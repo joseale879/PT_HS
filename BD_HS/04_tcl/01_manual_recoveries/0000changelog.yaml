@@ -1,0 +1,13 @@
+﻿databaseChangeLog:
+  - changeSet:
+      id: 6b4b10dc-bd55-4a55-9d10-0a4bf47f4f3f
+      author: Hidro_Smarth
+      labels: "tcl,manual-recovery,summary"
+      comment: Rebuilds today's daily consumption summary in a manual recovery step.
+      changes:
+        - sqlFile:
+            path: 001_recover_deleted_user.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: SELECT 1;

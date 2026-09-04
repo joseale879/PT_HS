@@ -1,0 +1,14 @@
+﻿databaseChangeLog:
+  - changeSet:
+      id: 1c8a5f62-8c0b-4f8a-b5a2-1234567890ab
+      author: Hidro_Smarth
+      labels: "tcl,transaction-blocks,consumption"
+      comment: Recomputes daily consumption summary in a safe transaction block.
+      changes:
+        - sqlFile:
+            path: 001_daily_summary_transaction.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: SELECT 1;

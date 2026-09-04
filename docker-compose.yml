@@ -1,0 +1,102 @@
+name: hidro_smart_full
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hidro_smart}
+      POSTGRES_USER: ${POSTGRES_USER:-hidro_smart_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD_in_env}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - hidro_smart_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./BK_HS
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost}
+      MATERIALIZED_VIEWS_REFRESH_MS: ${MATERIALIZED_VIEWS_REFRESH_MS:-300000}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-hidro_smart}
+      DB_USER: ${DB_USER:-hidro_smart_app}
+      DB_PASSWORD: ${DB_PASSWORD:?Set_DB_PASSWORD_in_env}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      JWT_SECRET: ${JWT_SECRET:?Set_JWT_SECRET_in_env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      JWT_ISSUER: ${JWT_ISSUER:-hidro-smart-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-hidro-smart-web}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    expose:
+      - "3000"
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./FT_HS/Web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api/v1
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  liquibase:
+    build:
+      context: ./BD_HS
+      dockerfile: docker/liquibase/Dockerfile
+    profiles: ["tooling"]
+    working_dir: /workspace
+    volumes:
+      - ./BD_HS:/workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - liquibase
+      - --search-path=/workspace
+      - --changeLogFile=changelog-master.yaml
+      - --classpath=/liquibase/liquibase_libs/postgresql-42.7.8.jar
+      - --url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-hidro_smart}
+      - --username=${LIQUIBASE_USER:?Set_LIQUIBASE_USER_in_env}
+      - --password=${LIQUIBASE_PASSWORD:?Set_LIQUIBASE_PASSWORD_in_env}
+
+volumes:
+  hidro_smart_postgres_data:
+    external: true
+    name: hidro_smart_postgres_data

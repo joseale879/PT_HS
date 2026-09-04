@@ -1,0 +1,549 @@
+databaseChangeLog:
+  - changeSet:
+      id: b8e6f5a4-7c4d-4f3e-a2b1-c3d4e5f6a7b8
+      author: Hidro_Smarth
+      comment: "Grant database connection and schema usage for application roles."
+      changes:
+        - sqlFile:
+            path: 001_grants_app_user.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: REVOKE CONNECT ON DATABASE hidro_smart FROM hidro_smart_app;
+        - sql: REVOKE CONNECT ON DATABASE hidro_smart FROM hidro_smart_readonly;
+        - sql: REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA user_account, preference, home, device, consumption, alert_rate, analytics_support, audit, privacy FROM hidro_smart_app;
+        - sql: REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA user_account, preference, home, device, consumption, alert_rate, analytics_support, audit, privacy FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA user_account, preference, home, device, consumption, alert_rate, analytics_support, audit, privacy FROM hidro_smart_app;
+        - sql: REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA user_account, preference, home, device, consumption, alert_rate, analytics_support, audit, privacy FROM hidro_smart_readonly;
+        - sql: REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA user_account, preference, home, device, consumption, alert_rate, analytics_support, audit, privacy FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA user_account, preference, home, device, consumption, alert_rate, analytics_support, audit, privacy FROM hidro_smart_readonly;
+
+  - changeSet:
+      id: c9f70605-1403-4021-1000-908070605040
+      author: Hidro_Smarth
+      comment: "Grant schema and object privileges for the application users."
+      changes:
+        - sql: GRANT USAGE ON SCHEMA user_account TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA preference TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA home TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA device TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA consumption TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA alert_rate TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA analytics_support TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA audit TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA privacy TO hidro_smart_app;
+        - sql: GRANT USAGE ON SCHEMA user_account TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA preference TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA home TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA device TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA consumption TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA alert_rate TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA analytics_support TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA audit TO hidro_smart_readonly;
+        - sql: GRANT USAGE ON SCHEMA privacy TO hidro_smart_readonly;
+      rollback:
+        - sql: REVOKE USAGE ON SCHEMA user_account FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA preference FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA home FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA device FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA consumption FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA alert_rate FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA analytics_support FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA audit FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA privacy FROM hidro_smart_app;
+        - sql: REVOKE USAGE ON SCHEMA user_account FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA preference FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA home FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA device FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA consumption FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA alert_rate FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA analytics_support FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA audit FROM hidro_smart_readonly;
+        - sql: REVOKE USAGE ON SCHEMA privacy FROM hidro_smart_readonly;
+
+  - changeSet:
+      id: 20260821-materialized-view-grants
+      author: Hidro_Smarth
+      comment: "Grant reporting access to materialized views."
+      changes:
+        - sqlFile:
+            path: 002_grants_materialized_views.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/002_grants_materialized_views.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 20260823-ingest-grants
+      author: Hidro_Smarth
+      comment: "Grants only sensor-reading ingestion permissions to the IoT role."
+      changes:
+        - sqlFile:
+            path: 003_grants_ingest.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/003_grants_ingest.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260823-registration-function-grant
+      author: Hidro_Smarth
+      comment: "Allows the application to register users through the controlled function instead of direct INSERT RETURNING."
+      changes:
+        - sql: |
+            REVOKE INSERT ON user_account.user_account FROM hidro_smart_app;
+            GRANT EXECUTE ON FUNCTION user_account.fn_register_user(VARCHAR, VARCHAR) TO hidro_smart_app;
+            GRANT EXECUTE ON FUNCTION home.fn_create_home_with_owner(VARCHAR, VARCHAR, VARCHAR, SMALLINT, UUID) TO hidro_smart_app;
+      rollback:
+        - sql: |
+            REVOKE EXECUTE ON FUNCTION user_account.fn_register_user(VARCHAR, VARCHAR) FROM hidro_smart_app;
+            REVOKE EXECUTE ON FUNCTION home.fn_create_home_with_owner(VARCHAR, VARCHAR, VARCHAR, SMALLINT, UUID) FROM hidro_smart_app;
+            GRANT INSERT ON user_account.user_account TO hidro_smart_app;
+
+  - changeSet:
+      id: 20260824-security-hardening
+      author: Hidro_Smarth
+      comment: "Restricts reporting access to secrets and removes PUBLIC execution from privileged functions."
+      changes:
+        - sqlFile:
+            path: 004_security_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: |
+            GRANT SELECT ON user_account.user_credential, user_account.password_reset_token, user_account.token, user_account.session, user_account.user_mfa, user_account.login_attempt, user_account.role_permission, privacy.user_consent, privacy.arco_request, audit.audit_log, audit.log_error TO hidro_smart_readonly;
+            GRANT SELECT ON user_account.user_credential, user_account.password_reset_token, user_account.token, user_account.user_mfa TO hidro_smart_app;
+            GRANT EXECUTE ON FUNCTION user_account.fn_register_user(VARCHAR, VARCHAR) TO PUBLIC;
+            GRANT EXECUTE ON FUNCTION home.fn_create_home_with_owner(VARCHAR, VARCHAR, VARCHAR, SMALLINT, UUID) TO PUBLIC;
+            GRANT EXECUTE ON FUNCTION consumption.fn_calculate_cost(DECIMAL, UUID, DATE) TO PUBLIC;
+
+  - changeSet:
+      id: 20260824-grant-hourly-mv
+      author: Hidro_Smarth
+      comment: "Grants explicit read access to the home-scoped hourly consumption materialized view."
+      changes:
+        - sqlFile:
+            path: 005_grant_hourly_mv.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: REVOKE SELECT ON consumption.mv_hourly_consumption_avg FROM hidro_smart_app, hidro_smart_readonly;
+  - changeSet:
+      id: 20260825-grant-period-cost
+      author: Hidro_Smarth
+      comment: "Grants the application access to the period cost calculation function."
+      changes:
+        - sqlFile:
+            path: 006_grant_period_cost.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: REVOKE EXECUTE ON FUNCTION consumption.fn_calculate_period_cost(UUID, DATE, DATE) FROM hidro_smart_app;
+  - changeSet:
+      id: 20260825-grant-login-security
+      author: Hidro_Smarth
+      comment: "Restricts login-attempt helper functions to the application role."
+      changes:
+        - sqlFile:
+            path: 007_grant_login_security.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/007_grant_login_security.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-least-privilege-auth-rbac
+      author: Hidro_Smarth
+      comment: "Removes direct application access to sensitive authentication, RBAC and audit tables."
+      changes:
+        - sqlFile:
+            path: 008_grant_least_privilege_auth_rbac.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/008_grant_least_privilege_auth_rbac.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-fn-cost-rollback-guard
+      author: Hidro_Smarth
+      comment: "Keeps the cost function grant rollback-safe before technical roles are removed."
+      changes:
+        - sqlFile:
+            path: 009_fn_cost_rollback_guard.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/009_fn_cost_rollback_guard.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-revoke-sensitive-token-crud
+      author: Hidro_Smarth
+      comment: "Removes direct application CRUD over password-reset tokens, JWT tokens and sessions."
+      changes:
+        - sqlFile:
+            path: 010_revoke_sensitive_token_crud.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/010_revoke_sensitive_token_crud.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-explicit-app-table-privileges
+      author: Hidro_Smarth
+      comment: "Replaces broad application CRUD with explicit table privileges and removes direct MV exposure."
+      changes:
+        - sqlFile:
+            path: 011_grant_app_table_privileges.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/011_grant_app_table_privileges.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-registration-flow-grants
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,registration,device"
+      comment: "Allows controlled user/device registration and removes direct device INSERT from the application role."
+      changes:
+        - sqlFile:
+            path: 012_grant_registration_flows.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/012_grant_registration_flows.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260826-device-management-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,security,rls"
+      comment: "Grants the application only the device management helper required by the RLS policy."
+      changes:
+        - sqlFile:
+            path: 013_grant_device_management.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/013_grant_device_management.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260826-readonly-reporting-privileges
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,readonly,reporting,security"
+      comment: "Replaces broad readonly table access with explicit aggregate reporting views."
+      changes:
+        - sqlFile:
+            path: 014_readonly_reporting_privileges.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/014_readonly_reporting_privileges.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260826-revoke-public-security-definers
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,functions"
+      comment: "Removes PUBLIC execution from SECURITY DEFINER helpers and grants only required application execution."
+      changes:
+        - sqlFile:
+            path: 015_revoke_public_security_definers.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/015_revoke_public_security_definers.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260827-restrict-privacy-table-writes
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,privacy"
+      comment: "Makes consent records append-only from the application and prevents direct deletion of ARCO requests."
+      changes:
+        - sqlFile:
+            path: 016_restrict_privacy_table_writes.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/016_restrict_privacy_table_writes.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260827-revoke-scope-helpers-public
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,functions"
+      comment: "Removes PUBLIC execution from the home and device authorization helpers."
+      changes:
+        - sqlFile:
+            path: 017_revoke_scope_helpers_public.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/017_revoke_scope_helpers_public.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260827-secure-materialized-view-access
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,reporting,rls"
+      comment: "Removes direct multi-home materialized-view access; reporting is exposed through home-scoped security-definer functions."
+      changes:
+        - sqlFile:
+            path: 018_secure_mv_access.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/018_secure_mv_access.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260828-ingest-references
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,ingest,iot,security"
+      comment: "Allows the IoT role to validate the sensor-reading foreign key against home_device."
+      changes:
+        - sqlFile:
+            path: 019_grant_ingest_references.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/019_grant_ingest_references.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260829-ingest-minimum-privileges
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,ingest,iot"
+      comment: "Grants only the schema, FK and function privileges required by IoT ingestion."
+      changes:
+        - sqlFile:
+            path: 020_ingest_minimum_privileges.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/020_ingest_minimum_privileges.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260831-device-history-insert-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,device"
+      comment: "Allows the application to persist authorized device status history."
+      changes:
+        - sqlFile:
+            path: 021_device_history_insert.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/021_device_history_insert.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260831-device-status-update-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,device"
+      comment: "Allows the application to execute the protected device status transition."
+      changes:
+        - sqlFile:
+            path: 022_device_status_update_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/022_device_status_update_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260901-session-token-functions-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,session"
+      comment: "Allows the application to use controlled session and refresh-token functions."
+      changes:
+        - sqlFile:
+            path: 023_session_token_functions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/023_session_token_functions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260901-password-functions-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,password"
+      comment: "Allows the application to use controlled password operations."
+      changes:
+        - sqlFile:
+            path: 024_password_functions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/024_password_functions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260901-auth-security-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,password"
+      comment: "Grants the application access to login security state through a controlled function."
+      changes:
+        - sqlFile:
+            path: 025_auth_security_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260901-active-password-policy-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,password"
+      comment: "Grants the backend access to the active password policy function."
+      changes:
+        - sqlFile:
+            path: 026_active_password_policy_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/026_active_password_policy_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/025_auth_security_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260902-alert-generation-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,alert"
+      comment: "Allows the backend job to generate alert events through a controlled function."
+      changes:
+        - sqlFile:
+            path: 027_alert_generation_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260902-role-management-functions-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,rbac"
+      comment: "Grants role management only through controlled functions."
+      changes:
+        - sqlFile:
+            path: 028_role_management_functions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/028_role_management_functions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260903-audit-read-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,audit"
+      comment: "Allows the application to consult audit logs only through the authorized function."
+      changes:
+        - sqlFile:
+            path: 030_audit_read_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/030_audit_read_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260904-preference-catalog-read
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,preference,security"
+      comment: "Allows the backend to resolve the active language and currency selected by the authenticated user."
+      changes:
+        - sqlFile:
+            path: 029_preference_catalog_read.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: REVOKE SELECT ON preference.language, preference.currency FROM hidro_smart_app;

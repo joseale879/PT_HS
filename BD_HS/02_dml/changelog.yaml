@@ -1,0 +1,26 @@
+﻿databaseChangeLog:
+  - include:
+      file: 00_inserts/0000changelog.yaml
+      relativeToChangelogFile: true
+      contextFilter: 02_dml
+      labels: 00_inserts
+  - include:
+      file: 01_updates/0000changelog.yaml
+      relativeToChangelogFile: true
+      contextFilter: 02_dml
+      labels: 01_updates
+  - include:
+      file: 02_deletes/0000changelog.yaml
+      relativeToChangelogFile: true
+      contextFilter: 02_dml
+      labels: 02_deletes
+  - include:
+      file: 03_upserts/0000changelog.yaml
+      relativeToChangelogFile: true
+      contextFilter: 02_dml
+      labels: 03_upserts
+  - include:
+      file: 04_patches/0000changelog.yaml
+      relativeToChangelogFile: true
+      contextFilter: 02_dml
+      labels: 04_patches

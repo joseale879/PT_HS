@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS device.fn_can_manage_device(UUID, UUID);

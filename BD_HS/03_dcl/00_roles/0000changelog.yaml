@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: a7d8e6f4-3b2c-4e5d-8f9a-0b1c2d3e4f5a
+      author: Hidro_Smarth
+      comment: "Create database roles."
+      changes:
+        - sqlFile:
+            path: 001_create_roles.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/00_roles/001_create_roles.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 20260823-create-ingest-role
+      author: Hidro_Smarth
+      comment: "Creates the least-privilege PostgreSQL role used by IoT ingestion."
+      changes:
+        - sqlFile:
+            path: 002_create_ingest_role.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP ROLE IF EXISTS hidro_smart_ingest;

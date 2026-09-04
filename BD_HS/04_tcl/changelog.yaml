@@ -1,0 +1,6 @@
+databaseChangeLog:
+  - include:
+      file: 00_transaction_blocks/0000changelog.yaml
+      relativeToChangelogFile: true
+      contextFilter: 04_tcl_manual
+      labels: 00_transaction_blocks

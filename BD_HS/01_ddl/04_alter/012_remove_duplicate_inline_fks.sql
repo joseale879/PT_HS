@@ -1,0 +1,11 @@
+ALTER TABLE user_account.user_account DROP CONSTRAINT IF EXISTS user_account_suspended_by_fkey;
+ALTER TABLE user_account.user_role DROP CONSTRAINT IF EXISTS user_role_assigned_by_fkey;
+ALTER TABLE home.home_user DROP CONSTRAINT IF EXISTS home_user_added_by_fkey;
+ALTER TABLE home.home_user_function DROP CONSTRAINT IF EXISTS home_user_function_assigned_by_fkey;
+ALTER TABLE home.home_member_request DROP CONSTRAINT IF EXISTS home_member_request_answered_by_fkey;
+ALTER TABLE device.calibration_history DROP CONSTRAINT IF EXISTS calibration_history_performed_by_fkey;
+ALTER TABLE device.device_history DROP CONSTRAINT IF EXISTS device_history_registered_by_fkey;
+ALTER TABLE alert_rate.threshold_configuration DROP CONSTRAINT IF EXISTS threshold_configuration_updated_by_fkey;
+ALTER TABLE alert_rate.alert_rule DROP CONSTRAINT IF EXISTS alert_rule_created_by_fkey;
+ALTER TABLE analytics_support.recommendation DROP CONSTRAINT IF EXISTS recommendation_created_by_fkey;
+ALTER TABLE privacy.arco_request DROP CONSTRAINT IF EXISTS arco_request_answered_by_fkey;

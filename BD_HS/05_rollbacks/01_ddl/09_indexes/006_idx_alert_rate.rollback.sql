@@ -1,0 +1,13 @@
+DROP INDEX IF EXISTS alert_rate.idx_threshold_configuration_home;
+DROP INDEX IF EXISTS alert_rate.idx_alert_rule_home_id;
+DROP INDEX IF EXISTS alert_rate.idx_alert_rule_type_active;
+DROP INDEX IF EXISTS alert_rate.idx_alert_event_rule_id;
+DROP INDEX IF EXISTS alert_rate.idx_alert_event_home_id;
+DROP INDEX IF EXISTS alert_rate.idx_alert_event_status_date;
+DROP INDEX IF EXISTS alert_rate.idx_alert_event_generated_at;
+DROP INDEX IF EXISTS alert_rate.idx_alert_notification_event_id;
+DROP INDEX IF EXISTS alert_rate.idx_alert_notification_sent;
+DROP INDEX IF EXISTS alert_rate.idx_home_rate_home_id;
+DROP INDEX IF EXISTS alert_rate.idx_home_rate_vigente;
+DROP INDEX IF EXISTS alert_rate.idx_home_rate_tier;
+DROP INDEX IF EXISTS alert_rate.idx_estratos_numero;

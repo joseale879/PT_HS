@@ -1,0 +1,135 @@
+databaseChangeLog:
+  - changeSet:
+      id: c2d1e3f4-5b6a-4d8e-9f0c-7a8b2c3d4e5f
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,triggers,timestamps,audit"
+      comment: Creates timestamp update triggers for the main tables.
+      changes:
+        - sqlFile:
+            path: 001_trg_update_updated_at.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP TRIGGER IF EXISTS trg_user_account_updated_at ON user_account.user_account;
+            DROP TRIGGER IF EXISTS trg_home_updated_at ON home.home;
+            DROP TRIGGER IF EXISTS trg_device_updated_at ON device.device;
+            DROP TRIGGER IF EXISTS trg_user_preference_updated_at ON preference.user_preference;
+            DROP TRIGGER IF EXISTS trg_vacation_mode_updated_at ON home.vacation_mode;
+            DROP TRIGGER IF EXISTS trg_saving_goal_updated_at ON home.saving_goal;
+            DROP TRIGGER IF EXISTS trg_ticket_updated_at ON analytics_support.ticket;
+            DROP TRIGGER IF EXISTS trg_role_updated_at ON user_account.role;
+            DROP TRIGGER IF EXISTS trg_permission_updated_at ON user_account.permission;
+            DROP TRIGGER IF EXISTS trg_password_policy_updated_at ON user_account.password_policy;
+            DROP TRIGGER IF EXISTS trg_user_mfa_updated_at ON user_account.user_mfa;
+            DROP TRIGGER IF EXISTS trg_language_updated_at ON preference.language;
+            DROP TRIGGER IF EXISTS trg_currency_updated_at ON preference.currency;
+            DROP TRIGGER IF EXISTS trg_theme_updated_at ON preference.theme;
+            DROP TRIGGER IF EXISTS trg_threshold_configuration_updated_at ON alert_rate.threshold_configuration;
+            DROP TRIGGER IF EXISTS trg_alert_rule_updated_at ON alert_rate.alert_rule;
+            DROP TRIGGER IF EXISTS trg_home_rate_updated_at ON alert_rate.home_rate;
+            DROP TRIGGER IF EXISTS trg_recommendation_category_updated_at ON analytics_support.recommendation_category;
+            DROP TRIGGER IF EXISTS trg_recommendation_updated_at ON analytics_support.recommendation;
+            DROP TRIGGER IF EXISTS trg_arco_request_updated_at ON privacy.arco_request;
+            DROP FUNCTION IF EXISTS public.fn_update_updated_at();
+
+  - changeSet:
+      id: c2d1e3f4-5b6a-4d8e-9f0c-7a8b2c3d4e60
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,triggers,audit"
+      comment: Creates the user account audit trigger.
+      changes:
+        - sqlFile:
+            path: 002_trg_audit_user_account.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP TRIGGER IF EXISTS trg_audit_user_account ON user_account.user_account;
+            DROP FUNCTION IF EXISTS user_account.fn_audit_user_account();
+
+  - changeSet:
+      id: c2d1e3f4-5b6a-4d8e-9f0c-7a8b2c3d4e61
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,triggers,consumption"
+      comment: Creates the post-insert consumption validation trigger.
+      changes:
+        - sqlFile:
+            path: 003_trg_after_reading_insert.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP TRIGGER IF EXISTS trg_after_reading_insert ON consumption.sensor_reading;
+            DROP FUNCTION IF EXISTS consumption.fn_after_reading_insert();
+
+  - changeSet:
+      id: 20260825-home-owner-invariant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,trigger,home,integrity"
+      comment: "Prevents a home from ending a transaction without an Owner."
+      changes:
+        - sqlFile:
+            path: 006_trg_home_owner_invariant.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/08_triggers/006_trg_home_owner_invariant.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-optimize-reading-alert-dedup
+      author: Hidro_Smarth
+      comment: "Removes recorded_at date casts from alert deduplication queries."
+      changes:
+        - sqlFile:
+            path: 007_trg_after_reading_insert_optimized.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/08_triggers/007_trg_after_reading_insert_optimized.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260826-device-status-change-timestamp
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,trigger,device,integrity"
+      comment: "Updates changed_at_status whenever the device status changes."
+      changes:
+        - sqlFile:
+            path: 008_trg_device_status_change.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/08_triggers/008_trg_device_status_change.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260826-alert-period-deduplication
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,trigger,alert_rate,integrity"
+      comment: "Uses daily, monthly and daily leak windows according to each alert rule."
+      changes:
+        - sqlFile:
+            path: 009_trg_after_reading_alert_periods.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/08_triggers/009_trg_after_reading_alert_periods.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

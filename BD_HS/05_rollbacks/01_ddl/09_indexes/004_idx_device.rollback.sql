@@ -1,0 +1,11 @@
+DROP INDEX IF EXISTS device.idx_device_status;
+DROP INDEX IF EXISTS device.idx_device_type;
+DROP INDEX IF EXISTS device.idx_device_code;
+DROP INDEX IF EXISTS device.idx_device_last_connection_at;
+DROP INDEX IF EXISTS device.idx_device_umbral_alerta;
+DROP INDEX IF EXISTS device.idx_device_history_device_id;
+DROP INDEX IF EXISTS device.idx_device_history_changed_at;
+DROP INDEX IF EXISTS device.idx_calibration_history_device_id;
+DROP INDEX IF EXISTS device.idx_calibration_history_date;
+DROP INDEX IF EXISTS device.idx_device_telemetry_device_id;
+DROP INDEX IF EXISTS device.idx_device_telemetry_recorded_at;

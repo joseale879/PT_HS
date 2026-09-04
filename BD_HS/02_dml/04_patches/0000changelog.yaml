@@ -1,0 +1,69 @@
+databaseChangeLog:
+  - changeSet:
+      id: 8d7f2a30-2e1c-4db2-9bde-20260518-fix-audit-delete
+      author: Codex
+      labels: "BD-01-dev,patch,audit_log,triggers"
+      comment: Updates user_account audit trigger so DELETE events do not violate the user_account foreign key.
+      changes:
+        - sqlFile:
+            path: 001_fix_user_account_delete_audit_trigger.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/02_dml/04_patches/001_fix_user_account_delete_audit_trigger.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260822-fix-self-delete-audit
+      author: Codex
+      labels: "patch,audit_log,triggers"
+      comment: "Prevents self-deletion audit rows from violating the deleted user's foreign key."
+      changes:
+        - sqlFile:
+            path: 002_fix_self_delete_audit.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/02_dml/04_patches/002_fix_self_delete_audit.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260827-audit-event-semantics
+      author: Hidro_Smarth
+      labels: "BD-01-dev,patch,audit_log,triggers,security"
+      comment: "Distinguishes account deactivation/reactivation from physical deletion and handles self-deletion safely."
+      changes:
+        - sqlFile:
+            path: 003_audit_event_semantics.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/02_dml/04_patches/003_audit_event_semantics.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260828-homeuser-device-permission
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dml,patch,rbac,device,security"
+      comment: "Allows HomeUser to register devices through the scoped registration function."
+      changes:
+        - sqlFile:
+            path: 004_homeuser_device_permission.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/02_dml/04_patches/004_homeuser_device_permission.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

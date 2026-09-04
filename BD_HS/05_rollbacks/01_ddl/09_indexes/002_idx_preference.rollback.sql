@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS preference.idx_language_code;
+DROP INDEX IF EXISTS preference.idx_language_active;
+DROP INDEX IF EXISTS preference.idx_currency_code;
+DROP INDEX IF EXISTS preference.idx_currency_active;
+DROP INDEX IF EXISTS preference.idx_theme_mode_active;
+DROP INDEX IF EXISTS preference.idx_theme_is_default;
+DROP INDEX IF EXISTS preference.idx_user_preference_language;
+DROP INDEX IF EXISTS preference.idx_user_preference_currency;
+DROP INDEX IF EXISTS preference.idx_user_preference_theme;

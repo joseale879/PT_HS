@@ -1,0 +1,39 @@
+name: hidro_smart_backend
+
+services:
+  backend:
+    build: .
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      MATERIALIZED_VIEWS_REFRESH_MS: ${MATERIALIZED_VIEWS_REFRESH_MS:-300000}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5433}
+      DB_NAME: ${DB_NAME:-hidro_smart}
+      DB_USER: ${DB_USER:-hidro_smart_app}
+      DB_PASSWORD: ${DB_PASSWORD:?Set_DB_PASSWORD_in_env}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      JWT_SECRET: ${JWT_SECRET:?Set_JWT_SECRET_in_env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      JWT_ISSUER: ${JWT_ISSUER:-hidro-smart-api}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

@@ -1,0 +1,180 @@
+﻿databaseChangeLog:
+  # ============================================================
+  # DOMINIO 1: USUARIOS Y AUTENTICACIÓN (user_account)
+  # ============================================================
+
+  - changeSet:
+      id: 6bc8aa7a-4647-4e7a-a881-7bfe4cb7bf78
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,user_account"
+      comment: Creates the baseline tables for the user_account domain.
+      changes:
+        - sqlFile:
+            path: 001_Users_authentication.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/001_Users_authentication.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 2: PREFERENCIAS (preference)
+  # ============================================================
+
+  - changeSet:
+      id: c53666e2-e4b7-48fa-a9c0-410483982c53
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,preference"
+      comment: Creates the baseline tables for the preferences domain.
+      changes:
+        - sqlFile:
+            path: 002_Preferences_personalitation.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/002_Preferences_personalitation.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 3: HOGARES Y MIEMBROS (home)
+  # ============================================================
+
+  - changeSet:
+      id: 65f52942-501f-4f03-9c52-e4daf6cae0c0
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,home"
+      comment: Creates the baseline tables for the homes and members domain.
+      changes:
+        - sqlFile:
+            path: 003_Homes_members.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/003_Homes_members.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 4: DISPOSITIVOS IoT (device)
+  # ============================================================
+
+  - changeSet:
+      id: a3bb6b65-efb6-4b6b-b844-dcb34828b365
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,device"
+      comment: Creates the baseline tables for the IoT devices domain.
+      changes:
+        - sqlFile:
+            path: 004_Iot_devices.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/004_Iot_devices.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 5: CONSUMO Y MONITOREO (consumption)
+  # ============================================================
+
+  - changeSet:
+      id: 723d6e4a-b387-491f-8e9f-ce4d24f12e6a
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,consumption"
+      comment: Creates the baseline tables for the consumption domain.
+      changes:
+        - sqlFile:
+            path: 005_Consuption_monitoring.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/005_Consuption_monitoring.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 6: ALERTAS, TARIFAS Y CONTROL (alert_rate)
+  # ============================================================
+
+  - changeSet:
+      id: 9db783ad-3984-4085-ad3c-ae9e77af5ab8
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,alert"
+      comment: Creates the baseline tables for the alerts and rates domain.
+      changes:
+        - sqlFile:
+            path: 006_Alerts_control.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/006_Alerts_control.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # 🟡 DOMINIO 7: REPORTES, ANÁLISIS Y SOPORTE (analytics_support)
+  # ============================================================
+
+  - changeSet:
+      id: 6798b2fd-1047-4c48-84fe-c5a7f9961491
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,analytics_support"
+      comment: Creates the baseline tables for the reports, analytics and support domain.
+      changes:
+        - sqlFile:
+            path: 007_Reports_analytics_support.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/007_Reports_analytics_support.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 8: AUDITORÍA Y LOGS (audit)
+  # ============================================================
+
+  - changeSet:
+      id: c150e8df-1bde-4cb8-969e-0c8d634bcb49
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,audit_log"
+      comment: Creates the baseline tables for the audit and logs domain.
+      changes:
+        - sqlFile:
+            path: 008_Audit_logs.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/008_Audit_logs.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 9: PRIVACIDAD Y ARCO (privacy)
+  # ============================================================
+
+  - changeSet:
+      id: c00bd110-c9b0-4126-9f20-6b22fbf27579
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,privacy"
+      comment: Creates the baseline tables for the privacy and ARCO domain.
+      changes:
+        - sqlFile:
+            path: 009_Privacy_arco.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/009_Privacy_arco.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false

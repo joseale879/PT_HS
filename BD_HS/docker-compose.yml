@@ -1,0 +1,45 @@
+name: hidro_smart
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hidro_smart}
+      POSTGRES_USER: ${POSTGRES_USER:-Usuario}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD_in_env}
+    ports:
+      - "${POSTGRES_PORT:-5433}:${POSTGRES_INTERNAL_PORT:-5432}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-Usuario} -d ${POSTGRES_DB:-hidro_smart}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  liquibase:
+    build:
+      context: .
+      dockerfile: docker/liquibase/Dockerfile
+    image: hidro-smart-liquibase:5.0.2
+    profiles:
+      - tooling
+    depends_on:
+      postgres:
+        condition: service_healthy
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    entrypoint:
+      - liquibase
+      - --search-path=/workspace
+      - --changeLogFile=changelog-master.yaml
+      - --classpath=/liquibase/liquibase_libs/postgresql-42.7.8.jar
+      - --url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-hidro_smart}
+      - --username=${LIQUIBASE_USER:?Set_LIQUIBASE_USER_in_env}
+      - --password=${LIQUIBASE_PASSWORD:?Set_LIQUIBASE_PASSWORD_in_env}
+
+volumes:
+  postgres_data:

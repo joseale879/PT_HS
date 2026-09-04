@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS analytics_support.ticket_response CASCADE;
+DROP TABLE IF EXISTS analytics_support.ticket CASCADE;
+DROP TABLE IF EXISTS analytics_support.ticket_status CASCADE;
+DROP TABLE IF EXISTS analytics_support.ticket_priority CASCADE;
+DROP TABLE IF EXISTS analytics_support.ticket_category CASCADE;
+DROP TABLE IF EXISTS analytics_support.generated_report CASCADE;
+DROP TABLE IF EXISTS analytics_support.user_recommendation CASCADE;
+DROP TABLE IF EXISTS analytics_support.recommendation CASCADE;
+DROP TABLE IF EXISTS analytics_support.recommendation_category CASCADE;

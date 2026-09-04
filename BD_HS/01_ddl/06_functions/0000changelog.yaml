@@ -1,0 +1,619 @@
+databaseChangeLog:
+  # ============================================================
+  # FUNCIONES — HIDRO SMART
+  # ============================================================
+
+  # 1. Security Helpers (user_account + home)
+  - changeSet:
+      id: a1b2c3d4-fn-001-security
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security"
+      comment: Creates security helper functions for RLS and access control.
+      changes:
+        - sqlFile:
+            path: 001_fn_security_helpers.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP FUNCTION IF EXISTS user_account.fn_app_current_user_id();
+            DROP FUNCTION IF EXISTS home.fn_is_home_member(UUID, UUID);
+            DROP FUNCTION IF EXISTS home.fn_is_home_owner(UUID, UUID);
+            DROP FUNCTION IF EXISTS device.fn_can_access_device(UUID, UUID);
+
+  # 2. Consumption Calculations (consumption)
+  - changeSet:
+      id: a1b2c3d4-fn-002-consumption
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,consumption"
+      comment: Creates consumption calculation functions.
+      changes:
+        - sqlFile:
+            path: 002_fn_consumption_calculations.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP FUNCTION IF EXISTS consumption.fn_calculate_consumption(UUID, DATE, DATE);
+            DROP FUNCTION IF EXISTS consumption.fn_calculate_cost(DECIMAL, UUID, DATE);
+            DROP FUNCTION IF EXISTS consumption.fn_get_daily_consumption(UUID, DATE);
+            DROP FUNCTION IF EXISTS consumption.fn_get_monthly_consumption(UUID, INTEGER, INTEGER);
+
+  # 3. Alert Validation (alert_rate)
+  - changeSet:
+      id: a1b2c3d4-fn-003-alert
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,alert_rate"
+      comment: Creates alert validation functions.
+      changes:
+        - sqlFile:
+            path: 003_fn_alert_validation.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP FUNCTION IF EXISTS alert_rate.fn_check_threshold(DECIMAL, UUID, DATE);
+            DROP FUNCTION IF EXISTS alert_rate.fn_is_leak_detected(UUID, TIMESTAMPTZ, INTEGER);
+
+  # 4. Vacation Helpers (home)
+  - changeSet:
+      id: a1b2c3d4-fn-004-vacation
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,home"
+      comment: Creates vacation mode helper function.
+      changes:
+        - sqlFile:
+            path: 004_fn_vacation_helpers.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP FUNCTION IF EXISTS home.fn_is_vacation_active(UUID, DATE);
+
+  # 5. Analytics Helpers (analytics_support)
+  - changeSet:
+      id: a1b2c3d4-fn-005-analytics
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,analytics_support"
+      comment: Creates analytics and reporting helper functions.
+      changes:
+        - sqlFile:
+            path: 005_fn_analytics_helpers.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP FUNCTION IF EXISTS analytics_support.fn_get_goal_progress(UUID);
+
+  - changeSet:
+      id: 20260823-fn-create-home-with-owner
+      validCheckSum: 9:6ed966971441bbf90ea055bdd8bfc1d8
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,home,security"
+      comment: "Creates a home together with its first owner through a controlled operation."
+      changes:
+        - sqlFile:
+            path: 006_fn_home_creation.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP FUNCTION IF EXISTS home.fn_create_home_with_owner(VARCHAR, VARCHAR, VARCHAR, SMALLINT, UUID);
+
+  - changeSet:
+      id: 20260823-fn-cost-business-rules
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,consumption,billing"
+      comment: "Uses the home's tier for the active rate and excludes the monthly fixed charge from per-reading cost."
+      changes:
+        - sqlFile:
+            path: 007_fn_cost_business_rules.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/007_fn_cost_business_rules.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260823-fn-user-registration
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security"
+      comment: "Registers a user through a controlled SECURITY DEFINER function so INSERT RETURNING is not blocked by RLS."
+      changes:
+        - sqlFile:
+            path: 008_fn_user_registration.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP FUNCTION IF EXISTS user_account.fn_register_user(VARCHAR, VARCHAR);
+
+  - changeSet:
+      id: 20260824-fn-rls-status-checks
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rls"
+      comment: "Excludes blocked or deleted users, suspended homes and inactive devices from row-level access checks."
+      changes:
+        - sqlFile:
+            path: 009_fn_rls_status_checks.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/009_fn_rls_status_checks.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-fn-period-cost
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,consumption,billing"
+      comment: "Calculates variable consumption cost and adds the monthly fixed charge once per period."
+      changes:
+        - sqlFile:
+            path: 010_fn_period_cost.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/010_fn_period_cost.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-fn-login-attempts
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security"
+      comment: "Centralizes failed-login counting, lockout and reset behavior."
+      changes:
+        - sqlFile:
+            path: 011_fn_login_attempts.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/011_fn_login_attempts.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-fn-registration-normalization
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security"
+      comment: "Normalizes username and email before registration."
+      changes:
+        - sqlFile:
+            path: 012_fn_registration_normalization.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/012_fn_registration_normalization.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-fn-login-attempts-validation
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security"
+      comment: "Validates the account identifier before recording a login failure."
+      changes:
+        - sqlFile:
+            path: 013_fn_login_attempts_validation.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/013_fn_login_attempts_validation.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-fn-sensitive-auth
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security"
+      comment: "Provides controlled credential and MFA operations without direct table access."
+      changes:
+        - sqlFile:
+            path: 014_fn_sensitive_auth.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/014_fn_sensitive_auth.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-fn-rbac
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security,rbac"
+      comment: "Connects application users with functional permissions through active roles."
+      changes:
+        - sqlFile:
+            path: 015_fn_rbac.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/015_fn_rbac.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-secure-materialized-view-functions
+      author: Hidro_Smarth
+      comment: "Exposes materialized-view results only through home-scoped, permission-checked functions."
+      changes:
+        - sqlFile:
+            path: 016_fn_secure_materialized_views.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/016_fn_secure_materialized_views.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-optimize-date-range-functions
+      author: Hidro_Smarth
+      comment: "Uses half-open timestamp ranges so recorded_at indexes remain usable."
+      changes:
+        - sqlFile:
+            path: 017_optimize_date_queries.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/017_optimize_date_queries.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260825-registration-flows
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,registration,device"
+      comment: "Assigns HomeUser during registration and registers unlinked devices through controlled functions."
+      changes:
+        - sqlFile:
+            path: 018_fn_registration_flows.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/018_fn_registration_flows.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260826-device-management-helper
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,security,rls"
+      comment: "Adds a home-scoped device management check for RLS updates."
+      changes:
+        - sqlFile:
+            path: 019_fn_device_management.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/019_fn_device_management.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260827-scoped-security-definers
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rls,consumption"
+      comment: "Requires home or device authorization when application sessions call SECURITY DEFINER calculations."
+      changes:
+        - sqlFile:
+            path: 020_fn_scoped_calculations.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/020_fn_scoped_calculations.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260829-fn-ingest-validation
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rls,ingest,iot"
+      comment: "Validates IoT device-home pairs through a SECURITY DEFINER function without global SELECT access."
+      changes:
+        - sqlFile:
+            path: 021_fn_ingest_validation.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/021_fn_ingest_validation.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260829-fn-home-member-management
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,home,security,rbac"
+      comment: "Adds active home members through an owner- and permission-checked SECURITY DEFINER function."
+      changes:
+        - sqlFile:
+            path: 022_fn_home_member_management.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/022_fn_home_member_management.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260829-fn-change-home-member-role
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,home,security,rbac"
+      comment: "Allows a home owner to change a member role without modifying the owner role."
+      changes:
+        - sqlFile:
+            path: 023_fn_change_home_member_role.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/023_fn_change_home_member_role.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260830-fn-remove-home-member
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,home,security,rbac"
+      comment: "Allows a home owner to remove a member without removing the owner."
+      changes:
+        - sqlFile:
+            path: 024_fn_remove_home_member.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/024_fn_remove_home_member.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260830-fn-home-membership-requests
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,home,security,rbac"
+      comment: "Adds secure home membership request and owner decision flows."
+      changes:
+        - sqlFile:
+            path: 025_fn_request_home_membership.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/025_fn_request_home_membership.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260831-fn-update-device-status
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,security"
+      comment: "Updates device status and records status history through a protected function."
+      changes:
+        - sqlFile:
+            path: 026_fn_update_device_status.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/026_fn_update_device_status.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260901-fn-session-tokens
+      validCheckSum: 9:ca8499a85a27bbae4d3af2a53771ddf5
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security,session"
+      comment: "Creates controlled session and refresh-token rotation operations."
+      changes:
+        - sqlFile:
+            path: 027_fn_session_tokens.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/027_fn_session_tokens.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260901-fn-fix-session-rotation
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security,session,fix"
+      comment: "Qualifies the session identifier in refresh-token rotation."
+      changes:
+        - sqlFile:
+            path: 028_fn_fix_session_rotation.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/028_fn_fix_session_rotation.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260901-fn-password-operations
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security,password"
+      comment: "Creates controlled password change and one-time recovery-token operations."
+      changes:
+        - sqlFile:
+            path: 029_fn_password_operations.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/029_fn_password_operations.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260901-fn-auth-security-and-device-visibility
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,device,security"
+      comment: "Applies login security state and keeps non-active devices visible to authorized household members."
+      changes:
+        - sqlFile:
+            path: 030_fn_auth_security_and_device_visibility.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/030_fn_auth_security_and_device_visibility.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260901-fn-timezone-policy-alignment
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,security,timezone,password"
+      comment: "Aligns existing credentials with the active password policy and sets the application session timezone."
+      changes:
+        - sqlFile:
+            path: 031_fn_timezone_policy_alignment.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260901-fn-active-password-policy
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security,password"
+      comment: "Exposes the active password policy to the backend through a controlled function."
+      changes:
+        - sqlFile:
+            path: 032_fn_active_password_policy.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/032_fn_active_password_policy.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/031_fn_timezone_policy_alignment.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260902-fn-generate-alert-events
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,alert"
+      comment: "Generates idempotent alert events from active daily and monthly consumption rules."
+      changes:
+        - sqlFile:
+            path: 033_fn_generate_alert_events.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260902-fn-role-management
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rbac"
+      comment: "Adds controlled security-definer functions for functional role management."
+      changes:
+        - sqlFile:
+            path: 034_fn_role_management.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/034_fn_role_management.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260904-fn-generate-alert-events-no-reading
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,alert"
+      comment: "Evaluates no-reading alert rules in the periodic alert generation job."
+      changes:
+        - sqlFile:
+            path: 035_fn_generate_alert_events_no_reading.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: 033_fn_generate_alert_events.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260903-fn-list-audit-logs
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,audit,security"
+      comment: "Exposes paginated audit consultation through an authorized security-definer function."
+      changes:
+        - sqlFile:
+            path: 036_fn_list_audit_logs.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/036_fn_list_audit_logs.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

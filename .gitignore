@@ -1,0 +1,19 @@
+# Secretos y configuracion local
+.env*
+!.env.example
+!**/.env.example
+!**/.env.local.example
+CREDENCIALES-LOCAL.md
+**/CREDENCIALES-LOCAL.md
+BD_HS/docs/credenciales-locales.md
+
+# Dependencias, builds y archivos locales
+**/node_modules/
+**/dist/
+**/.vite/
+**/.expo/
+**/*.log
+**/*.pem
+**/*.key
+**/*.p12
+.vscode/

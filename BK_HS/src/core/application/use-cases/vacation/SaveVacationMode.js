@@ -1,0 +1,6 @@
+class SaveVacationMode {
+  constructor({ repository }) { this.repository=repository; }
+  execute({userId,homeId,active,startedAt,endedAt,dailyTargetConsumption,notifyOnReturn=true}) { if(!userId)throw this.bad('El usuario autenticado es obligatorio'); if(!this.uuid(homeId))throw this.bad('homeId no es válido'); if(typeof active!=='boolean')throw this.bad('active debe ser booleano'); if(!this.date(startedAt)||!this.date(endedAt)||endedAt<startedAt)throw this.bad('Las fechas de vacaciones no son válidas'); if(dailyTargetConsumption!=null&&(!Number.isFinite(Number(dailyTargetConsumption))||Number(dailyTargetConsumption)<0))throw this.bad('dailyTargetConsumption no es válido'); if(typeof notifyOnReturn!=='boolean')throw this.bad('notifyOnReturn debe ser booleano'); return this.repository.save({userId,homeId,active,startedAt,endedAt,dailyTargetConsumption:dailyTargetConsumption==null?null:Number(dailyTargetConsumption),notifyOnReturn}); }
+  uuid(v){return typeof v==='string'&&/^[0-9a-f-]{36}$/i.test(v)} date(v){return typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(`${v}T00:00:00Z`))} bad(m){const e=new Error(m);e.status=400;return e;}
+}
+module.exports = { SaveVacationMode };

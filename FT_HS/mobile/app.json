@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "HidroSmart",
+    "slug": "hidrosmart-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true },
+    "android": { "edgeToEdgeEnabled": false },
+    "androidNavigationBar": {
+      "backgroundColor": "#020617",
+      "barStyle": "light-content"
+    },
+    "web": { "bundler": "metro" }
+  }
+}

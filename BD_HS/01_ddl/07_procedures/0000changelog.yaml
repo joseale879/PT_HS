@@ -1,0 +1,96 @@
+databaseChangeLog:
+  # ============================================================
+  # PROCEDIMIENTOS — HIDRO SMART
+  # ============================================================
+
+  # 1. Refresh Materialized Views (analytics_support)
+  - changeSet:
+      id: a1b2c3d4-prc-001-refresh-mv
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,procedure,analytics_support"
+      comment: Creates procedure to refresh all materialized views.
+      changes:
+        - sqlFile:
+            path: 001_prc_refresh_materialized_views.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP PROCEDURE IF EXISTS analytics_support.prc_refresh_materialized_views();
+
+  # 2. Generate Daily Summary (consumption)
+  - changeSet:
+      id: a1b2c3d4-prc-002-daily-summary
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,procedure,consumption"
+      comment: Creates procedure to generate daily consumption summaries.
+      changes:
+        - sqlFile:
+            path: 002_prc_generate_daily_summary.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP PROCEDURE IF EXISTS consumption.prc_generate_daily_summary(DATE);
+
+  # 3. Clean Old Audit Logs (audit)
+  - changeSet:
+      id: a1b2c3d4-prc-003-clean-audit
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,procedure,audit"
+      comment: Creates procedure to clean old audit logs.
+      changes:
+        - sqlFile:
+            path: 003_prc_clean_old_audit_logs.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP PROCEDURE IF EXISTS audit.prc_clean_old_audit_logs(INTEGER, INTEGER);
+
+  - changeSet:
+      id: 20260823-prc-archive-closed-tickets
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,procedure,analytics_support"
+      comment: "Archives closed tickets by setting archived_at without changing the original closed_at."
+      changes:
+        - sqlFile:
+            path: 004_prc_archive_closed_tickets.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP PROCEDURE IF EXISTS analytics_support.prc_archive_closed_tickets(INTEGER, INTEGER);
+  - changeSet:
+      id: 20260825-optimize-daily-summary-date-range
+      author: Hidro_Smarth
+      comment: "Uses an index-friendly timestamp range for daily summary generation."
+      changes:
+        - sqlFile:
+            path: 005_prc_generate_daily_summary_optimized.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/07_procedures/005_prc_generate_daily_summary_optimized.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260826-refresh-materialized-views-concurrently
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,procedure,materialized-view,performance"
+      comment: "Refreshes populated materialized views concurrently using unique keys."
+      changes:
+        - sqlFile:
+            path: 006_prc_refresh_materialized_views_concurrent.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/07_procedures/006_prc_refresh_materialized_views_concurrent.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

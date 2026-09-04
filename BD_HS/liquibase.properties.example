@@ -1,0 +1,6 @@
+# Configuracion local de Liquibase. No pongas secretos reales en este archivo.
+changeLogFile=changelog-master.yaml
+url=jdbc:postgresql://localhost:5433/hidro_smart
+username=hidro_smart_liquibase
+password=CAMBIA_ESTA_CONTRASENA_LIQUIBASE
+driver=org.postgresql.Driver

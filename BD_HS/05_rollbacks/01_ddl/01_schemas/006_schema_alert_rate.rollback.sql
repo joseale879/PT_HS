@@ -1,0 +1,1 @@
+DROP SCHEMA IF EXISTS alert_rate CASCADE;

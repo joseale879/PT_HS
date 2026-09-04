@@ -1,0 +1,223 @@
+databaseChangeLog:
+  - changeSet:
+      id: d00809f0-e1d2-4c3b-a4b5-c6d7e8f90001
+      author: Hidro_Smarth
+      comment: "Enable row-level security and create row access policies."
+      changes:
+        - sqlFile:
+            path: 001_rls_policies.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/001_rls_policies.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 20260821-readonly-rls-policies
+      author: Hidro_Smarth
+      comment: "Allow the read-only reporting role to read RLS-protected tables."
+      changes:
+        - sqlFile:
+            path: 002_readonly_rls_policies.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/002_readonly_rls_policies.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 20260822-domain-rls-policies
+      author: Hidro_Smarth
+      comment: "Protect user, home, consumption, alert and support data with RLS."
+      changes:
+        - sqlFile:
+            path: 003_rls_domain_tables.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/003_rls_domain_tables.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 20260823-ingest-rls-policy
+      author: Hidro_Smarth
+      comment: "Allows the isolated ingestion role to insert sensor readings only."
+      changes:
+        - sql: |
+            CREATE POLICY sensor_reading_ingest_insert ON consumption.sensor_reading
+                FOR INSERT TO hidro_smart_ingest
+                WITH CHECK (TRUE);
+      rollback:
+        - sql: DROP POLICY IF EXISTS sensor_reading_ingest_insert ON consumption.sensor_reading;
+
+  - changeSet:
+      id: 20260823-device-home-write-rls
+      author: Hidro_Smarth
+      comment: "Allows controlled backend creation of devices and owner-controlled home-device assignments."
+      changes:
+        - sql: |
+            CREATE POLICY device_backend_insert ON device.device
+                FOR INSERT TO hidro_smart_app WITH CHECK (TRUE);
+            CREATE POLICY home_device_owner_insert ON home.home_device
+                FOR INSERT TO hidro_smart_app
+                WITH CHECK (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id()));
+            CREATE POLICY home_device_owner_update_delete ON home.home_device
+                FOR UPDATE TO hidro_smart_app
+                USING (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id()))
+                WITH CHECK (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id()));
+            CREATE POLICY home_device_owner_delete ON home.home_device
+                FOR DELETE TO hidro_smart_app
+                USING (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id()));
+      rollback:
+        - sql: |
+            DROP POLICY IF EXISTS home_device_owner_delete ON home.home_device;
+            DROP POLICY IF EXISTS home_device_owner_update_delete ON home.home_device;
+            DROP POLICY IF EXISTS home_device_owner_insert ON home.home_device;
+            DROP POLICY IF EXISTS device_backend_insert ON device.device;
+
+  - changeSet:
+      id: 20260824-home-membership-rls-hardening
+      author: Hidro_Smarth
+      comment: "Separates home membership read access from owner-only membership mutations."
+      changes:
+        - sql: |
+            DROP POLICY IF EXISTS home_user_member_access ON home.home_user;
+            CREATE POLICY home_user_member_select ON home.home_user FOR SELECT TO hidro_smart_app USING (home.fn_is_home_member(home_id, user_account.fn_app_current_user_id()));
+            CREATE POLICY home_user_owner_insert ON home.home_user FOR INSERT TO hidro_smart_app WITH CHECK (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id()));
+            CREATE POLICY home_user_owner_update ON home.home_user FOR UPDATE TO hidro_smart_app USING (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id())) WITH CHECK (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id()));
+            CREATE POLICY home_user_owner_delete ON home.home_user FOR DELETE TO hidro_smart_app USING (home.fn_is_home_owner(home_id, user_account.fn_app_current_user_id()));
+      rollback:
+        - sql: |
+            DROP POLICY IF EXISTS home_user_owner_delete ON home.home_user;
+            DROP POLICY IF EXISTS home_user_owner_update ON home.home_user;
+            DROP POLICY IF EXISTS home_user_owner_insert ON home.home_user;
+            DROP POLICY IF EXISTS home_user_member_select ON home.home_user;
+            CREATE POLICY home_user_member_access ON home.home_user
+                FOR ALL TO hidro_smart_app
+                USING (home.fn_is_home_member(home_id, user_account.fn_app_current_user_id()))
+                WITH CHECK (home.fn_is_home_member(home_id, user_account.fn_app_current_user_id()));
+
+  - changeSet:
+      id: 20260825-ingest-rls-hardening
+      author: Hidro_Smarth
+      comment: "Restricts IoT ingestion to active devices assigned to the submitted home."
+      changes:
+        - sqlFile:
+            path: 004_ingest_rls_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/004_ingest_rls_hardening.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-rbac-policy-enforcement
+      author: Hidro_Smarth
+      comment: "Makes row-level writes depend on the functional RBAC permissions."
+      changes:
+        - sqlFile:
+            path: 005_rbac_policy_enforcement.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/005_rbac_policy_enforcement.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260826-device-update-scope
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,policy,device,security,rls"
+      comment: "Requires devices.manage and active home membership when updating a device."
+      changes:
+        - sqlFile:
+            path: 006_device_update_scope.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/006_device_update_scope.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260827-private-domain-rls
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,policy,security,rls,privacy,device,home"
+      comment: "Adds row-level isolation to private profile, membership, IoT history and privacy tables."
+      changes:
+        - sqlFile:
+            path: 007_private_domain_rls.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/007_private_domain_rls.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260829-ingest-security-definer-policy
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,policy,security,rls,ingest,iot"
+      comment: "Validates IoT readings through the protected device-home function and removes broad ingest policies."
+      changes:
+        - sqlFile:
+            path: 008_ingest_security_definer.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/008_ingest_security_definer.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260831-device-history-insert-policy
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,policy,security,rls,device"
+      comment: "Restricts device history inserts to authorized managers acting on their own user context."
+      changes:
+        - sqlFile:
+            path: 009_device_history_insert.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/009_device_history_insert.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260902-ticket-response-owner-visibility
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,rls,support,tickets"
+      comment: "Allows ticket owners to read the complete response history of their tickets."
+      changes:
+        - sqlFile:
+            path: 019_ticket_response_owner_visibility.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/019_ticket_response_owner_visibility.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

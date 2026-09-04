@@ -1,0 +1,2 @@
+class VacationController { constructor(d){Object.assign(this,d);} async get(req,res){res.json({data:await this.getVacationMode.execute({userId:req.user.id,homeId:req.params.homeId,date:req.query.date})});} async save(req,res){res.json({data:await this.saveVacationMode.execute({userId:req.user.id,homeId:req.params.homeId,...req.body})});} async remove(req,res){await this.deleteVacationMode.execute({userId:req.user.id,homeId:req.params.homeId});res.status(204).send();} }
+module.exports={VacationController};

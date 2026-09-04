@@ -1,0 +1,2 @@
+class RoleController { constructor(d){Object.assign(this,d);} async list(req,res){res.json({data:await this.listUserRoles.execute({userId:req.user.id,targetUserId:req.params.userId})});} async assign(req,res){res.status(201).json({data:await this.assignUserRole.execute({userId:req.user.id,targetUserId:req.params.userId,roleName:req.body?.roleName})});} async remove(req,res){await this.removeUserRole.execute({userId:req.user.id,targetUserId:req.params.userId,roleName:req.body?.roleName||req.query.roleName});res.status(204).send();} }
+module.exports={RoleController};

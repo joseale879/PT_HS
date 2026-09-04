@@ -1,0 +1,1 @@
+REVOKE REFERENCES ON home.home_device FROM hidro_smart_ingest;

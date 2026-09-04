@@ -1,0 +1,126 @@
+databaseChangeLog:
+  - changeSet:
+      id: 4252a8b3-1e8f-4a8d-a9d2-fd527ab70213
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,materialized-views,consumption"
+      comment: Creates a materialized view with monthly consumption aggregates by household.
+      changes:
+        - sqlFile:
+            path: 001_mv_home_monthly_consumption.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DROP MATERIALIZED VIEW IF EXISTS consumption.mv_home_monthly_consumption;
+
+  - changeSet:
+      id: b8f0c6d2-0e9a-4fd2-a0b5-2d75c4d0e349
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,materialized-views,alert"
+      comment: Creates a materialized view summarizing pending alerts by household.
+      changes:
+        - sqlFile:
+            path: 002_mv_pending_alerts.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DROP MATERIALIZED VIEW IF EXISTS alert_rate.mv_pending_alerts;
+
+  - changeSet:
+      id: c3f7d0b1-9d2b-4db1-9f3a-207c9b57de93
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,materialized-views,device"
+      comment: Creates a materialized view with active device counts and connection summary per household.
+      changes:
+        - sqlFile:
+            path: 003_mv_active_devices.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DROP MATERIALIZED VIEW IF EXISTS device.mv_active_devices;
+
+  - changeSet:
+      id: 6f1f15d4-7c9f-4e8a-b1d2-3a5c7e9f0124
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,materialized-views,recommendation"
+      comment: Creates a materialized view summarizing recommendations by home.
+      changes:
+        - sqlFile:
+            path: 004_mv_recommendation_summary.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DROP MATERIALIZED VIEW IF EXISTS analytics_support.mv_recommendation_summary;
+
+  - changeSet:
+      id: 7a2e26e5-8d0a-4f9b-c2e3-4b6d8f0a1235
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,materialized-views,consumption"
+      comment: Creates a materialized view with average hourly consumption for the last 30 days.
+      changes:
+        - sqlFile:
+            path: 005_mv_hourly_consumption_avg.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP MATERIALIZED VIEW IF EXISTS consumption.mv_hourly_consumption_avg;
+            CREATE MATERIALIZED VIEW consumption.mv_hourly_consumption_avg AS
+            SELECT
+                EXTRACT(HOUR FROM sr.recorded_at)::INTEGER AS hour,
+                ROUND(AVG(sr.consumption_m3)::NUMERIC, 4) AS avg_consumption_m3,
+                ROUND(AVG(sr.consumption_liters)::NUMERIC, 2) AS avg_consumption_liters,
+                COUNT(*) AS sample_count,
+                NOW() AS refreshed_at
+            FROM consumption.sensor_reading sr
+            WHERE sr.recorded_at > NOW() - INTERVAL '30 days'
+              AND sr.consumption_m3 > 0
+            GROUP BY EXTRACT(HOUR FROM sr.recorded_at)
+            ORDER BY hour;
+            CREATE UNIQUE INDEX idx_mv_hourly_consumption_avg_hour
+                ON consumption.mv_hourly_consumption_avg (hour);
+
+  - changeSet:
+      id: 20260824-mv-hourly-by-home
+      author: Hidro_Smarth
+      comment: "Prevents hourly consumption analytics from mixing data between homes."
+      changes:
+        - sqlFile:
+            path: 006_mv_hourly_consumption_by_home.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            DROP MATERIALIZED VIEW IF EXISTS consumption.mv_hourly_consumption_avg;
+            CREATE MATERIALIZED VIEW consumption.mv_hourly_consumption_avg AS
+            SELECT
+                EXTRACT(HOUR FROM sr.recorded_at)::INTEGER AS hour,
+                ROUND(AVG(sr.consumption_m3)::NUMERIC, 4) AS avg_consumption_m3,
+                ROUND(AVG(sr.consumption_liters)::NUMERIC, 2) AS avg_consumption_liters,
+                COUNT(*) AS sample_count,
+                NOW() AS refreshed_at
+            FROM consumption.sensor_reading sr
+            WHERE sr.recorded_at > NOW() - INTERVAL '30 days'
+              AND sr.consumption_m3 > 0
+            GROUP BY EXTRACT(HOUR FROM sr.recorded_at)
+            ORDER BY hour;
+            CREATE UNIQUE INDEX idx_mv_hourly_consumption_avg_hour
+                ON consumption.mv_hourly_consumption_avg (hour);
+
+  - changeSet:
+      id: 20260825-mv-monthly-all-history
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,materialized-views,consumption"
+      comment: "Removes the hard-coded 2024 cutoff from monthly consumption reporting."
+      changes:
+        - sqlFile:
+            path: 007_mv_home_monthly_all_history.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/05_materialized_views/007_mv_home_monthly_all_history.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

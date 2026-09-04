@@ -1,0 +1,219 @@
+databaseChangeLog:
+  # ============================================================
+  # DOMINIO 1: USUARIOS Y AUTENTICACIÓN
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-001-idx-user-account
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,user_account"
+      comment: Creates indexes for user_account domain.
+      changes:
+        - sqlFile:
+            path: 001_idx_user_account.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/001_idx_user_account.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 2: PREFERENCIAS
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-002-idx-preference
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,preference"
+      comment: Creates indexes for preference domain.
+      changes:
+        - sqlFile:
+            path: 002_idx_preference.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/002_idx_preference.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 3: HOGARES Y MIEMBROS
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-003-idx-home
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,home"
+      comment: Creates indexes for home domain.
+      changes:
+        - sqlFile:
+            path: 003_idx_home.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/003_idx_home.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 4: DISPOSITIVOS IoT
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-004-idx-device
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,device"
+      comment: Creates indexes for device domain.
+      changes:
+        - sqlFile:
+            path: 004_idx_device.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/004_idx_device.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 5: CONSUMO Y MONITOREO
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-005-idx-consumption
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,consumption"
+      comment: Creates indexes for consumption domain.
+      changes:
+        - sqlFile:
+            path: 005_idx_consumption.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/005_idx_consumption.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 6: ALERTAS, TARIFAS Y CONTROL
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-006-idx-alert-rate
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,alert_rate"
+      comment: Creates indexes for alert_rate domain.
+      changes:
+        - sqlFile:
+            path: 006_idx_alert_rate.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/006_idx_alert_rate.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 7: REPORTES, ANÁLISIS Y SOPORTE
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-007-idx-analytics-support
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,analytics_support"
+      comment: Creates indexes for analytics_support domain.
+      changes:
+        - sqlFile:
+            path: 007_idx_analytics_support.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/007_idx_analytics_support.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 8: AUDITORÍA Y LOGS
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-008-idx-audit
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,audit"
+      comment: Creates indexes for audit domain.
+      changes:
+        - sqlFile:
+            path: 008_idx_audit.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/008_idx_audit.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 9: PRIVACIDAD Y ARCO
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-009-idx-privacy
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,privacy"
+      comment: Creates indexes for privacy domain.
+      changes:
+        - sqlFile:
+            path: 009_idx_privacy.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/009_idx_privacy.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-case-insensitive-identity-indexes
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,user_account,security"
+      comment: "Prevents duplicate usernames and emails regardless of letter case and enforces one login-attempt row per user."
+      changes:
+        - sqlFile:
+            path: 010_idx_case_insensitive_identity.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/010_idx_case_insensitive_identity.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-integrity-dedup-indexes
+      author: Hidro_Smarth
+      comment: "Prevents duplicate pending membership requests and active alert rules."
+      changes:
+        - sqlFile:
+            path: 011_integrity_dedup.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/011_integrity_dedup.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260826-mv-concurrent-refresh-keys
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,materialized-view,performance"
+      comment: "Adds the unique keys required for concurrent materialized-view refreshes."
+      changes:
+        - sqlFile:
+            path: 012_mv_concurrent_refresh_keys.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/012_mv_concurrent_refresh_keys.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 78bf1438-0529-4c1a-aced-fbd01a6b1c75
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,extensions,uuid-ossp"
+      comment: Enables the uuid-ossp extension for UUID generation compatibility.
+      changes:
+        - sqlFile:
+            path: 001_enable_uuid_extension.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/00_extensions/001_enable_uuid_extension.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 84aeb650-0f93-4d97-8f32-90df2da1f6a3
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,extensions,pgcrypto"
+      comment: Enables the pgcrypto extension for gen_random_uuid().
+      changes:
+        - sqlFile:
+            path: 002_enable_pgcrypto_extension.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/00_extensions/002_enable_pgcrypto_extension.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+  - changeSet:
+      id: 548b41e1-8eb3-46d4-9e46-ffde7928fbcb
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,extensions,btree-gist"
+      comment: Enables the btree_gist extension for exclusion constraints.
+      changes:
+        - sqlFile:
+            path: 001_enable_btree_gist_extension.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/00_extensions/001_enable_btree_gist_extension.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false

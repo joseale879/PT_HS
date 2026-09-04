@@ -1,0 +1,5 @@
+.env*
+!.env.example
+.env.shared
+liquibase.properties
+docs/credenciales-locales.md

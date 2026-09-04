@@ -1,0 +1,140 @@
+databaseChangeLog:
+  # ===================================================================
+  # DML INSERTS — BASE DATA
+  # ===================================================================
+
+  - changeSet:
+      id: dml-insert-roles
+      author: Hidro_Smarth
+      labels: "insert,data,roles"
+      comment: "Insert base application roles."
+      changes:
+        - sqlFile:
+            path: 001_roles.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM user_account.role WHERE name IN ('Administrator', 'Support', 'HomeUser', 'Guest');
+
+  - changeSet:
+      id: dml-insert-languages
+      author: Hidro_Smarth
+      labels: "insert,data,languages"
+      comment: "Insert supported languages."
+      changes:
+        - sqlFile:
+            path: 002_languages.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM preference.language WHERE code IN ('es', 'en');
+
+  - changeSet:
+      id: dml-insert-currencies
+      author: Hidro_Smarth
+      labels: "insert,data,currencies"
+      comment: "Insert supported currencies."
+      changes:
+        - sqlFile:
+            path: 003_currencies.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM preference.currency WHERE code IN ('COP', 'USD', 'EUR', 'MXN');
+
+  - changeSet:
+      id: dml-insert-themes
+      author: Hidro_Smarth
+      labels: "insert,data,themes"
+      comment: "Insert available UI themes."
+      changes:
+        - sqlFile:
+            path: 004_themes.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM preference.theme WHERE name IN ('Light', 'Dark', 'High Contrast');
+
+  - changeSet:
+      id: dml-insert-estratos
+      author: Hidro_Smarth
+      labels: "insert,data,estratos"
+      comment: "Insert socioeconomic strata catalog for billing and tariff logic."
+      changes:
+        - sqlFile:
+            path: 005_estratos.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM alert_rate.estratos WHERE numero_estrato IN (1, 2, 3, 4, 5, 6);
+
+  - changeSet:
+      id: dml-insert-ticket-categories
+      author: Hidro_Smarth
+      labels: "insert,data,ticket-categories"
+      comment: "Insert standard ticket categories."
+      changes:
+        - sqlFile:
+            path: 006_ticket_categories.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM analytics_support.ticket_category WHERE name IN ('Dispositivo', 'Reportes', 'Tarifas', 'Detección', 'Otros');
+
+  - changeSet:
+      id: dml-insert-ticket-priorities
+      author: Hidro_Smarth
+      labels: "insert,data,ticket-priorities"
+      comment: "Insert standard ticket priorities."
+      changes:
+        - sqlFile:
+            path: 007_ticket_priorities.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM analytics_support.ticket_priority WHERE name IN ('Baja', 'Media', 'Alta');
+
+  - changeSet:
+      id: dml-insert-ticket-statuses
+      author: Hidro_Smarth
+      labels: "insert,data,ticket-statuses"
+      comment: "Insert standard ticket statuses."
+      changes:
+        - sqlFile:
+            path: 008_ticket_statuses.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM analytics_support.ticket_status WHERE name IN ('Abierto', 'En Proceso', 'Resuelto', 'Cerrado');
+
+  - changeSet:
+      id: 20260822-default-password-policy
+      author: Hidro_Smarth
+      labels: "insert,data,password-policy"
+      comment: "Creates the default password policy and sets the 15-minute lockout default."
+      changes:
+        - sqlFile:
+            path: 009_password_policy.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM user_account.password_policy WHERE name = 'Default';
+
+  - changeSet:
+      id: 20260825-rbac-permissions
+      author: Hidro_Smarth
+      labels: "insert,data,rbac,security"
+      comment: "Seeds functional permissions and maps them to Administrator, Support, HomeUser and Guest."
+      changes:
+        - sqlFile:
+            path: 010_rbac_permissions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/02_dml/00_inserts/010_rbac_permissions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

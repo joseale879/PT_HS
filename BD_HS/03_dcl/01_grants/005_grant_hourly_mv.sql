@@ -1,0 +1,1 @@
+GRANT SELECT ON consumption.mv_hourly_consumption_avg TO hidro_smart_app, hidro_smart_readonly;

@@ -1,0 +1,6 @@
+.env*
+.git
+liquibase.properties
+docs/credenciales-locales.md
+docs/
+*.log

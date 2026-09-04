@@ -1,0 +1,12 @@
+const { withTransaction } = require('../../../../infrastructure/db');
+class PostgresGoalRepository {
+  map(r) { return { goalId:r.goal_id, homeId:r.home_id, type:r.type, targetM3:Number(r.target_m3), targetBudget:r.target_budget == null ? null : Number(r.target_budget), periodStart:r.period_start, periodEnd:r.period_end, achieved:r.achieved, createdAt:r.created_at, updatedAt:r.updated_at }; }
+  fields() { return 'goal_id, home_id, type, target_m3, target_budget, period_start, period_end, achieved, created_at, updated_at'; }
+  async create({userId,homeId,type,targetM3,targetBudget,periodStart,periodEnd}) { const q=await withTransaction(userId,c=>c.query(`INSERT INTO home.saving_goal(home_id,type,target_m3,target_budget,period_start,period_end) VALUES($1,$2,$3,$4,$5,$6) RETURNING ${this.fields()}`,[homeId,type,targetM3,targetBudget,periodStart,periodEnd])); return this.map(q.rows[0]); }
+  async list({userId,homeId}) { const q=await withTransaction(userId,c=>c.query(`SELECT ${this.fields()} FROM home.saving_goal ${homeId?'WHERE home_id=$1':''} ORDER BY created_at DESC`,homeId?[homeId]:[])); return q.rows.map(r=>this.map(r)); }
+  async findById({userId,goalId}) { const q=await withTransaction(userId,c=>c.query(`SELECT ${this.fields()} FROM home.saving_goal WHERE goal_id=$1`,[goalId])); if(!q.rows[0]){const e=new Error('Meta no encontrada');e.status=404;throw e;} return this.map(q.rows[0]); }
+  async update({userId,goalId,type,targetM3,targetBudget,periodStart,periodEnd,achieved}) { const q=await withTransaction(userId,c=>c.query(`UPDATE home.saving_goal SET type=$2,target_m3=$3,target_budget=$4,period_start=$5,period_end=$6,achieved=COALESCE($7,achieved),updated_at=now() WHERE goal_id=$1 RETURNING ${this.fields()}`,[goalId,type,targetM3,targetBudget,periodStart,periodEnd,achieved ?? null])); if(!q.rows[0]){const e=new Error('Meta no encontrada');e.status=404;throw e;} return this.map(q.rows[0]); }
+  async delete({userId,goalId}) { const q=await withTransaction(userId,c=>c.query('DELETE FROM home.saving_goal WHERE goal_id=$1 RETURNING goal_id',[goalId])); if(!q.rows[0]){const e=new Error('Meta no encontrada');e.status=404;throw e;} }
+  async progress({userId,goalId}) { const q=await withTransaction(userId,c=>c.query('SELECT analytics_support.fn_get_goal_progress($1::uuid) AS progress',[goalId])); if(q.rows[0]?.progress==null){const e=new Error('Meta no encontrada');e.status=404;throw e;} return { goalId, progress:Number(q.rows[0].progress) }; }
+}
+module.exports = { PostgresGoalRepository };

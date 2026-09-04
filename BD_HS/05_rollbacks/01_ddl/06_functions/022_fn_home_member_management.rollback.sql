@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS home.fn_add_home_member(UUID, VARCHAR, VARCHAR);

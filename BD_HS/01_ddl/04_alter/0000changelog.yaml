@@ -1,0 +1,287 @@
+databaseChangeLog:
+  # ============================================================
+  # DOMINIO 1: USUARIOS Y AUTENTICACIÓN
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-001-fk-user-account
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account"
+      comment: Adds foreign keys for user_account domain.
+      changes:
+        - sqlFile:
+            path: 001_fk_user_account.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/001_fk_user_account.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 3: HOGARES Y MIEMBROS
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-003-fk-home
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,home"
+      comment: Adds foreign keys for home domain.
+      changes:
+        - sqlFile:
+            path: 003_fk_home.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/003_fk_home.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 4: DISPOSITIVOS IoT
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-004-fk-device
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device"
+      comment: Adds foreign keys for device domain.
+      changes:
+        - sqlFile:
+            path: 004_fk_device.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/004_fk_device.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 6: ALERTAS, TARIFAS Y CONTROL
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-006-fk-alert-rate
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,alert_rate"
+      comment: Adds foreign keys for alert_rate domain.
+      changes:
+        - sqlFile:
+            path: 006_fk_alert_rate.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/006_fk_alert_rate.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 7: REPORTES, ANÁLISIS Y SOPORTE
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-007-fk-analytics-support
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,analytics_support"
+      comment: Adds foreign keys for analytics_support domain.
+      changes:
+        - sqlFile:
+            path: 007_fk_analytics_support.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/007_fk_analytics_support.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 9: PRIVACIDAD Y ARCO
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-009-fk-privacy
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,privacy"
+      comment: Adds foreign keys for privacy domain.
+      changes:
+        - sqlFile:
+            path: 009_fk_privacy.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/009_fk_privacy.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # AGREGAR COLUMNA umbral_alerta A DEVICE (Dominio 4)
+  # ============================================================
+  - changeSet:
+      id: a1b2c3d4-004-add-umbral-alerta
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device"
+      comment: Adds umbral_alerta column to device table.
+      changes:
+        - sql: ALTER TABLE device.device ADD COLUMN IF NOT EXISTS umbral_alerta DECIMAL(10,4) NULL;
+      rollback:
+        - sql: ALTER TABLE device.device DROP COLUMN IF EXISTS umbral_alerta;
+
+  - changeSet:
+      id: 20260822-srs-alignment
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,srs"
+      comment: "Aligns document types, home suspension tracking and positive device calibration values."
+      changes:
+        - sqlFile:
+            path: 010_srs_alignment.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            ALTER TABLE device.calibration_history DROP CONSTRAINT IF EXISTS ck_calibration_new_factor_positive;
+            ALTER TABLE device.device DROP CONSTRAINT IF EXISTS ck_device_umbral_alerta_positive;
+            ALTER TABLE device.device DROP CONSTRAINT IF EXISTS ck_device_calibration_factor_positive;
+            ALTER TABLE home.home DROP CONSTRAINT IF EXISTS fk_home_suspended_by;
+            ALTER TABLE home.home DROP COLUMN IF EXISTS suspended_by;
+            ALTER TABLE user_account.user_profile DROP CONSTRAINT IF EXISTS ck_user_profile_document_type;
+            ALTER TABLE user_account.user_profile ADD CONSTRAINT user_profile_document_type_check CHECK (document_type IN ('CC', 'CE'));
+            ALTER TABLE user_account.user_profile DROP COLUMN IF EXISTS photo_url;
+            ALTER TABLE user_account.password_policy ALTER COLUMN lockout_minutes SET DEFAULT 30;
+
+  - changeSet:
+      id: 20260823-integrity-and-ticket-archive
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,integrity,analytics_support"
+      comment: "Adds ticket archival timestamp and enforces the device-home pair for sensor readings."
+      changes:
+        - sqlFile:
+            path: 011_integrity_and_archive.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: |
+            ALTER TABLE consumption.sensor_reading DROP CONSTRAINT IF EXISTS fk_sensor_reading_home_device;
+            ALTER TABLE analytics_support.ticket DROP COLUMN IF EXISTS archived_at;
+
+  - changeSet:
+      id: 20260823-remove-duplicate-inline-fks
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,cleanup,foreign-keys"
+      comment: "Removes automatic inline foreign keys duplicated by the explicit alter constraints."
+      changes:
+        - sqlFile:
+            path: 012_remove_duplicate_inline_fks.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: |
+            ALTER TABLE user_account.user_account ADD CONSTRAINT user_account_suspended_by_fkey FOREIGN KEY (suspended_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE user_account.user_role ADD CONSTRAINT user_role_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE home.home_user ADD CONSTRAINT home_user_added_by_fkey FOREIGN KEY (added_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE home.home_user_function ADD CONSTRAINT home_user_function_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE home.home_member_request ADD CONSTRAINT home_member_request_answered_by_fkey FOREIGN KEY (answered_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE device.calibration_history ADD CONSTRAINT calibration_history_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE device.device_history ADD CONSTRAINT device_history_registered_by_fkey FOREIGN KEY (registered_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE alert_rate.threshold_configuration ADD CONSTRAINT threshold_configuration_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE alert_rate.alert_rule ADD CONSTRAINT alert_rule_created_by_fkey FOREIGN KEY (created_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE analytics_support.recommendation ADD CONSTRAINT recommendation_created_by_fkey FOREIGN KEY (created_by) REFERENCES user_account.user_account(user_account_id);
+            ALTER TABLE privacy.arco_request ADD CONSTRAINT arco_request_answered_by_fkey FOREIGN KEY (answered_by) REFERENCES user_account.user_account(user_account_id);
+
+  - changeSet:
+      id: 20260825-mfa-protection
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account,security"
+      comment: "Adds protected MFA ciphertext and backup-code hash fields while retaining legacy columns for migration."
+      changes:
+        - sqlFile:
+            path: 013_mfa_protection.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/013_mfa_protection.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260825-retain-history-and-tickets
+      author: Hidro_Smarth
+      comment: "Prevents destructive cascades from deleting readings, histories or support tickets."
+      changes:
+        - sqlFile:
+            path: 014_retain_history_and_tickets.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/014_retain_history_and_tickets.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260826-device-status-integrity
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,integrity"
+      comment: "Makes suspension_reason mandatory only for Suspended devices; Low is an operational health state."
+      changes:
+        - sqlFile:
+            path: 016_device_status_integrity.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/016_device_status_integrity.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260827-privacy-retention-tier-fks
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,privacy,integrity,tier"
+      comment: "Preserves privacy evidence and references home tiers to the estratos catalog."
+      changes:
+        - sqlFile:
+            path: 017_privacy_retention_and_tier_fks.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260902-ticket-assignment
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,support,tickets"
+      comment: "Adds optional support-agent assignment to tickets."
+      changes:
+        - sqlFile:
+            path: 018_ticket_assignment.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260903-document-number-max-10
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user-profile,validation"
+      comment: "Restricts document numbers to numeric values with a maximum of 10 digits."
+      changes:
+        - sqlFile:
+            path: 019_document_number_max_10.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/018_ticket_assignment.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/017_privacy_retention_and_tier_fks.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

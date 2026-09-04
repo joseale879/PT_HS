@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS consumption.idx_sensor_reading_device_id;
+DROP INDEX IF EXISTS consumption.idx_sensor_reading_home_id;
+DROP INDEX IF EXISTS consumption.idx_sensor_reading_recorded_at;
+DROP INDEX IF EXISTS consumption.idx_sensor_reading_activity;
+DROP INDEX IF EXISTS consumption.idx_sensor_reading_home_date;
+DROP INDEX IF EXISTS consumption.idx_daily_consumption_summary_home_date;
+DROP INDEX IF EXISTS consumption.idx_hourly_consumption_history_home_date_hour;
+DROP INDEX IF EXISTS consumption.idx_monthly_consumption_history_home_year_month;
+DROP INDEX IF EXISTS consumption.idx_consumption_prediction_home_period;

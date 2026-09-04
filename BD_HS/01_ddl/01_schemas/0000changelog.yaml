@@ -1,0 +1,171 @@
+﻿databaseChangeLog:
+  # ============================================================
+  # DOMINIO 1: USUARIOS Y AUTENTICACIÓN
+  # ============================================================
+  - changeSet:
+      id: 001-schema-user-account
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,user_account"
+      comment: Creates schema for user_account domain.
+      changes:
+        - sqlFile:
+            path: 001_schema_user_account.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/001_schema_user_account.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 2: PREFERENCIAS
+  # ============================================================
+  - changeSet:
+      id: 002-schema-preference
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,preference"
+      comment: Creates schema for preference domain.
+      changes:
+        - sqlFile:
+            path: 002_schema_preference.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/002_schema_preference.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 3: HOGARES Y MIEMBROS
+  # ============================================================
+  - changeSet:
+      id: 003-schema-home
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,home"
+      comment: Creates schema for home domain.
+      changes:
+        - sqlFile:
+            path: 003_schema_home.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/003_schema_home.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 4: DISPOSITIVOS IoT
+  # ============================================================
+  - changeSet:
+      id: 004-schema-device
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,device"
+      comment: Creates schema for device domain.
+      changes:
+        - sqlFile:
+            path: 004_schema_device.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/004_schema_device.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 5: CONSUMO Y MONITOREO
+  # ============================================================
+  - changeSet:
+      id: 005-schema-consumption
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,consumption"
+      comment: Creates schema for consumption domain.
+      changes:
+        - sqlFile:
+            path: 005_schema_consumption.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/005_schema_consumption.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 6: ALERTAS, TARIFAS Y CONTROL
+  # ============================================================
+  - changeSet:
+      id: 006-schema-alert-rate
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,alert_rate"
+      comment: Creates schema for alert_rate domain.
+      changes:
+        - sqlFile:
+            path: 006_schema_alert_rate.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/006_schema_alert_rate.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 7: REPORTES, ANÁLISIS Y SOPORTE
+  # ============================================================
+  - changeSet:
+      id: 007-schema-analytics-support
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,analytics_support"
+      comment: Creates schema for analytics_support domain.
+      changes:
+        - sqlFile:
+            path: 007_schema_analytics_support.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/007_schema_analytics_support.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 8: AUDITORÍA Y LOGS
+  # ============================================================
+  - changeSet:
+      id: 008-schema-audit
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,audit"
+      comment: Creates schema for audit domain.
+      changes:
+        - sqlFile:
+            path: 008_schema_audit.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/008_schema_audit.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false
+
+  # ============================================================
+  # DOMINIO 9: PRIVACIDAD Y ARCO
+  # ============================================================
+  - changeSet:
+      id: 009-schema-privacy
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,schema,privacy"
+      comment: Creates schema for privacy domain.
+      changes:
+        - sqlFile:
+            path: 009_schema_privacy.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/01_schemas/009_schema_privacy.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false

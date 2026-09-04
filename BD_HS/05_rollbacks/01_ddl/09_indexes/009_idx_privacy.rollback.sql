@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS privacy.idx_user_consent_user_account_id;
+DROP INDEX IF EXISTS privacy.idx_user_consent_type;
+DROP INDEX IF EXISTS privacy.idx_user_consent_date;
+DROP INDEX IF EXISTS privacy.idx_user_consent_accepted_type;
+DROP INDEX IF EXISTS privacy.idx_arco_request_user_account_id;
+DROP INDEX IF EXISTS privacy.idx_arco_request_status;
+DROP INDEX IF EXISTS privacy.idx_arco_request_deadline_at;
+DROP INDEX IF EXISTS privacy.idx_arco_request_type;
+DROP INDEX IF EXISTS privacy.idx_arco_request_requested_at;

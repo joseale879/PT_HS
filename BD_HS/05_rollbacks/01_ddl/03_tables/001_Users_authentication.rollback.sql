@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS user_account.user_mfa CASCADE;
+DROP TABLE IF EXISTS user_account.session CASCADE;
+DROP TABLE IF EXISTS user_account.token CASCADE;
+DROP TABLE IF EXISTS user_account.password_reset_token CASCADE;
+DROP TABLE IF EXISTS user_account.login_attempt CASCADE;
+DROP TABLE IF EXISTS user_account.user_credential CASCADE;
+DROP TABLE IF EXISTS user_account.password_policy CASCADE;
+DROP TABLE IF EXISTS user_account.role_permission CASCADE;
+DROP TABLE IF EXISTS user_account.user_role CASCADE;
+DROP TABLE IF EXISTS user_account.permission CASCADE;
+DROP TABLE IF EXISTS user_account.role CASCADE;
+DROP TABLE IF EXISTS user_account.user_profile CASCADE;
+DROP TABLE IF EXISTS user_account.user_account CASCADE;

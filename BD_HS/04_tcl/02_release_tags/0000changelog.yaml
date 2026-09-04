@@ -1,0 +1,13 @@
+﻿databaseChangeLog:
+  - changeSet:
+      id: d3b8f3a7-486a-4f4a-9a2b-7c8d9e0f1b2c
+      author: Hidro_Smarth
+      labels: "tcl,release-tags,metadata"
+      comment: Defines a database release tag by storing a stable comment in the schema.
+      changes:
+        - sqlFile:
+            path: 001_tag_v1_0_0.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sql: DELETE FROM public.schema_version WHERE version = '1.0.0';

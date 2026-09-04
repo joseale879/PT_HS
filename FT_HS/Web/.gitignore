@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+out/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.log
+
+# Editor / OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Cache
+.cache/
