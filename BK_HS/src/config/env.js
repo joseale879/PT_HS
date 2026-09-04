@@ -16,8 +16,8 @@ function getEnv() {
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
     smtp: {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT || 587),
+      host: process.env.SMTP_HOST || 'localhost',
+      port: Number(process.env.SMTP_PORT || 1025),
       secure: process.env.SMTP_SECURE === 'true',
       user: process.env.SMTP_USER,
       password: process.env.SMTP_PASSWORD,

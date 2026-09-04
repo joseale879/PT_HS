@@ -9,6 +9,11 @@ const repoRoot = path.resolve(mobileRoot, '..');
 const webRoot = path.join(repoRoot, 'Web');
 const distRoot = path.join(mobileRoot, '.web-dist');
 const outFile = path.join(mobileRoot, 'src', 'webBundle.js');
+const localApiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+const buildEnv = {
+  ...process.env,
+  VITE_API_URL: process.env.VITE_API_URL ?? localApiUrl
+};
 
 const mimeTypes = new Map([
   ['.css', 'text/css'],
@@ -66,11 +71,13 @@ assertPathExists(webRoot, 'Proyecto web');
 if (process.platform === 'win32') {
   execFileSync(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `npm run build -- --outDir ../mobile/.web-dist --emptyOutDir`], {
     cwd: webRoot,
+    env: buildEnv,
     stdio: 'inherit'
   });
 } else {
   execFileSync('npm', ['run', 'build', '--', '--outDir', distRoot, '--emptyOutDir'], {
     cwd: webRoot,
+    env: buildEnv,
     stdio: 'inherit'
   });
 }

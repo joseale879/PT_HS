@@ -94,7 +94,7 @@ export default function App() {
     const auditLog = {
       action: 'LOGIN',
       timestamp: new Date().toISOString(),
-      ipAddress: 'Backend'
+      ipAddress: 'Backend',
     };
     console.log('Auditoría:', auditLog);
 
@@ -108,7 +108,7 @@ export default function App() {
     const auditLog = {
       action: 'LOGOUT',
       role: userRole,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
     console.log('Auditoría:', auditLog);
 
@@ -146,7 +146,8 @@ export default function App() {
   };
 
   const handlePasswordReset = (email) => authApi.requestPasswordReset(email);
-  const handlePasswordResetComplete = ({ token, password }) => authApi.resetPassword(token, password).then(() => undefined);
+  const handlePasswordResetComplete = ({ token, password }) =>
+    authApi.resetPassword(token, password).then(() => undefined);
 
   const handleRegisterSuccess = () => {
     setCurrentView('login');
@@ -164,7 +165,11 @@ export default function App() {
           <div className="text-center space-y-4">
             <div className="relative flex items-center justify-center">
               <div className="bg-blue-600 p-4 rounded-2xl">
-                <img src={logoImage} alt="HidroSmart Logo" className="h-32 w-auto mx-auto animate-pulse" />
+                <img
+                  src={logoImage}
+                  alt="HidroSmart Logo"
+                  className="h-32 w-auto mx-auto animate-pulse"
+                />
               </div>
               <Loader2 className="size-10 text-blue-600 animate-spin absolute -bottom-2 -right-2" />
             </div>
@@ -193,7 +198,13 @@ export default function App() {
   if (currentView === 'register') {
     return (
       <ThemeProvider>
-        <RegisterScreen onRegister={handleRegister} onBack={handleBackToLogin} initialFormData={registrationDraft} initialLegalAccepted={legalAccepted} onReviewTerms={handleReviewTerms} />
+        <RegisterScreen
+          onRegister={handleRegister}
+          onBack={handleBackToLogin}
+          initialFormData={registrationDraft}
+          initialLegalAccepted={legalAccepted}
+          onReviewTerms={handleReviewTerms}
+        />
         <FloatingLanguageSwitcher />
         <Toaster />
       </ThemeProvider>
@@ -204,7 +215,12 @@ export default function App() {
   if (currentView === 'login') {
     return (
       <ThemeProvider>
-        <LoginScreen onLogin={handleLogin} onPasswordReset={handlePasswordReset} onPasswordResetComplete={handlePasswordResetComplete} onRegisterClick={handleRegisterClick} />
+        <LoginScreen
+          onLogin={handleLogin}
+          onPasswordReset={handlePasswordReset}
+          onPasswordResetComplete={handlePasswordResetComplete}
+          onRegisterClick={handleRegisterClick}
+        />
         <FloatingLanguageSwitcher />
         <Toaster />
       </ThemeProvider>

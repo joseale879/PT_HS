@@ -1,11 +1,24 @@
+# HidroSmart Web
 
-  # Web
+Frontend React/Vite con arquitectura Feature-First.
 
-  This is a code bundle for Web. The original project is available at https://www.figma.com/design/0zOBmy5JuETUlknQ8Sv91p/Web.
+## Ejecución local
 
-  ## Running the code
+Integrado con Docker desde la raíz:
 
-  Run `npm i` to install the dependencies.
+```powershell
+docker compose --env-file .env up -d --build
+```
 
-  Run `npm run dev` to start the development server.
-  
+Abre `http://localhost:5173`.
+
+Sin Docker:
+
+```powershell
+npm install
+npm run dev
+```
+
+En ejecución directa, `VITE_API_URL` debe apuntar a `http://localhost:3000/api/v1`. En Docker el build usa `/api/v1` y Nginx hace el proxy al servicio `backend`.
+
+Consulta `INTEGRACION.md`, `ARQUITECTURA_FRONTEND.md` y `ACCESO_DISPOSITIVOS.md` antes de cambiar rutas o conexiones.

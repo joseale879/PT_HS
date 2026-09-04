@@ -15,14 +15,31 @@ import {
   Shield,
   Wrench,
   Database,
-  Palette
+  Palette,
 } from 'lucide-react';
 import logoImage from '@/imports/aaa-Photoroom-1.png';
 import { Button } from '@shared/ui/button';
 import { Badge } from '@shared/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@shared/ui/sheet';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@shared/ui/alert-dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@shared/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@shared/ui/alert-dialog';
 import { DashboardHome } from '@features/dashboard/pages/DashboardPage';
 import { HomeManagement } from '@features/homes/pages/HomesPage';
 import { DeviceManagement } from '@features/devices/pages/DevicesPage';
@@ -56,47 +73,122 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    Promise.all([homesApi.list(), userApi.me()]).then(([homesResponse, userResponse]) => {
-      const availableHomes = (homesResponse.data as Array<{ homeId: string; name: string }>) || [];
-      setHomes(availableHomes);
-      setSelectedHomeId((current) => current || availableHomes[0]?.homeId || '');
-      setProfile(userResponse.data as { fullName?: string; email?: string });
-    }).catch(() => {
-      setHomes([]);
-      setSelectedHomeId('');
-    });
+    Promise.all([homesApi.list(), userApi.me()])
+      .then(([homesResponse, userResponse]) => {
+        const availableHomes =
+          (homesResponse.data as Array<{ homeId: string; name: string }>) || [];
+        setHomes(availableHomes);
+        setSelectedHomeId((current) => current || availableHomes[0]?.homeId || '');
+        setProfile(userResponse.data as { fullName?: string; email?: string });
+      })
+      .catch(() => {
+        setHomes([]);
+        setSelectedHomeId('');
+      });
   }, []);
 
   // RF6.2, RF20.1 - Menús según el rol del usuario
   const getMenuItems = () => {
     const baseItems = [
-      { id: 'dashboard', label: t('nav.home'), icon: Home, roles: ['admin', 'technician', 'user'], ariaLabel: t('nav.home') },
+      {
+        id: 'dashboard',
+        label: t('nav.home'),
+        icon: Home,
+        roles: ['admin', 'technician', 'user'],
+        ariaLabel: t('nav.home'),
+      },
     ];
 
     const adminItems = [
-      { id: 'admin-panel', label: t('nav.adminPanel'), icon: Shield, roles: ['admin'], ariaLabel: t('nav.adminPanel') },
-      { id: 'users', label: t('nav.users'), icon: Users, roles: ['admin'], ariaLabel: t('nav.users') },
-      { id: 'audit', label: t('nav.audit'), icon: Database, roles: ['admin'], ariaLabel: t('nav.audit') },
+      {
+        id: 'admin-panel',
+        label: t('nav.adminPanel'),
+        icon: Shield,
+        roles: ['admin'],
+        ariaLabel: t('nav.adminPanel'),
+      },
+      {
+        id: 'users',
+        label: t('nav.users'),
+        icon: Users,
+        roles: ['admin'],
+        ariaLabel: t('nav.users'),
+      },
+      {
+        id: 'audit',
+        label: t('nav.audit'),
+        icon: Database,
+        roles: ['admin'],
+        ariaLabel: t('nav.audit'),
+      },
     ];
 
     const technicianItems = [
-      { id: 'technician-panel', label: t('nav.technicianPanel'), icon: Wrench, roles: ['technician'], ariaLabel: t('nav.technicianPanel') },
+      {
+        id: 'technician-panel',
+        label: t('nav.technicianPanel'),
+        icon: Wrench,
+        roles: ['technician'],
+        ariaLabel: t('nav.technicianPanel'),
+      },
     ];
 
     const userItems = [
-      { id: 'homes', label: t('nav.homes'), icon: Building2, roles: ['user'], ariaLabel: t('nav.homes') },
-      { id: 'devices', label: t('nav.devices'), icon: Droplets, roles: ['admin', 'technician', 'user'], ariaLabel: t('nav.devices') },
-      { id: 'reports', label: t('nav.reports'), icon: BarChart3, roles: ['admin', 'user'], ariaLabel: t('nav.reports') },
-      { id: 'goals', label: t('nav.goals'), icon: Target, roles: ['user'], ariaLabel: t('nav.goals') },
-      { id: 'notifications', label: t('nav.notifications'), icon: Bell, roles: ['admin', 'technician', 'user'], ariaLabel: t('nav.notifications') },
-      { id: 'support', label: t('nav.support'), icon: Users, roles: ['admin', 'technician', 'user'], ariaLabel: t('nav.support') },
-      { id: 'settings', label: t('nav.settings'), icon: Settings, roles: ['admin', 'technician', 'user'], ariaLabel: t('nav.settings') },
+      {
+        id: 'homes',
+        label: t('nav.homes'),
+        icon: Building2,
+        roles: ['user'],
+        ariaLabel: t('nav.homes'),
+      },
+      {
+        id: 'devices',
+        label: t('nav.devices'),
+        icon: Droplets,
+        roles: ['admin', 'technician', 'user'],
+        ariaLabel: t('nav.devices'),
+      },
+      {
+        id: 'reports',
+        label: t('nav.reports'),
+        icon: BarChart3,
+        roles: ['admin', 'user'],
+        ariaLabel: t('nav.reports'),
+      },
+      {
+        id: 'goals',
+        label: t('nav.goals'),
+        icon: Target,
+        roles: ['user'],
+        ariaLabel: t('nav.goals'),
+      },
+      {
+        id: 'notifications',
+        label: t('nav.notifications'),
+        icon: Bell,
+        roles: ['admin', 'technician', 'user'],
+        ariaLabel: t('nav.notifications'),
+      },
+      {
+        id: 'support',
+        label: t('nav.support'),
+        icon: Users,
+        roles: ['admin', 'technician', 'user'],
+        ariaLabel: t('nav.support'),
+      },
+      {
+        id: 'settings',
+        label: t('nav.settings'),
+        icon: Settings,
+        roles: ['admin', 'technician', 'user'],
+        ariaLabel: t('nav.settings'),
+      },
     ];
 
     const allItems = [...baseItems, ...adminItems, ...technicianItems, ...userItems];
 
     // RF20.2 - Filtrar según el rol para restringir vistas
-    return allItems.filter(item => item.roles.includes(userRole));
+    return allItems.filter((item) => item.roles.includes(userRole));
   };
 
   const menuItems = getMenuItems();
@@ -104,7 +196,14 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
   // Información del usuario según el rol
   const getUserInfo = () => {
     const name = profile.fullName || profile.email || t('roles.user');
-    const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'HS';
+    const initials =
+      name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase() || 'HS';
     switch (userRole) {
       case 'admin':
         return { name, email: profile.email || '', initials, color: 'bg-red-600' };
@@ -120,7 +219,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
   const handleThemeChange = (newTheme: string) => {
     setTheme(newTheme as 'default' | 'dark' | 'green' | 'ocean');
     toast.success(t('settings.changesSaved'), {
-      description: `${t('settings.theme')}: ${t(`themes.${newTheme}`)}`
+      description: `${t('settings.theme')}: ${t(`themes.${newTheme}`)}`,
     });
   };
 
@@ -136,25 +235,43 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
       case 'dashboard':
         return <DashboardHome userRole={userRole} homeId={selectedHomeId} />;
       case 'admin-panel':
-        return userRole === 'admin' ? <AdminPanel /> : <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>;
+        return userRole === 'admin' ? (
+          <AdminPanel />
+        ) : (
+          <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
+        );
       case 'users':
-        return userRole === 'admin' ? <div className="text-center py-12 text-gray-600">{t('nav.users')} - {t('common.inDevelopment')}</div> : <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>;
+        return userRole === 'admin' ? (
+          <div className="text-center py-12 text-gray-600">
+            {t('nav.users')} - {t('common.inDevelopment')}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
+        );
       case 'audit':
-        return userRole === 'admin' ? <AuditLog /> : <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>;
+        return userRole === 'admin' ? (
+          <AuditLog />
+        ) : (
+          <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
+        );
       case 'support':
         return <SupportTickets />;
       case 'technician-panel':
-        return userRole === 'technician' ? <TechnicianPanel /> : <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>;
+        return userRole === 'technician' ? (
+          <TechnicianPanel />
+        ) : (
+          <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
+        );
       case 'homes':
         return <HomeManagement />;
       case 'devices':
         return <DeviceManagement userRole={userRole} />;
       case 'reports':
-        return <ReportsAnalytics />;
+        return <ReportsAnalytics homeId={selectedHomeId} />;
       case 'goals':
-        return <GoalsConfig />;
+        return <GoalsConfig homeId={selectedHomeId} />;
       case 'notifications':
-        return <NotificationsPanel />;
+        return <NotificationsPanel homeId={selectedHomeId} />;
       case 'settings':
         return <AccountSettings userRole={userRole} />;
       default:
@@ -186,18 +303,22 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
             </div>
             <SheetTitle className="text-white text-2xl hidrosmart-logo">{t('app.name')}</SheetTitle>
           </div>
-          <SheetDescription className="text-blue-100">
-            {t('app.tagline')}
-          </SheetDescription>
+          <SheetDescription className="text-blue-100">{t('app.tagline')}</SheetDescription>
           <div className="mt-4">
-            <Badge className={`${
-              userRole === 'admin' ? 'bg-red-600' :
-              userRole === 'technician' ? 'bg-orange-600' :
-              'bg-green-600'
-            } text-white`}>
-              {userRole === 'admin' ? `👑 ${t('roles.admin')}` :
-               userRole === 'technician' ? `🔧 ${t('roles.technician')}` :
-               `👤 ${t('roles.user')}`}
+            <Badge
+              className={`${
+                userRole === 'admin'
+                  ? 'bg-red-600'
+                  : userRole === 'technician'
+                    ? 'bg-orange-600'
+                    : 'bg-green-600'
+              } text-white`}
+            >
+              {userRole === 'admin'
+                ? `👑 ${t('roles.admin')}`
+                : userRole === 'technician'
+                  ? `🔧 ${t('roles.technician')}`
+                  : `👤 ${t('roles.user')}`}
             </Badge>
           </div>
         </SheetHeader>
@@ -242,15 +363,11 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{t('auth.logout')}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('common.logoutConfirmation')}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{t('common.logoutConfirmation')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleLogout}>
-                  {t('auth.logout')}
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleLogout}>{t('auth.logout')}</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -273,14 +390,20 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
 
           {/* Badge de rol */}
           <div className="mb-6">
-            <Badge className={`${
-              userRole === 'admin' ? 'bg-red-600' :
-              userRole === 'technician' ? 'bg-orange-600' :
-              'bg-green-600'
-            } text-white`}>
-              {userRole === 'admin' ? `👑 ${t('roles.admin')}` :
-               userRole === 'technician' ? `🔧 ${t('roles.technician')}` :
-               `👤 ${t('roles.user')}`}
+            <Badge
+              className={`${
+                userRole === 'admin'
+                  ? 'bg-red-600'
+                  : userRole === 'technician'
+                    ? 'bg-orange-600'
+                    : 'bg-green-600'
+              } text-white`}
+            >
+              {userRole === 'admin'
+                ? `👑 ${t('roles.admin')}`
+                : userRole === 'technician'
+                  ? `🔧 ${t('roles.technician')}`
+                  : `👤 ${t('roles.user')}`}
             </Badge>
           </div>
 
@@ -323,15 +446,11 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{t('auth.logout')}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('common.logoutConfirmation')}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{t('common.logoutConfirmation')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleLogout}>
-                  {t('auth.logout')}
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleLogout}>{t('auth.logout')}</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -347,7 +466,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
               <MobileNavigation />
               <div className="min-w-0">
                 <h1 className="truncate text-lg sm:text-xl lg:text-2xl text-gray-900">
-                  {menuItems.find(item => item.id === activeView)?.label || t('nav.home')}
+                  {menuItems.find((item) => item.id === activeView)?.label || t('nav.home')}
                 </h1>
                 <p className="truncate text-xs lg:text-sm text-gray-600 mt-0.5">
                   {t('app.tagline')}
@@ -357,14 +476,23 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
 
             {/* Usuario info */}
             <div className="flex shrink-0 items-center gap-2 sm:gap-3 ml-auto">
-              {homes.length > 0 && <Select value={selectedHomeId} onValueChange={setSelectedHomeId}>
-                <SelectTrigger className="hidden h-10 w-[10rem] sm:flex" aria-label={t('homes.home')}>
-                  <SelectValue placeholder={t('homes.home')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {homes.map((home) => <SelectItem key={home.homeId} value={home.homeId}>{home.name}</SelectItem>)}
-                </SelectContent>
-              </Select>}
+              {homes.length > 0 && (
+                <Select value={selectedHomeId} onValueChange={setSelectedHomeId}>
+                  <SelectTrigger
+                    className="hidden h-10 w-[10rem] sm:flex"
+                    aria-label={t('homes.home')}
+                  >
+                    <SelectValue placeholder={t('homes.home')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {homes.map((home) => (
+                      <SelectItem key={home.homeId} value={home.homeId}>
+                        {home.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={theme} onValueChange={handleThemeChange}>
                 <SelectTrigger
                   className="h-10 w-10 rounded-full p-0 sm:w-[11rem] sm:rounded-lg sm:px-3"

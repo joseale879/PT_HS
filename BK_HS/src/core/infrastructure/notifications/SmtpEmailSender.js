@@ -3,16 +3,20 @@ const nodemailer = require('nodemailer');
 class SmtpEmailSender {
   constructor({ smtp, transportFactory = nodemailer.createTransport }) {
     this.smtp = smtp;
-    this.transporter = transportFactory({
+    const transportOptions = {
       host: smtp.host,
       port: smtp.port,
-      secure: smtp.secure,
-      auth: { user: smtp.user, pass: smtp.password }
-    });
+      secure: smtp.secure
+    };
+    if (smtp.user || smtp.password) {
+      transportOptions.auth = { user: smtp.user, pass: smtp.password };
+    }
+    this.transporter = transportFactory(transportOptions);
   }
 
   isConfigured() {
-    return Boolean(this.smtp.host && this.smtp.port && this.smtp.user && this.smtp.password && this.smtp.from);
+    const hasPartialAuth = Boolean(this.smtp.user) !== Boolean(this.smtp.password);
+    return Boolean(this.smtp.host && this.smtp.port && this.smtp.from && !hasPartialAuth);
   }
 
   async verifyConfiguration() {

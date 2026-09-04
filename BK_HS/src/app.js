@@ -21,6 +21,8 @@ const { getEnv } = require('./config/env');
 const app = express();
 
 app.disable('x-powered-by');
+// El backend recibe las peticiones del navegador a través de Nginx.
+app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({ origin: getEnv().corsOrigin.split(',').map((origin) => origin.trim()) }));
 app.use(express.json({ limit: '1mb' }));

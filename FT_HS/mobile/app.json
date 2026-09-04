@@ -7,7 +7,7 @@
     "userInterfaceStyle": "light",
     "assetBundlePatterns": ["**/*"],
     "ios": { "supportsTablet": true },
-    "android": { "edgeToEdgeEnabled": false },
+    "android": { "edgeToEdgeEnabled": false, "usesCleartextTraffic": true },
     "androidNavigationBar": {
       "backgroundColor": "#020617",
       "barStyle": "light-content"

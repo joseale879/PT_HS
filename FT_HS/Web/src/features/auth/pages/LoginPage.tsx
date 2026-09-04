@@ -3,10 +3,25 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@shared/ui/button';
 import { Input } from '@shared/ui/input';
 import { Label } from '@shared/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@shared/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@shared/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@shared/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@shared/ui/dialog';
 import { Eye, EyeOff, AlertCircle, Info, CheckCircle2, Circle } from 'lucide-react';
 import { Alert, AlertDescription } from '@shared/ui/alert';
 import { toast } from 'sonner';
@@ -20,7 +35,12 @@ interface LoginScreenProps {
   onRegisterClick: () => void;
 }
 
-export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete, onRegisterClick }: LoginScreenProps) {
+export function LoginScreen({
+  onLogin,
+  onPasswordReset,
+  onPasswordResetComplete,
+  onRegisterClick,
+}: LoginScreenProps) {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -31,10 +51,14 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordChecklistVisible, setIsPasswordChecklistVisible] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('resetToken') || '');
+  const [resetToken, setResetToken] = useState(
+    () => new URLSearchParams(window.location.search).get('resetToken') || ''
+  );
   const [resetPassword, setResetPassword] = useState('');
   const [resetPasswordConfirmation, setResetPasswordConfirmation] = useState('');
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(() => Boolean(new URLSearchParams(window.location.search).get('resetToken')));
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(() =>
+    Boolean(new URLSearchParams(window.location.search).get('resetToken'))
+  );
   const [isResetRequestSent, setIsResetRequestSent] = useState(false);
   const [isRequestingReset, setIsRequestingReset] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -52,7 +76,7 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
     { label: t('auth.passwordUppercase'), isValid: /[A-ZÁÉÍÓÚÑ]/.test(registerPassword) },
     { label: t('auth.passwordLowercase'), isValid: /[a-záéíóúñ]/.test(registerPassword) },
     { label: t('auth.passwordNumber'), isValid: /\d/.test(registerPassword) },
-    { label: t('auth.passwordSymbol'), isValid: /[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/.test(registerPassword) }
+    { label: t('auth.passwordSymbol'), isValid: /[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/.test(registerPassword) },
   ];
 
   const shouldShowPasswordMismatch =
@@ -93,16 +117,24 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
       setIsRequestingReset(true);
       await onPasswordReset(resetEmail.trim().toLowerCase());
       setIsResetRequestSent(true);
-      toast.success('Solicitud registrada', { description: 'Revisa tu correo e ingresa desde el enlace recibido.' });
+      toast.success('Solicitud registrada', {
+        description: 'Revisa tu correo e ingresa desde el enlace recibido.',
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No fue posible solicitar la recuperación');
+      toast.error(
+        error instanceof Error ? error.message : 'No fue posible solicitar la recuperación'
+      );
     } finally {
       setIsRequestingReset(false);
     }
   };
 
   const handlePasswordResetComplete = async () => {
-    if (!isResetFromEmail || !isValidPassword(resetPassword) || resetPassword !== resetPasswordConfirmation) {
+    if (
+      !isResetFromEmail ||
+      !isValidPassword(resetPassword) ||
+      resetPassword !== resetPasswordConfirmation
+    ) {
       toast.error('Ingresa una contraseña válida y confirma la nueva contraseña');
       return;
     }
@@ -117,7 +149,9 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
       setResetPasswordConfirmation('');
       setIsResetRequestSent(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No fue posible restablecer la contraseña');
+      toast.error(
+        error instanceof Error ? error.message : 'No fue posible restablecer la contraseña'
+      );
     } finally {
       setIsResettingPassword(false);
     }
@@ -131,12 +165,12 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
             <div className="bg-blue-600 p-2 rounded-xl sm:p-3 sm:rounded-2xl">
               <img src={logoImage} alt="HidroSmart Logo" className="h-12 w-auto sm:h-20" />
             </div>
-            <h1 className="min-w-0 break-words text-2xl sm:text-5xl text-blue-900 hidrosmart-logo">{t('app.name')}</h1>
+            <h1 className="min-w-0 break-words text-2xl sm:text-5xl text-blue-900 hidrosmart-logo">
+              {t('app.name')}
+            </h1>
           </div>
           <h2 className="text-base sm:text-2xl text-blue-800">{t('app.tagline')}</h2>
-          <p className="hidden text-blue-700 sm:block">
-            {t('login.description')}
-          </p>
+          <p className="hidden text-blue-700 sm:block">{t('login.description')}</p>
           <div className="hidden sm:grid grid-cols-3 gap-4 pt-4">
             <div className="text-center">
               <div className="text-3xl text-blue-600">24/7</div>
@@ -154,19 +188,27 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
         </div>
 
         <Card className="w-full shadow-2xl">
-          <Tabs defaultValue="login" className="w-full" onValueChange={(value) => { if (value === 'register') onRegisterClick(); }}>
+          <Tabs
+            defaultValue="login"
+            className="w-full"
+            onValueChange={(value) => {
+              if (value === 'register') onRegisterClick();
+            }}
+          >
             <TabsList className="grid w-full grid-cols-2 mobile-equal-tabs sm:w-full [--mobile-tabs:2]">
-              <TabsTrigger value="login" className="w-full">{t('auth.login')}</TabsTrigger>
-              <TabsTrigger value="register" className="w-full">{t('auth.register')}</TabsTrigger>
+              <TabsTrigger value="login" className="w-full">
+                {t('auth.login')}
+              </TabsTrigger>
+              <TabsTrigger value="register" className="w-full">
+                {t('auth.register')}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <form onSubmit={handleLogin}>
                 <CardHeader>
                   <CardTitle>{t('auth.login')}</CardTitle>
-                  <CardDescription>
-                    {t('auth.enterCredentials')}
-                  </CardDescription>
+                  <CardDescription>{t('auth.enterCredentials')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -204,37 +246,80 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
                     </div>
                   </div>
 
-                  <Dialog open={isResetDialogOpen} onOpenChange={(open) => {
-                    if (open && !isResetFromEmail && !resetEmail) setResetEmail(email);
-                    setIsResetDialogOpen(open);
-                  }}>
+                  <Dialog
+                    open={isResetDialogOpen}
+                    onOpenChange={(open) => {
+                      if (open && !isResetFromEmail && !resetEmail) setResetEmail(email);
+                      setIsResetDialogOpen(open);
+                    }}
+                  >
                     <DialogTrigger asChild>
-                      <button type="button" className="h-auto min-h-0 p-0 text-left text-sm text-blue-600 hover:underline">
+                      <button
+                        type="button"
+                        className="h-auto min-h-0 p-0 text-left text-sm text-blue-600 hover:underline"
+                      >
                         {t('auth.forgotPassword')}
                       </button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>{t('auth.recoverPassword')}</DialogTitle>
-                        <DialogDescription>{isResetFromEmail ? 'Crea una nueva contraseña para tu cuenta.' : t('auth.recoverPasswordDesc')}</DialogDescription>
+                        <DialogDescription>
+                          {isResetFromEmail
+                            ? 'Crea una nueva contraseña para tu cuenta.'
+                            : t('auth.recoverPasswordDesc')}
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        {isResetFromEmail ? <>
-                          <div className="space-y-2">
-                            <Label htmlFor="resetPassword">Nueva contraseña</Label>
-                            <Input id="resetPassword" type="password" autoComplete="new-password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="resetPasswordConfirmation">Confirmar contraseña</Label>
-                            <Input id="resetPasswordConfirmation" type="password" autoComplete="new-password" value={resetPasswordConfirmation} onChange={(e) => setResetPasswordConfirmation(e.target.value)} />
-                          </div>
-                        </> : <>
-                          <div className="space-y-2">
-                            <Label htmlFor="resetEmail">{t('auth.email')}</Label>
-                            <Input id="resetEmail" type="email" autoComplete="email" placeholder={t('auth.emailPlaceholder')} value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
-                          </div>
-                          {isResetRequestSent && <Alert><Info className="size-4" /><AlertDescription className="text-xs">Si la cuenta existe, recibirás un enlace de recuperación. Ábrelo para crear tu nueva contraseña.</AlertDescription></Alert>}
-                        </>}
+                        {isResetFromEmail ? (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="resetPassword">Nueva contraseña</Label>
+                              <Input
+                                id="resetPassword"
+                                type="password"
+                                autoComplete="new-password"
+                                value={resetPassword}
+                                onChange={(e) => setResetPassword(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="resetPasswordConfirmation">
+                                Confirmar contraseña
+                              </Label>
+                              <Input
+                                id="resetPasswordConfirmation"
+                                type="password"
+                                autoComplete="new-password"
+                                value={resetPasswordConfirmation}
+                                onChange={(e) => setResetPasswordConfirmation(e.target.value)}
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="resetEmail">{t('auth.email')}</Label>
+                              <Input
+                                id="resetEmail"
+                                type="email"
+                                autoComplete="email"
+                                placeholder={t('auth.emailPlaceholder')}
+                                value={resetEmail}
+                                onChange={(e) => setResetEmail(e.target.value)}
+                              />
+                            </div>
+                            {isResetRequestSent && (
+                              <Alert>
+                                <Info className="size-4" />
+                                <AlertDescription className="text-xs">
+                                  Si la cuenta existe, recibirás un enlace de recuperación. Ábrelo
+                                  para crear tu nueva contraseña.
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </>
+                        )}
                         <Alert>
                           <Info className="size-4" />
                           <AlertDescription className="text-xs">
@@ -247,9 +332,16 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
                           {t('common.cancel')}
                         </Button>
                         {isResetFromEmail ? (
-                          <Button onClick={handlePasswordResetComplete} disabled={isResettingPassword}>{isResettingPassword ? 'Restableciendo...' : 'Restablecer contraseña'}</Button>
+                          <Button
+                            onClick={handlePasswordResetComplete}
+                            disabled={isResettingPassword}
+                          >
+                            {isResettingPassword ? 'Restableciendo...' : 'Restablecer contraseña'}
+                          </Button>
                         ) : (
-                          <Button onClick={handlePasswordReset} disabled={isRequestingReset}>{isRequestingReset ? 'Enviando...' : t('auth.sendLink')}</Button>
+                          <Button onClick={handlePasswordReset} disabled={isRequestingReset}>
+                            {isRequestingReset ? 'Enviando...' : t('auth.sendLink')}
+                          </Button>
                         )}
                       </DialogFooter>
                     </DialogContent>
@@ -264,12 +356,15 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
             </TabsContent>
 
             <TabsContent value="register">
-              <form onSubmit={(e) => { e.preventDefault(); onRegisterClick(); }}>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onRegisterClick();
+                }}
+              >
                 <CardHeader>
                   <CardTitle>{t('auth.createAccountTitle')}</CardTitle>
-                  <CardDescription>
-                    {t('auth.completeRequiredFields')}
-                  </CardDescription>
+                  <CardDescription>{t('auth.completeRequiredFields')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -326,7 +421,11 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
                         className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-500 hover:text-gray-700"
                         aria-label={showRegisterPassword ? t('common.hide') : t('common.show')}
                       >
-                        {showRegisterPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        {showRegisterPassword ? (
+                          <EyeOff className="size-4" />
+                        ) : (
+                          <Eye className="size-4" />
+                        )}
                       </button>
                     </div>
                     {isPasswordChecklistVisible && (
@@ -374,7 +473,11 @@ export function LoginScreen({ onLogin, onPasswordReset, onPasswordResetComplete,
                         className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-500 hover:text-gray-700"
                         aria-label={showConfirmPassword ? t('common.hide') : t('common.show')}
                       >
-                        {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="size-4" />
+                        ) : (
+                          <Eye className="size-4" />
+                        )}
                       </button>
                     </div>
                     {shouldShowPasswordMismatch && (

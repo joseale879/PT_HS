@@ -11,7 +11,7 @@ const resources = {
   es: { translation: es },
   en: { translation: en },
   pt: { translation: pt },
-  it: { translation: it }
+  it: { translation: it },
 };
 
 i18n
@@ -23,13 +23,13 @@ i18n
     supportedLngs: ['es', 'en', 'pt', 'it'],
     load: 'languageOnly',
     interpolation: {
-      escapeValue: false
+      escapeValue: false,
     },
     detection: {
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: 'hidrosmart_language',
-      caches: ['localStorage']
-    }
+      caches: ['localStorage'],
+    },
   });
 
 i18n.on('languageChanged', (language) => {

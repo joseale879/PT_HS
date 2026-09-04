@@ -68,11 +68,7 @@ export function ResponsiveContainer({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <div className={`${responsiveClasses.containerResponsive} ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`${responsiveClasses.containerResponsive} ${className}`}>{children}</div>;
 }
 
 /**
@@ -103,11 +99,7 @@ export function ResponsiveGrid({
     lg: responsiveClasses.gapResponsive,
   }[gap];
 
-  return (
-    <div className={`grid ${gridClass} ${gapClass} ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`grid ${gridClass} ${gapClass} ${className}`}>{children}</div>;
 }
 
 /**
@@ -124,9 +116,7 @@ export function ResponsiveStack({
   gap?: 'sm' | 'md' | 'lg';
   className?: string;
 }) {
-  const directionClass = direction === 'horizontal'
-    ? 'flex flex-col sm:flex-row'
-    : 'flex flex-col';
+  const directionClass = direction === 'horizontal' ? 'flex flex-col sm:flex-row' : 'flex flex-col';
 
   const gapClass = {
     sm: 'gap-2 sm:gap-3',
@@ -134,21 +124,13 @@ export function ResponsiveStack({
     lg: 'gap-4 sm:gap-6',
   }[gap];
 
-  return (
-    <div className={`${directionClass} ${gapClass} ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`${directionClass} ${gapClass} ${className}`}>{children}</div>;
 }
 
 /**
  * Hook para obtener clases responsive condicionalmente
  */
-export function useResponsiveClass(
-  mobile: string,
-  tablet?: string,
-  desktop?: string
-): string {
+export function useResponsiveClass(mobile: string, tablet?: string, desktop?: string): string {
   const tabletClass = tablet || mobile;
   const desktopClass = desktop || tabletClass;
 
@@ -167,11 +149,7 @@ export const breakpoints = {
 /**
  * Función para obtener clases responsive para espaciado
  */
-export function getResponsivePadding(
-  mobile: string,
-  tablet?: string,
-  desktop?: string
-): string {
+export function getResponsivePadding(mobile: string, tablet?: string, desktop?: string): string {
   const tab = tablet || mobile;
   const desk = desktop || tab;
   return `p-${mobile} sm:p-${tab} lg:p-${desk}`;
@@ -180,11 +158,7 @@ export function getResponsivePadding(
 /**
  * Función para obtener tamaño responsive
  */
-export function getResponsiveSize(
-  mobile: string,
-  tablet?: string,
-  desktop?: string
-): string {
+export function getResponsiveSize(mobile: string, tablet?: string, desktop?: string): string {
   const tab = tablet || mobile;
   const desk = desktop || tab;
   return `w-${mobile} sm:w-${tab} lg:w-${desk}`;

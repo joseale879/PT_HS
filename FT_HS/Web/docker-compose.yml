@@ -9,5 +9,5 @@ services:
         VITE_API_URL: ${VITE_API_URL:?Set_VITE_API_URL_to_the_public_backend_API}
         NGINX_CONFIG: nginx.standalone.conf
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - '${FRONTEND_PORT:-5173}:80'
     restart: unless-stopped

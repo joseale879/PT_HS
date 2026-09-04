@@ -1,113 +1,39 @@
-# 🌐 Enlaces para Acceder al Proyecto HidroSmart
+# Acceso local al frontend HidroSmart
 
-El servidor está corriendo y es accesible desde múltiples dispositivos en tu red.
+Fecha de revisión: 2026-09-04.
 
-## 📍 Enlaces de Acceso
+## Acceso desde el equipo donde corre Docker
 
-### En tu computadora
-- **Local**: [http://localhost:5175](http://localhost:5175)
+- Aplicación web: `http://localhost:5173`
+- Health del frontend: `http://localhost:5173/health`
+- API directa: `http://localhost:3000/health`
+- Bandeja de correo local: `http://localhost:8025`
 
-### Desde otros dispositivos en la red
-Use una de estas direcciones IP según tu dispositivo:
+## Acceso desde otro dispositivo de la red
 
-#### Opción 1 (Red principal)
+Usa la IP local del equipo que ejecuta Docker, conservando el puerto publicado:
+
+```text
+http://<IP_DEL_EQUIPO>:5173
 ```
-http://192.168.56.1:5175
+
+La IP concreta cambia según la red; no debe quedar quemada en la documentación ni en el frontend. Si no abre desde otro dispositivo, revisa el firewall de Windows, que Docker Desktop esté iniciado y que el puerto 5173 esté publicado por `docker compose ps`.
+
+El dispositivo remoto solo necesita acceder al frontend. Las llamadas `/api/v1` se resuelven a través de Nginx y no requieren exponer PostgreSQL ni Mosquitto al navegador.
+
+## Arranque
+
+Desde la raíz del proyecto:
+
+```powershell
+docker compose --env-file .env up -d --build
+docker compose ps
 ```
-- ✅ Móviles en la misma red
-- ✅ Tablets
-- ✅ Otras computadoras en la red
 
-#### Opción 2 (Red alternativa)  
+Para detener la pila sin borrar datos:
+
+```powershell
+docker compose down
 ```
-http://10.3.234.249:5175
-```
-- ✅ Dispositivos con acceso a esta red
-- ✅ Mejor para conexiones VPN o redes múltiples
 
-## 📱 Cómo Acceder desde Diferentes Dispositivos
-
-### Desde iPhone/iPad
-1. Abre Safari
-2. Ingresa: `http://192.168.56.1:5175` o `http://10.3.234.249:5175`
-3. ¡Listo! Verás el proyecto responsive
-
-### Desde Android
-1. Abre Chrome o navegador
-2. Ingresa: `http://192.168.56.1:5175` o `http://10.3.234.249:5175`
-3. ¡Listo! Verás el proyecto adaptado para móvil
-
-### Desde otra Laptop/PC
-1. Abre navegador (Chrome, Firefox, Edge)
-2. Ingresa: `http://192.168.56.1:5175` o `http://10.3.234.249:5175`
-3. ¡Listo!
-
-## 🔧 Requisitos Previos
-
-✅ Ambos dispositivos deben estar en la **misma red Wi-Fi**
-✅ El servidor debe estar ejecutando (`npm run dev`)
-✅ Firewall debe permitir conexiones en el puerto 5175
-
-## 🛑 Detener el Servidor
-
-Para detener el servidor, presiona `q` en la terminal donde se ejecuta `npm run dev`.
-
-## 📋 Info del Servidor
-
-- **Puerto**: 5175 (se cambió a 5175 porque 5174 estaba en uso)
-- **Host**: 0.0.0.0 (acepta conexiones de cualquier dispositivo)
-- **Estado**: ✅ En ejecución y accesible
-
-## ⚠️ Solución de Problemas
-
-### No puedo acceder desde otro dispositivo
-
-1. **Verifica la conexión Wi-Fi**
-   - Asegúrate de que ambos dispositivos estén en la misma red
-
-2. **Comprueba el firewall**
-   - Es posible que Windows bloquee el puerto 5175
-   - Ve a: Configuración > Firewall > Permitir aplicación a través del firewall
-
-3. **Prueba con ambas IPs**
-   - Intenta con: `http://192.168.56.1:5175`
-   - Si no funciona, intenta: `http://10.3.234.249:5175`
-
-4. **Reinicia el servidor**
-   - Presiona `q` en la terminal
-   - Ejecuta `npm run dev` de nuevo
-
-5. **Comprueba que el servidor está corriendo**
-   - Deberías ver en la terminal:
-   ```
-   ➜  Local:   http://localhost:5175/
-   ➜  Network: http://192.168.56.1:5175/
-   ➜  Network: http://10.3.234.249:5175/
-   ```
-
-## 🎯 Pruebas Recomendadas
-
-- [ ] Accede desde iPhone en modo portrait
-- [ ] Accede desde iPhone en modo landscape  
-- [ ] Accede desde Android en modo portrait
-- [ ] Accede desde Android en modo landscape
-- [ ] Accede desde tablet en modo portrait
-- [ ] Accede desde tablet en modo landscape
-- [ ] Accede desde laptop/desktop
-- [ ] Prueba todos los botones y menús
-- [ ] Verifica que los gráficos se ven bien
-- [ ] Comprueba la velocidad de carga
-
-## 📊 Características Responsive ya Implementadas
-
-✅ Layout adaptable (1 col mobile → 4 cols desktop)
-✅ Tipografía responsive (14px mobile → 16px desktop)
-✅ Gráficos optimizados para móvil
-✅ Elementos de 44px mínimo para táctil
-✅ Menú colapsible en móvil
-✅ Diálogos adaptables
-✅ Tablas scrolleables en móvil
-
----
-
-**¡El proyecto está listo para visualizar en cualquier dispositivo!** 🚀
+No uses `docker compose down --volumes` salvo que quieras borrar los volúmenes locales y reconstruir la base desde cero.

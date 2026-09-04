@@ -30,7 +30,7 @@ test('solicita recuperación solo con un correo electrónico válido', async () 
   await assert.rejects(() => useCase.execute({ email: 'usuario-invalido' }), (error) => error.status === 400);
 });
 
-test('no revela cuentas inexistentes ni intenta enviar un correo', async () => {
+test('rechaza cuentas inexistentes y no intenta enviar un correo', async () => {
   let sent = false;
   const useCase = new RequestPasswordReset({
     authRepository: { createPasswordResetToken: async () => null },
@@ -38,19 +38,22 @@ test('no revela cuentas inexistentes ni intenta enviar un correo', async () => {
     notificationService: { isConfigured: () => true, sendPasswordReset: async () => { sent = true; } }
   });
 
-  await useCase.execute({ email: 'noexiste@ejemplo.com' });
+  await assert.rejects(
+    () => useCase.execute({ email: 'noexiste@ejemplo.com' }),
+    (error) => error.status === 404 && /no esta registrado/i.test(error.message)
+  );
   assert.equal(sent, false);
 });
 
 test('construye un enlace de recuperación seguro para el frontend', async () => {
   const sent = [];
   const sender = new SmtpEmailSender({
-    smtp: { host: 'smtp.gmail.com', port: 587, secure: false, user: 'correo@gmail.com', password: 'app-password', from: 'HidroSmart <correo@gmail.com>' },
-    passwordResetUrl: 'https://app.hidrosmart.co/?from=email',
+    smtp: { host: 'localhost', port: 1025, secure: false, user: '', password: '', from: 'HidroSmart <no-reply@localhost>' },
+    passwordResetUrl: 'http://localhost:5173/?from=email',
     transportFactory: () => ({ sendMail: async (message) => sent.push(message), verify: async () => true })
   });
 
-  const notifications = new NotificationService({ sender, frontendUrl: 'https://app.hidrosmart.co', passwordResetUrl: 'https://app.hidrosmart.co/?from=email' });
+  const notifications = new NotificationService({ sender, frontendUrl: 'http://localhost:5173', passwordResetUrl: 'http://localhost:5173/?from=email' });
   await notifications.sendPasswordReset({ recipient: 'usuario@ejemplo.com', resetToken: 'token_seguro' });
   assert.equal(sent[0].to, 'usuario@ejemplo.com');
   assert.match(sent[0].text, /from=email/);

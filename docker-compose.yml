@@ -18,12 +18,49 @@ services:
       retries: 10
     restart: unless-stopped
 
+  db-bootstrap:
+    image: postgres:16-alpine
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-hidro_smart}
+      PGUSER: ${POSTGRES_USER:-hidro_smart_admin}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD_in_env}
+      APP_PASSWORD: ${DB_PASSWORD:?Set_DB_PASSWORD_in_env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'hidro_smart_app'" | grep -q 1; then
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE hidro_smart_app LOGIN;"
+        fi
+        psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_app LOGIN PASSWORD '$${APP_PASSWORD}';"
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.21
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+    volumes:
+      - ./BK_HS/docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: unless-stopped
+
   backend:
     build:
       context: ./BK_HS
       dockerfile: Dockerfile
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost}
       MATERIALIZED_VIEWS_REFRESH_MS: ${MATERIALIZED_VIEWS_REFRESH_MS:-300000}
@@ -43,12 +80,19 @@ services:
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173}
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_FROM: ${SMTP_FROM:-HidroSmart <no-reply@localhost>}
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://mosquitto:1883}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-hidrosmart-backend}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_QOS: ${MQTT_QOS:-1}
+      MQTT_RECONNECT_PERIOD_MS: ${MQTT_RECONNECT_PERIOD_MS:-3000}
+      MQTT_CONNECT_TIMEOUT_MS: ${MQTT_CONNECT_TIMEOUT_MS:-10000}
     expose:
       - "3000"
     ports:
@@ -56,6 +100,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
+      mosquitto:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:3000/health"]
       interval: 10s
@@ -87,16 +135,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
     entrypoint:
       - liquibase
       - --search-path=/workspace
       - --changeLogFile=changelog-master.yaml
       - --classpath=/liquibase/liquibase_libs/postgresql-42.7.8.jar
       - --url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-hidro_smart}
-      - --username=${LIQUIBASE_USER:?Set_LIQUIBASE_USER_in_env}
-      - --password=${LIQUIBASE_PASSWORD:?Set_LIQUIBASE_PASSWORD_in_env}
+      - --username=${POSTGRES_USER:-hidro_smart_admin}
+      - --password=${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD_in_env}
 
 volumes:
   hidro_smart_postgres_data:
-    external: true
     name: hidro_smart_postgres_data

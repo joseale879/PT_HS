@@ -147,3 +147,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 - No uses `down -v` en una base que quieras conservar.
 - Rota las contraseñas temporales antes de producción.
 - Ejecuta `04_tcl` solo como operación manual revisada.
+## Nota sobre el Compose integrado (2026-09-04)
+
+Este documento describe el provisionamiento independiente de Liquibase y conserva `LIQUIBASE_PASSWORD` para ese flujo. En el Compose integrado de la raíz, el servicio `liquibase` usa directamente `POSTGRES_USER` y `POSTGRES_PASSWORD`; no se debe crear ni documentar una variable adicional solo para esa pila.
+
+La guía oficial del flujo integrado está en `BD_HS/docs/guia-ejecucion-liquibase.md`.

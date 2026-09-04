@@ -1,67 +1,46 @@
 # Ambiente local
 
-El desarrollo local utiliza dos proyectos Docker separados:
+Fecha de revisión: 2026-09-04.
 
-```text
-BD_HS  -> PostgreSQL + Liquibase -> localhost:5433
-BK_HS  -> API Node.js/Express   -> localhost:3000
-```
+La pila oficial de desarrollo se ejecuta desde el `docker-compose.yml` de la raíz. Los Compose individuales de BD y backend se conservan solo por compatibilidad.
 
-La API se conecta a PostgreSQL mediante el rol `hidro_smart_app`. Liquibase y las tareas administrativas permanecen en `BD_HS`.
+## Servicios
+
+| Servicio | Windows | Dentro de Docker |
+|---|---|---|
+| PostgreSQL | `localhost:5433` | `postgres:5432` |
+| Backend | `localhost:3000` | `backend:3000` |
+| Frontend | `localhost:5173` | `frontend:80` |
+| Mailpit SMTP | `localhost:1025` | `mailpit:1025` |
+| Mailpit UI | `localhost:8025` | `mailpit:8025` |
+| Mosquitto | `localhost:1883` | `mosquitto:1883` |
 
 ## Preparación
-
-Desde `BD_HS`:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Desde `BK_HS`:
-
-```powershell
-Copy-Item .env.local.example .env
-```
-
-En `BK_HS/.env` se debe colocar la contraseña local real de `hidro_smart_app` y un secreto JWT local. Estos archivos no se suben al repositorio.
-
-## Levantar todo
 
 Desde la raíz del proyecto:
 
 ```powershell
-.\BK_HS\start-local.ps1 -BuildBackend
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+docker compose --env-file .env config --quiet
+docker compose --env-file .env up -d --build
 ```
 
-Si las imágenes ya existen:
-
-```powershell
-.\BK_HS\start-local.ps1
-```
+El backend usa `DB_HOST=postgres`, `DB_PORT=5432`, `DB_USER=hidro_smart_app`, `MQTT_BROKER_URL=mqtt://mosquitto:1883` y Mailpit por defecto. Si se ejecuta el backend fuera de Docker, usa los valores de `BK_HS/.env.example`: PostgreSQL en `localhost:5433` y MQTT en `localhost:1883`.
 
 ## Verificación
 
 ```powershell
-Invoke-RestMethod http://localhost:3000/health
+docker compose ps
+Invoke-WebRequest http://localhost:3000/health
+Invoke-WebRequest http://localhost:5173/health
 ```
 
-La API debe responder con `status: ok` y mostrar la base `hidro_smart`.
+Liquibase se ejecuta bajo el perfil `tooling`; consulta `BD_HS/docs/guia-ejecucion-liquibase.md`.
 
-## Pruebas de integración autenticadas
+## Correo
 
-Las pruebas básicas se ejecutan con:
+Mailpit es el proveedor local recomendado. Gmail se configura solo en el `.env` local mediante SMTP y sus credenciales no deben aparecer en la documentación, ejemplos ni código.
 
-```powershell
-$env:RUN_INTEGRATION = '1'
-$env:INTEGRATION_DATABASE_URL = 'postgresql://hidro_smart_app:<PASSWORD>@localhost:5433/hidro_smart'
-npm.cmd run test:integration
-```
+## MQTT
 
-Para validar además el flujo autenticado, define temporalmente:
-
-```powershell
-$env:INTEGRATION_USER_EMAIL = '<EMAIL_DE_PRUEBA>'
-$env:INTEGRATION_USER_PASSWORD = '<PASSWORD_DE_PRUEBA>'
-```
-
-La prueba inicia sesión, consulta `/users/me`, `/homes` y `/devices`, y revoca la sesión con logout. No se guardan credenciales en el repositorio. El usuario de prueba debe existir realmente en la base local antes de activar esta validación.
+Mosquitto está configurado sin autenticación, sin TLS y sin persistencia para pruebas locales. El contrato vigente está en `BK_HS/docs/14-mqtt-protocol.md`.

@@ -8,5 +8,8 @@ export const sessionStorageAdapter = {
     if (accessToken) sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   },
-  clear: () => { sessionStorage.removeItem(ACCESS_TOKEN_KEY); sessionStorage.removeItem(REFRESH_TOKEN_KEY); }
+  clear: () => {
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  },
 };

@@ -1,38 +1,73 @@
-# Estado de integración del frontend web
+# Integración del frontend web
 
-Fecha de revisión: 2026-09-03.
+Fecha de revisión: 2026-09-04.
 
-## Conectado y validado
+## Conexión
 
-| Pantalla o flujo | Endpoint | Validación de interfaz |
+- Docker: el navegador abre `http://localhost:5173`.
+- Nginx sirve la aplicación y reenvía `/api/` a `http://backend:3000/api/`.
+- El frontend se compila con `VITE_API_URL=/api/v1`.
+- Desarrollo directo sin Docker: `VITE_API_URL=http://localhost:3000/api/v1`.
+- El frontend nunca se conecta directamente a PostgreSQL ni a MQTT.
+
+El punto único para llamadas de negocio es `src/shared/http/apiClient.ts`; `httpClient.ts` conserva la exportación común. Las vistas no deben construir URLs completas ni usar datos de conexión propios.
+
+## API disponible para el frontend
+
+| Módulo | Prefijo | Operaciones principales |
 |---|---|---|
-| Registro | `POST /api/v1/auth/register` | Nombre, correo, documento CC/CE numérico de 1 a 10 dígitos, contraseña de 8 a 128 caracteres con mayúscula, minúscula, número y símbolo, y confirmación. |
-| Inicio de sesión | `POST /api/v1/auth/login` | Correo válido y contraseña obligatoria. La validación final corresponde al backend. |
-| Restauración de sesión | `GET /api/v1/users/me`, `POST /api/v1/auth/refresh` | Tokens de sesión y reintento único ante 401. |
-| Cierre de sesión | `POST /api/v1/auth/logout` | Envía el refresh token autenticado y limpia la sesión local. |
-| Cambio de contraseña | `POST /api/v1/auth/change-password` | Debe contrastarse con la política vigente del backend. |
-| Recuperación | `POST /api/v1/auth/request-password-reset`, `POST /api/v1/auth/reset-password` | Correo válido, token de al menos 40 caracteres y contraseña segura. El envío de correo requiere SMTP. |
+| Auth | `/auth` | registro, login, refresh, logout, cambio y recuperación de contraseña |
+| Perfil | `/users` | usuario actual y preferencias |
+| Hogares | `/homes` | CRUD básico, miembros y solicitudes |
+| Dispositivos | `/devices` | alta, listado, detalle, configuración, estado, desactivar y desvincular |
+| Consumo | `/consumption` | summary, daily, hourly, monthly y cost |
+| Tarifas | `/tariffs` | tarifa por hogar |
+| Alertas | `/alerts` | pendientes, reglas, umbrales, historial y estados |
+| Metas | `/goals` | CRUD y progreso |
+| Vacaciones | `/vacation` | consulta, actualización y eliminación |
+| Soporte | `/support` | catálogos, tickets y respuestas |
+| Auditoría | `/audit` | logs para permiso `audit.read` |
+| Roles | `/roles` | administración para permiso `roles.manage` |
 
-## Cliente API preparado, aún no usado por pantalla
+La ruta completa usa el prefijo `/api/v1`; por ejemplo, el resumen es `GET /api/v1/consumption/summary`.
 
-- Hogares: `/homes` y miembros.
-- Dispositivos: `/devices`.
-- Consumo: `/consumption/summary`, `/daily`, `/hourly`, `/monthly`, `/cost`.
-- Alertas: pendientes, reglas, umbrales y estado.
-- Auditoría administrativa: `GET /api/v1/audit/logs`, únicamente para `Administrator` con `audit.read`.
+## Estado por flujo
 
-El listado de dispositivos ya no envía `homeId`: el backend actual lista los dispositivos autorizados del usuario y no implementa ese filtro.
+| Flujo | Situación actual |
+|---|---|
+| Registro/login | Cliente API y validaciones de formulario preparados; el backend es la validación final. |
+| Sesión | Refresh ante `401`, logout y limpieza de sesión implementados en el cliente. |
+| Perfil | Consume `/users/me` y preferencias según la vista. |
+| Dashboard | Consulta resumen, agregados horarios/diarios, dispositivos y alertas; algunos indicadores visuales todavía son valores de presentación. |
+| Hogares | Cliente API disponible; verificar en cada pantalla carga, vacío, error y permisos. |
+| Dispositivos | Cliente API disponible; `homeId` no se envía en el listado porque el backend devuelve los autorizados al usuario. |
+| Consumo/reportes | Endpoints disponibles; la vista debe mostrar claramente que son agregados de BD, no telemetría instantánea. |
+| Alertas/metas/vacaciones/soporte | Rutas y clientes disponibles; terminar validación visual por estado. |
+| Auditoría | Endpoint backend protegido; la pantalla todavía requiere consumirlo completamente. |
+| MQTT | No hay llamada HTTP desde el frontend: el camino correcto es ESP32 -> broker -> backend -> BD -> API. |
 
-## Auditoría disponible en backend
+## Reglas de rutas
 
-El endpoint administrativo ya existe y está documentado en `BK_HS/docs/endpoints-por-rol.md`. La pantalla web de auditoría todavía no lo consume; por eso conserva datos de demostración hasta implementar su estado de carga, vacío y error. No debe mostrarse a `Support`, `HomeUser` ni `Guest`.
+- No poner `localhost` en el código de producción del navegador cuando se usa Docker; usar `/api/v1`.
+- No apuntar el navegador al puerto de PostgreSQL ni al puerto MQTT.
+- No duplicar endpoints en cada página; agregar la operación al cliente API común.
+- Los permisos se validan en backend aunque la interfaz oculte botones.
+- Las respuestas y errores del backend deben conservar el contrato común `{ data, meta }` o `{ error }`.
 
-Parámetros disponibles: `action`, `tableName`, `from`, `to`, `page` y `pageSize`.
+## Pendientes frontend
 
-## Datos locales pendientes de conectar
+- Conectar las pantallas que todavía muestran datos de demostración.
+- Eliminar indicadores hardcodeados del dashboard.
+- Obtener roles reales de la sesión para no depender del rol fijo `user`.
+- Decidir si se agregan rutas URL/deep links; la navegación actual es por estado de React.
+- Crear una pantalla de telemetría después de completar la persistencia MQTT en PostgreSQL.
 
-Los paneles de hogares, dispositivos, consumo, reportes, alertas, soporte, vacaciones, metas, administración y auditoría todavía contienen datos de demostración. No se retiraron para evitar dejar pantallas vacías: deben sustituirse gradualmente cuando se conecte cada pantalla al endpoint y se manejen sus estados de carga, vacío y error.
+## Verificación local
 
-## Docker
+```powershell
+docker compose --env-file .env up -d --build
+Invoke-WebRequest http://localhost:5173/health
+Invoke-WebRequest http://localhost:3000/health
+```
 
-El servicio `frontend` se construye desde `FT_HS/Web` y se publica en `http://localhost:5173`. La variable de compilación es `VITE_API_URL=/api/v1`; Nginx reenvía esa ruta al servicio `backend` de la misma red Docker.
+Para una ejecución sin Docker, revisa el `.env.example` de `Web` y ejecuta `npm run dev` desde `FT_HS/Web`.

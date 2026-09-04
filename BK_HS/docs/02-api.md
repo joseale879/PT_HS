@@ -790,3 +790,8 @@ La API no será responsable directamente de:
 - Implementar las reglas principales del negocio.
 
 Estas responsabilidades pertenecen a las capas correspondientes del Core e Infrastructure.
+## Advertencia de implementación (2026-09-04)
+
+Este documento conserva material conceptual de arquitectura. Para las rutas que realmente existen debe usarse `03-endpoints.md`, que se verificó contra `src/app.js`. Las secciones de `/api/v1/actuators` y los controladores de actuadores son una propuesta futura: actualmente no están montados.
+
+La integración MQTT vigente está documentada en `14-mqtt-protocol.md`; el backend recibe y normaliza mensajes, pero aún no persiste lecturas en PostgreSQL.

@@ -533,3 +533,10 @@ rollback:
 ```
 
 No se deben usar rutas de Windows con `\` en los changelogs. Liquibase se ejecuta dentro de Docker y requiere rutas con `/`.
+## Estado operativo e integración IoT (2026-09-04)
+
+El Compose integrado de la raíz levanta PostgreSQL, `db-bootstrap`, backend, frontend, Mailpit y Mosquitto. Liquibase se ejecuta con el perfil `tooling`; consulta `docs/guia-ejecucion-liquibase.md` para los comandos actuales.
+
+La base está actualizada con 166 changesets. Los objetos `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` están preparados para IoT, pero el subscriber MQTT del backend todavía no persiste lecturas.
+
+Antes de activar la ingestión deben revisarse los grants del rol `hidro_smart_ingest`, la resolución segura del dispositivo y la precisión de `consumption.sensor_reading.consumption_liters`, actualmente `NUMERIC(10,2)`, porque el ESP32 puede enviar muestras de `0.040 L`.

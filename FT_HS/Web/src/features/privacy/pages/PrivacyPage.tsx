@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@shared/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@shared/ui/card';
 import { Button } from '@shared/ui/button';
 import { Checkbox } from '@shared/ui/checkbox';
 import { Label } from '@shared/ui/label';
@@ -72,16 +79,17 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
               <div className="space-y-4 text-sm text-gray-700">
                 <h3 className="font-semibold">1. Recopilación de Datos</h3>
                 <p>
-                  AquaMonitor recopila información necesaria para proporcionar servicios de monitoreo
-                  de consumo de agua mediante dispositivos IoT. Los datos incluyen información
-                  personal básica, datos de consumo en tiempo real y métricas de dispositivos.
+                  AquaMonitor recopila información necesaria para proporcionar servicios de
+                  monitoreo de consumo de agua mediante dispositivos IoT. Los datos incluyen
+                  información personal básica, datos de consumo en tiempo real y métricas de
+                  dispositivos.
                 </p>
 
                 <h3 className="font-semibold">2. Uso de la Información</h3>
                 <p>
                   Los datos recopilados se utilizan exclusivamente para: análisis de consumo,
-                  generación de reportes, detección de fugas, envío de notificaciones relevantes,
-                  y mejora continua del servicio.
+                  generación de reportes, detección de fugas, envío de notificaciones relevantes, y
+                  mejora continua del servicio.
                 </p>
 
                 <h3 className="font-semibold">3. Protección de Datos</h3>
@@ -94,8 +102,8 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
                 <h3 className="font-semibold">4. Compartir Información</h3>
                 <p>
                   No vendemos ni compartimos tu información personal con terceros para fines
-                  comerciales. Solo compartimos datos con proveedores de servicios esenciales
-                  bajo estrictos acuerdos de confidencialidad.
+                  comerciales. Solo compartimos datos con proveedores de servicios esenciales bajo
+                  estrictos acuerdos de confidencialidad.
                 </p>
 
                 <h3 className="font-semibold">5. Derechos del Usuario</h3>
@@ -108,13 +116,14 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
                 <h3 className="font-semibold">6. Retención de Datos</h3>
                 <p>
                   Conservamos tus datos mientras mantengas una cuenta activa o según sea necesario
-                  para cumplir con obligaciones legales. Puedes solicitar la eliminación en cualquier momento.
+                  para cumplir con obligaciones legales. Puedes solicitar la eliminación en
+                  cualquier momento.
                 </p>
 
                 <h3 className="font-semibold">7. Cookies y Tecnologías de Seguimiento</h3>
                 <p>
-                  Utilizamos cookies esenciales para el funcionamiento de la plataforma y cookies
-                  de análisis para mejorar la experiencia del usuario. Puedes gestionar tus
+                  Utilizamos cookies esenciales para el funcionamiento de la plataforma y cookies de
+                  análisis para mejorar la experiencia del usuario. Puedes gestionar tus
                   preferencias de cookies en la configuración.
                 </p>
               </div>
@@ -130,7 +139,8 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
                 onCheckedChange={(checked) => setAcceptLegal(checked as boolean)}
               />
               <Label htmlFor="legalConsent" className="text-sm leading-relaxed cursor-pointer">
-                <span className="text-red-600">*</span> Acepto los términos y condiciones y la política de privacidad de HidroSmart.
+                <span className="text-red-600">*</span> Acepto los términos y condiciones y la
+                política de privacidad de HidroSmart.
               </Label>
             </div>
           </div>
@@ -140,7 +150,8 @@ export function PrivacyConsent({ onAccept }: PrivacyConsentProps) {
             <AlertTriangle className="size-4" />
             <AlertDescription className="text-sm">
               Puedes solicitar la eliminación completa de tus datos personales en cualquier momento
-              desde la configuración de tu cuenta, conforme a la normativa de protección de datos vigente.
+              desde la configuración de tu cuenta, conforme a la normativa de protección de datos
+              vigente.
             </AlertDescription>
           </Alert>
         </CardContent>

@@ -1,26 +1,22 @@
 # HidroSmart Mobile
 
-Esta carpeta contiene la version para Expo Go sin modificar el proyecto web original.
+Cliente Expo que carga el bundle del frontend web mediante WebView; no duplica las rutas de negocio.
 
 ## Estructura
 
 - `index.js`: registra la app en Expo.
-- `src/App.jsx`: raiz de la aplicacion mobile.
-- `src/components/MobileShell.jsx`: contenedor principal de la pantalla mobile.
-- `src/components/AppStatusBar.jsx`: barra de estado de la app.
-- `src/components/HidroSmartWebView.jsx`: WebView que carga HidroSmart.
-- `src/components/WebViewLoading.jsx`: estado de carga del WebView.
-- `src/config/webView.js`: configuracion del WebView.
-- `src/constants/colors.js`: colores compartidos.
-- `src/constants/layout.js`: espaciado seguro para la barra superior de Android.
+- `src/App.jsx`: raíz mobile.
+- `src/components/HidroSmartWebView.jsx`: WebView.
+- `src/config/webView.js`: URL/configuración del WebView.
 - `src/webBundle.js`: bundle generado desde `../Web`.
 
-## Como abrirla en Expo Go
+## Ejecución
 
-1. Instala dependencias:
-   npm install
+```powershell
+npm install
+npm start
+```
 
-2. Inicia Expo:
-   npm start
+Para desarrollo local, la URL que carga el WebView debe ser accesible desde el dispositivo móvil. `localhost` dentro del teléfono no apunta al equipo de desarrollo; usa la IP local del equipo y el puerto web publicado, por ejemplo `http://<IP_DEL_EQUIPO>:5173`.
 
-El script genera primero el bundle web desde ../Web y luego abre Expo. Escanea el QR con Expo Go.
+La API continúa siendo `/api/v1` a través del frontend/Nginx; mobile no accede directamente a PostgreSQL ni a MQTT.

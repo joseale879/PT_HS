@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check src/app.js && node --check src/config/env.js && node --check src/infrastructure/db.js && node --check src/jobs/materializedViewsRefreshJob.js && node --check src/jobs/alertGenerationJob.js",
+    "check": "node --check server.js && node --check src/app.js && node --check src/config/env.js && node --check src/config/mqtt.js && node --check src/infrastructure/db.js && node --check src/jobs/materializedViewsRefreshJob.js && node --check src/jobs/alertGenerationJob.js && node --check src/mqtt/topics.js && node --check src/mqtt/message-parser.js && node --check src/core/infrastructure/services/mqtt/MqttClient.js && node --check src/core/infrastructure/services/mqtt/MqttPublisher.js && node --check src/core/infrastructure/services/mqtt/MqttSubscriber.js",
     "test": "node --test tests/unit/**/*.test.js",
     "test:integration": "node --test tests/integration/**/*.test.js"
   },
@@ -20,6 +20,8 @@
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mqtt": "^5.15.2",
+    "mqtt": "^5.15.1",
     "nodemailer": "^9.1.1",
     "pg": "^8.13.1"
   }

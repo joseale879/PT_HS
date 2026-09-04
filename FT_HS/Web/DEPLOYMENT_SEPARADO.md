@@ -37,3 +37,8 @@ Inicia con `docker compose --env-file .env up -d --build`. Esta imagen no requie
 ## Desarrollo integrado
 
 El `docker-compose.yml` de la raíz se conserva para desarrollo local. Usa `/api/v1` y el proxy Nginx interno, por eso no se debe usar para despliegues separados.
+## Nota para el desarrollo actual
+
+El flujo recomendado hoy es el Compose integrado de la raíz, con frontend en `http://localhost:5173`, backend en `http://localhost:3000`, PostgreSQL en `localhost:5433`, Mailpit en `localhost:8025` y Mosquitto en `localhost:1883`.
+
+El despliegue separado es una guía futura. Si se utiliza fuera de Docker, el backend debe apuntar a la base y al broker mediante sus nombres/URLs reales, y el frontend debe usar una URL pública de API. Nunca se deben publicar secretos en `VITE_*`.
