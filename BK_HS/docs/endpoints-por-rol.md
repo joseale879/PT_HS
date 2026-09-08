@@ -1,6 +1,6 @@
 # Endpoints accesibles por rol
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-07.
 
 La ruta exacta de cada método está en `03-endpoints.md`. Este documento resume el control de acceso real y no incluye endpoints de actuadores que todavía no están montados.
 

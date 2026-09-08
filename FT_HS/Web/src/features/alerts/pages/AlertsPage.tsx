@@ -16,12 +16,18 @@ type AlertEvent = {
 export function NotificationsPanel({ homeId }: { homeId?: string }) {
   const [alerts, setAlerts] = useState<AlertEvent[]>([]);
   const [thresholds, setThresholds] = useState<any>(null);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
   const load = () => {
     if (!homeId) return Promise.resolve();
-    return Promise.all([alertsApi.history(homeId, 'pageSize=100'), alertsApi.thresholds(homeId)])
-      .then(([history, threshold]) => {
+    return Promise.all([
+      alertsApi.history(homeId, 'pageSize=100'),
+      alertsApi.thresholds(homeId),
+      alertsApi.pending(homeId),
+    ])
+      .then(([history, threshold, pending]) => {
         setAlerts(history.data as AlertEvent[]);
         setThresholds(threshold.data);
+        setPendingCount(pending.data.pendingCount);
       })
       .catch((error) =>
         toast.error(error instanceof Error ? error.message : 'No se pudieron cargar las alertas')
@@ -53,16 +59,20 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Pendientes</p>
               <p className="text-2xl">
-                {alerts.filter((alert) => alert.status === 'Pending').length}
+                {pendingCount ?? alerts.filter((alert) => alert.status === 'Pending').length}
               </p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Límite diario</p>
-              <p className="text-2xl">{thresholds?.dailyLimit ?? '—'}</p>
+              <p className="text-2xl">
+                {thresholds?.dailyLimit == null ? '—' : `${thresholds.dailyLimit} m³`}
+              </p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Límite mensual</p>
-              <p className="text-2xl">{thresholds?.monthlyLimit ?? '—'}</p>
+              <p className="text-2xl">
+                {thresholds?.monthlyLimit == null ? '—' : `${thresholds.monthlyLimit} m³`}
+              </p>
             </div>
           </div>
         </CardContent>

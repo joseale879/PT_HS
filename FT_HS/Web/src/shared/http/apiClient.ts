@@ -4,6 +4,8 @@ const API_BASE_URL = env.apiBaseUrl;
 
 const ACCESS_TOKEN_KEY = 'hidrosmart_access_token';
 const REFRESH_TOKEN_KEY = 'hidrosmart_refresh_token';
+export const SESSION_EXPIRED_EVENT = 'hidrosmart:session-expired';
+let refreshPromise: Promise<string> | null = null;
 
 type ApiOptions = RequestInit & { skipAuth?: boolean };
 
@@ -60,6 +62,30 @@ async function parseResponse(response: Response) {
   }
 }
 
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = sessionTokens.refreshToken;
+  if (!refreshToken) return null;
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshed = await request<{ data: { accessToken: string; refreshToken?: string } }>(
+      '/auth/refresh',
+      {
+        method: 'POST',
+        skipAuth: true,
+        body: JSON.stringify({ refreshToken }),
+      },
+      false
+    );
+    sessionTokens.save(refreshed.data);
+    return refreshed.data.accessToken;
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
 async function request<T>(path: string, options: ApiOptions = {}, retry = true): Promise<T> {
   const { skipAuth, headers, body, ...requestOptions } = options;
   const requestHeaders = new Headers(headers);
@@ -78,19 +104,11 @@ async function request<T>(path: string, options: ApiOptions = {}, retry = true):
 
   if (response.status === 401 && retry && sessionTokens.refreshToken) {
     try {
-      const refreshed = await request<{ data: { accessToken: string; refreshToken?: string } }>(
-        '/auth/refresh',
-        {
-          method: 'POST',
-          skipAuth: true,
-          body: JSON.stringify({ refreshToken: sessionTokens.refreshToken }),
-        },
-        false
-      );
-      sessionTokens.save(refreshed.data);
+      await refreshAccessToken();
       return request<T>(path, options, false);
     } catch {
       sessionTokens.clear();
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     }
   }
 

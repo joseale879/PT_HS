@@ -1,6 +1,6 @@
 # Documentación del backend HidroSmart
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-07.
 
 La documentación se mantiene alineada con el código que realmente está montado. Para una lectura rápida empieza por:
 
@@ -22,3 +22,31 @@ Los documentos `01` a `12` conservan decisiones de arquitectura, dominio, seguri
 - `00-roles-y-permisos.md`, `endpoints-por-rol.md`, `frontend-endpoints-por-rol.md`: autorización.
 
 La persistencia de telemetría MQTT todavía está pendiente. El subscriber valida y normaliza mensajes, pero no inserta lecturas en PostgreSQL.
+
+## Verificación local
+
+Desde `BK_HS`:
+
+```powershell
+npm.cmd run check
+npm.cmd test
+npm.cmd start
+```
+
+La API directa queda en `http://localhost:3000`; con el frontend/Nginx se
+consume mediante `/api/v1`. El backend usa `DB_HOST=postgres` y `DB_PORT=5432`
+dentro de Docker, y `DB_HOST=localhost` y `DB_PORT=5433` cuando se ejecuta
+directamente desde Windows.
+
+## Estado de integraciones
+
+- PostgreSQL: conectado mediante repositorios y funciones versionadas.
+- JWT: access token, refresh token, logout, cambio y recuperación de contraseña.
+- SMTP: Nodemailer preparado para Gmail; requiere configurar las variables
+  `SMTP_*` y una clave de aplicación.
+- MQTT: conexión, suscripción, parseo y publicación preparados; persistencia de
+  lecturas aún pendiente.
+- Actuadores: publisher preparado, pero no hay rutas REST montadas.
+
+Cuando una documentación conceptual contradiga una ruta inexistente, prevalecen
+`src/app.js` y `03-endpoints.md`.

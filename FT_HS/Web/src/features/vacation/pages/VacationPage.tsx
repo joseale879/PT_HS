@@ -4,13 +4,12 @@ import { Button } from '@shared/ui/button';
 import { Label } from '@shared/ui/label';
 import { Badge } from '@shared/ui/badge';
 import { Plane } from 'lucide-react';
-import { homesApi, vacationApi } from '@shared/http/httpClient';
+import { vacationApi } from '@shared/http/httpClient';
 import { toast } from 'sonner';
 
 type Vacation = { active?: boolean; isActive?: boolean; startedAt?: string; endedAt?: string };
 
-export function VacationMode() {
-  const [homeId, setHomeId] = useState('');
+export function VacationMode({ homeId }: { homeId?: string }) {
   const [vacation, setVacation] = useState<Vacation | null>(null);
   const [startedAt, setStartedAt] = useState('');
   const [endedAt, setEndedAt] = useState('');
@@ -26,17 +25,9 @@ export function VacationMode() {
       })
       .catch(() => setVacation(null));
   useEffect(() => {
-    homesApi
-      .list()
-      .then(({ data }) => {
-        const id = String((data as any[])[0]?.homeId || '');
-        setHomeId(id);
-        if (id) load(id);
-      })
-      .catch((error) =>
-        toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los hogares')
-      );
-  }, []);
+    if (homeId) load(homeId);
+    else setVacation(null);
+  }, [homeId]);
 
   const save = async () => {
     if (!homeId || !startedAt || !endedAt || startedAt >= endedAt) {
@@ -58,6 +49,7 @@ export function VacationMode() {
   };
   const disable = async () => {
     try {
+      if (!homeId) return;
       await vacationApi.remove(homeId);
       setVacation(null);
       setStartedAt('');

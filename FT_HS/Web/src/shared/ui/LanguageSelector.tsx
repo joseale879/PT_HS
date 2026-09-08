@@ -16,14 +16,15 @@ export function LanguageSelector() {
   // RF33.2 - Cambio de idioma
   const handleLanguageChange = async (lang: string) => {
     const language = languageOptions.find((option) => option.code === lang);
-    await i18n.changeLanguage(lang);
     if (language) {
       try {
         await userApi.updatePreferences({ language: lang, currency: language.defaultCurrency });
       } catch {
         toast.error('No fue posible guardar la preferencia de idioma');
+        return;
       }
     }
+    await i18n.changeLanguage(lang);
     toast.success(t('settings.changesSaved'), {
       description: `${t('settings.language')}: ${t(`languages.${lang}`)}`,
     });

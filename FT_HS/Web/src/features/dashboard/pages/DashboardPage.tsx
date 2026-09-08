@@ -20,14 +20,13 @@ import { useEffect, useState } from 'react';
 import { alertsApi, consumptionApi, devicesApi } from '@shared/http/httpClient';
 
 interface DashboardHomeProps {
-  userRole: 'admin' | 'technician' | 'user';
   homeId?: string;
 }
 
 // RNF1.2 - Tiempos de respuesta menores a 3 segundos
 // RNF4.3 - Notificaciones en tiempo real
 // RF14 - Monitoreo en tiempo real
-export function DashboardHome({ userRole, homeId }: DashboardHomeProps) {
+export function DashboardHome({ homeId }: DashboardHomeProps) {
   const { t } = useTranslation();
   const [currentConsumption, setCurrentConsumption] = useState({
     today: 0,
@@ -46,14 +45,37 @@ export function DashboardHome({ userRole, homeId }: DashboardHomeProps) {
     Array<{ hour: number; averageConsumptionM3: number }>
   >([]);
   const [weeklyPoints, setWeeklyPoints] = useState<Array<{ day: string; consumption: number }>>([]);
+  const [comparisons, setComparisons] = useState<{ today: number | null; week: number | null }>({
+    today: null,
+    week: null,
+  });
+  const [monthlyProjection, setMonthlyProjection] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadError, setHasLoadError] = useState(false);
 
   useEffect(() => {
-    if (!homeId) return;
+    if (!homeId) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setHasLoadError(false);
     const now = new Date();
-    const iso = (date: Date) => date.toISOString().slice(0, 10);
+    const iso = (date: Date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+        date.getDate()
+      ).padStart(2, '0')}`;
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - 6);
+    const previousWeekStart = new Date(weekStart);
+    previousWeekStart.setDate(weekStart.getDate() - 7);
+    const previousWeekEnd = new Date(now);
+    previousWeekEnd.setDate(now.getDate() - 7);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const elapsedMonthDays = now.getDate();
+    const monthDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const days = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + index);
@@ -69,6 +91,12 @@ export function DashboardHome({ userRole, homeId }: DashboardHomeProps) {
       consumptionApi.summary(
         new URLSearchParams({ homeId, from: iso(monthStart), to: iso(now) }).toString()
       ),
+      consumptionApi.summary(
+        new URLSearchParams({ homeId, from: iso(yesterday), to: iso(yesterday) }).toString()
+      ),
+      consumptionApi.summary(
+        new URLSearchParams({ homeId, from: iso(previousWeekStart), to: iso(previousWeekEnd) }).toString()
+      ),
       consumptionApi.hourly(new URLSearchParams({ homeId }).toString()),
       devicesApi.list(homeId),
       alertsApi.pending(homeId),
@@ -78,17 +106,44 @@ export function DashboardHome({ userRole, homeId }: DashboardHomeProps) {
         )
       ),
     ])
-      .then(([today, week, month, hourly, deviceResponse, alertResponse, dailyResponses]) => {
+      .then(
+        ([
+          today,
+          week,
+          month,
+          yesterdayResponse,
+          previousWeekResponse,
+          hourly,
+          deviceResponse,
+          alertResponse,
+          dailyResponses,
+        ]) => {
+          const getTotal = (response: { data: unknown }) =>
+            Number((response.data as { totalM3?: number }).totalM3 || 0);
+          const todayTotal = getTotal(today);
+          const weekTotal = getTotal(week);
+          const monthTotal = getTotal(month);
+          const yesterdayTotal = getTotal(yesterdayResponse);
+          const previousWeekTotal = getTotal(previousWeekResponse);
+          const percentageChange = (current: number, previous: number) =>
+            previous > 0 ? ((current - previous) / previous) * 100 : null;
         const hourData =
           (hourly.data as { points?: Array<{ hour: number; averageConsumptionM3: number }> })
             .points || [];
         setHourlyPoints(hourData);
         setCurrentConsumption({
-          today: Number((today.data as { totalM3?: number }).totalM3 || 0),
-          week: Number((week.data as { totalM3?: number }).totalM3 || 0),
-          month: Number((month.data as { totalM3?: number }).totalM3 || 0),
+          today: todayTotal,
+          week: weekTotal,
+          month: monthTotal,
           realTime: Number(hourData.at(-1)?.averageConsumptionM3 || 0),
         });
+        setComparisons({
+          today: percentageChange(todayTotal, yesterdayTotal),
+          week: percentageChange(weekTotal, previousWeekTotal),
+        });
+        setMonthlyProjection(
+          elapsedMonthDays > 0 ? (monthTotal / elapsedMonthDays) * monthDays : null
+        );
         setWeeklyPoints(
           dailyResponses.map((response, index) => ({
             day: days[index].toLocaleDateString(undefined, { weekday: 'short' }),
@@ -130,16 +185,43 @@ export function DashboardHome({ userRole, homeId }: DashboardHomeProps) {
               ]
             : []
         );
-      })
+        }
+      )
       .catch(() => {
         setCurrentConsumption({ today: 0, week: 0, month: 0, realTime: 0 });
+        setComparisons({ today: null, week: null });
+        setMonthlyProjection(null);
         setDevices([]);
         setAlerts([]);
         setPendingAlertCount(0);
         setHourlyPoints([]);
         setWeeklyPoints([]);
-      });
+        setHasLoadError(true);
+      })
+      .finally(() => setIsLoading(false));
   }, [homeId, t]);
+
+  const MetricValue = ({ value }: { value: number }) =>
+    isLoading || hasLoadError ? '—' : `${value.toFixed(2)} m³`;
+
+  const Comparison = ({ value }: { value: number | null }) => {
+    if (isLoading || hasLoadError || value === null) {
+      return <span className="text-sm text-gray-600">{t('dashboard.noComparableData')}</span>;
+    }
+    const isDecrease = value <= 0;
+    const TrendIcon = isDecrease ? TrendingDown : TrendingUp;
+    return (
+      <div className={`flex items-center gap-2 ${isDecrease ? 'text-green-600' : 'text-red-600'}`}>
+        <TrendIcon className="size-4" aria-hidden="true" />
+        <span className="text-sm">
+          {Math.abs(value).toFixed(1)}%{' '}
+          {isDecrease
+            ? t('dashboard.lessThanPreviousPeriod')
+            : t('dashboard.moreThanPreviousPeriod')}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="min-w-0 space-y-7 lg:space-y-8">
@@ -148,36 +230,34 @@ export function DashboardHome({ userRole, homeId }: DashboardHomeProps) {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <CardDescription>{t('dashboard.todayConsumption')}</CardDescription>
-            <CardTitle className="text-2xl lg:text-3xl">{currentConsumption.today} m³</CardTitle>
+            <CardTitle className="text-2xl lg:text-3xl"><MetricValue value={currentConsumption.today} /></CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-green-600">
-              <TrendingDown className="size-4" aria-hidden="true" />
-              <span className="text-sm">12% {t('dashboard.lessThanYesterday')}</span>
-            </div>
+            <Comparison value={comparisons.today} />
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <CardDescription>{t('dashboard.weekConsumption')}</CardDescription>
-            <CardTitle className="text-2xl lg:text-3xl">{currentConsumption.week} m³</CardTitle>
+            <CardTitle className="text-2xl lg:text-3xl"><MetricValue value={currentConsumption.week} /></CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-green-600">
-              <TrendingDown className="size-4" aria-hidden="true" />
-              <span className="text-sm">8% {t('dashboard.less')}</span>
-            </div>
+            <Comparison value={comparisons.week} />
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <CardDescription>{t('dashboard.monthConsumption')}</CardDescription>
-            <CardTitle className="text-2xl lg:text-3xl">{currentConsumption.month} m³</CardTitle>
+            <CardTitle className="text-2xl lg:text-3xl"><MetricValue value={currentConsumption.month} /></CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-gray-600">{t('dashboard.projection')}: 78.5 m³</div>
+            <div className="text-sm text-gray-600">
+              {isLoading || hasLoadError || monthlyProjection === null
+                ? t('dashboard.noComparableData')
+                : t('dashboard.monthlyProjectionValue', { value: monthlyProjection.toFixed(2) })}
+            </div>
           </CardContent>
         </Card>
 
@@ -339,40 +419,6 @@ export function DashboardHome({ userRole, homeId }: DashboardHomeProps) {
         </CardContent>
       </Card>
 
-      {/* RF30 - Recomendaciones */}
-      <Card className="mt-2 sm:mt-0">
-        <CardHeader>
-          <CardTitle>{t('dashboard.savingRecommendations')}</CardTitle>
-          <CardDescription>{t('dashboard.personalizedSuggestions')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-              <Droplets className="size-5 text-green-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm">{t('dashboard.yourNightConsumptionIsLow')}</p>
-                <p className="text-xs text-gray-600 mt-1">
-                  {t('dashboard.continueWithTheseGoodHabits')}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <TrendingDown
-                className="size-5 text-blue-600 mt-0.5 flex-shrink-0"
-                aria-hidden="true"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm">
-                  {t('dashboard.youCouldSave')} 15% {t('dashboard.optimizingPeakHourConsumption')}
-                </p>
-                <p className="text-xs text-gray-600 mt-1">
-                  {t('dashboard.savingPotential')} ~2.5 {t('dashboard.perMonth')}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

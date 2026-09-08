@@ -25,6 +25,7 @@ function getEnv() {
     },
     passwordResetUrl: process.env.PASSWORD_RESET_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
     materializedViewsRefreshMs: Number(process.env.MATERIALIZED_VIEWS_REFRESH_MS || 300000),
+    alertGenerationIntervalMs: Number(process.env.ALERT_GENERATION_INTERVAL_MS || 300000),
     authRateLimitWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 900000),
     authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX || 20),
     db: {

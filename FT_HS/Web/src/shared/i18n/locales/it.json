@@ -68,6 +68,7 @@
     "settings": "Impostazioni",
     "adminPanel": "Pannello Amministratore",
     "technicianPanel": "Pannello Tecnico",
+    "supportPanel": "Pannello Supporto",
     "users": "Gestione Utenti",
     "audit": "Audit"
   },
@@ -87,6 +88,10 @@
     "lessThanYesterday": "meno di ieri",
     "less": "meno",
     "projection": "Proiezione",
+    "lessThanPreviousPeriod": "meno del periodo precedente",
+    "moreThanPreviousPeriod": "più del periodo precedente",
+    "noComparableData": "Nessun dato comparabile disponibile",
+    "monthlyProjectionValue": "Proiezione mensile: {{value}} m³",
     "realTimeFlow": "m³/ora in tempo reale",
     "waterConsumptionPerHour": "Consumo d'acqua per ora (m³)",
     "waterConsumptionPerDay": "Consumo d'acqua per giorno (m³)",
@@ -170,6 +175,14 @@
     "deleteAccount": "Elimina Account",
     "accountTab": "Account",
     "profileUpdated": "Profile updated",
+    "profileLoadError": "Non è stato possibile caricare le tue informazioni",
+    "profileSaveError": "Non è stato possibile salvare le modifiche",
+    "passwordValidationError": "Controlla le password inserite",
+    "passwordSaveError": "Non è stato possibile modificare la password",
+    "togglePasswordVisibility": "Mostra o nascondi password",
+    "photoUploadUnavailable": "Le foto del profilo saranno disponibili quando esisterà un endpoint per i file",
+    "sessionsNotAvailable": "Il backend può chiudere la sessione corrente, ma non espone ancora l'elenco o la revoca delle sessioni remote.",
+    "privacyNotAvailable": "I permessi sulla privacy, l'esportazione e la cancellazione richiedono endpoint di consenso non ancora pubblicati dal backend.",
     "verificationEmailSent": "A verification email has been sent to your account",
     "photoFormats": "Formats: JPG, PNG. Maximum 2MB",
     "citizenshipId": "Citizen ID (C.C)",
@@ -260,7 +273,11 @@
   "roles": {
     "admin": "Amministratore",
     "technician": "Tecnico",
-    "user": "Utente"
+    "user": "Utente",
+    "administrator": "Amministratore",
+    "support": "Supporto",
+    "homeUser": "Utente titolare",
+    "guest": "Ospite"
   },
   "devices": {
     "title": "Gestione Dispositivi IoT",
@@ -334,6 +351,15 @@
     }
   },
   "reports": {
+    "homesLoadError": "Non è stato possibile caricare le case",
+    "loadError": "Non è stato possibile caricare i report",
+    "dataSourceNotice": "Dati consultati dal backend e dal database; le esportazioni saranno abilitate quando esisterà il relativo endpoint.",
+    "readings": "letture registrate",
+    "backendCalculated": "Costo calcolato dal backend",
+    "fixedCharge": "Quota fissa",
+    "noCurrentRate": "Nessuna tariffa vigente",
+    "databaseMonthlyNotice": "Consumo mensile consultato dal database",
+    "noMonthlyReadings": "Non ci sono letture mensili da mostrare",
     "title": "Report e Analisi",
     "generateReport": "Genera Report",
     "exportData": "Esporta Dati",

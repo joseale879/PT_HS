@@ -68,6 +68,7 @@
     "settings": "Settings",
     "adminPanel": "Admin Panel",
     "technicianPanel": "Technician Panel",
+    "supportPanel": "Support Panel",
     "users": "User Management",
     "audit": "Audit"
   },
@@ -87,6 +88,10 @@
     "lessThanYesterday": "less than yesterday",
     "less": "less",
     "projection": "Projection",
+    "lessThanPreviousPeriod": "less than the previous period",
+    "moreThanPreviousPeriod": "more than the previous period",
+    "noComparableData": "No comparable data yet",
+    "monthlyProjectionValue": "Monthly projection: {{value}} m³",
     "realTimeFlow": "m³/hour in real time",
     "waterConsumptionPerHour": "Water consumption per hour (m³)",
     "waterConsumptionPerDay": "Water consumption per day (m³)",
@@ -170,6 +175,14 @@
     "deleteAccount": "Delete Account",
     "accountTab": "Account",
     "profileUpdated": "Profile updated",
+    "profileLoadError": "Your information could not be loaded",
+    "profileSaveError": "Your changes could not be saved",
+    "passwordValidationError": "Check the passwords entered",
+    "passwordSaveError": "The password could not be changed",
+    "togglePasswordVisibility": "Show or hide password",
+    "photoUploadUnavailable": "Profile photos will be available when a file endpoint exists",
+    "sessionsNotAvailable": "The backend can close the current session, but it does not expose remote session listing or revocation yet.",
+    "privacyNotAvailable": "Privacy permissions, export, and deletion require consent endpoints that the backend has not published yet.",
     "verificationEmailSent": "A verification email has been sent to your account",
     "photoFormats": "Formats: JPG, PNG. Maximum 2MB",
     "citizenshipId": "Citizen ID (C.C)",
@@ -260,7 +273,11 @@
   "roles": {
     "admin": "Administrator",
     "technician": "Technician",
-    "user": "User"
+    "user": "User",
+    "administrator": "Administrator",
+    "support": "Support",
+    "homeUser": "Home user",
+    "guest": "Guest"
   },
   "devices": {
     "title": "IoT Device Management",
@@ -334,6 +351,15 @@
     }
   },
   "reports": {
+    "homesLoadError": "Homes could not be loaded",
+    "loadError": "Reports could not be loaded",
+    "dataSourceNotice": "Data is read from the backend and database; exports will be enabled when their endpoint exists.",
+    "readings": "registered readings",
+    "backendCalculated": "Cost calculated by the backend",
+    "fixedCharge": "Fixed charge",
+    "noCurrentRate": "No current rate",
+    "databaseMonthlyNotice": "Monthly consumption read from the database",
+    "noMonthlyReadings": "There are no monthly readings to display",
     "title": "Reports and Analysis",
     "generateReport": "Generate Report",
     "exportData": "Export Data",

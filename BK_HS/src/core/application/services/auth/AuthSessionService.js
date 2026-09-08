@@ -34,9 +34,14 @@ class AuthSessionService {
     return this.tokens(session.userId, session.sessionId, nextRefreshToken, refreshExpiresAt);
   }
 
-  async revoke(refreshToken) {
+  async revoke({ refreshToken, userId, sessionId }) {
     this.requireRefreshToken(refreshToken);
-    await this.authRepository.revokeRefreshSession(this.hash(refreshToken));
+    if (typeof userId !== 'string' || typeof sessionId !== 'string') {
+      const error = new Error('La sesión autenticada es obligatoria');
+      error.status = 401;
+      throw error;
+    }
+    await this.authRepository.revokeRefreshSession({ refreshTokenHash: this.hash(refreshToken), userId, sessionId });
   }
 
   tokens(userId, sessionId, refreshToken, refreshExpiresAt) {

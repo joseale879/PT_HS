@@ -18,7 +18,7 @@ const stopRefreshJob = startMaterializedViewsRefreshJob({
 });
 const stopAlertGenerationJob = startAlertGenerationJob({
   pool,
-  intervalMs: getEnv().materializedViewsRefreshMs
+  intervalMs: getEnv().alertGenerationIntervalMs
 });
 const mqttConfig = require('./src/config/mqtt').getMqttConfig();
 const mqttClient = new MqttClient();

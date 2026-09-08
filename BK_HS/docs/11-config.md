@@ -1,6 +1,6 @@
 # Configuración actual del backend
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-07.
 
 Este documento refleja los nombres de variables y archivos que existen en el backend actual. Redis no forma parte de la pila integrada actual; no se debe agregar como dependencia hasta que exista una decisión y un servicio real.
 

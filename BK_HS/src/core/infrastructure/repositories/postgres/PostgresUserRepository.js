@@ -24,6 +24,15 @@ class PostgresUserRepository extends UserRepository {
     ));
     return result.rows[0];
   }
+  async getAuthorizationContext(userId) {
+    const result = await withTransaction(userId, (client) => client.query(
+      `SELECT role_name, permission_name
+         FROM user_account.fn_get_my_authorization_context()`
+    ));
+    const roles = [...new Set(result.rows.map((row) => row.role_name).filter(Boolean))];
+    const permissions = [...new Set(result.rows.map((row) => row.permission_name).filter(Boolean))];
+    return { roles, permissions };
+  }
   async updatePreferences({ userId, language, currency }) {
     const result = await withTransaction(userId, (client) => client.query(
       `WITH selected_language AS (

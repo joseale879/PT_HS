@@ -251,6 +251,13 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/017_privacy_retention_and_tier_fks.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
   - changeSet:
       id: 20260902-ticket-assignment
       author: Hidro_Smarth
@@ -262,6 +269,13 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: false
             stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/018_ticket_assignment.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
   - changeSet:
       id: 20260903-document-number-max-10
       author: Hidro_Smarth
@@ -275,13 +289,26 @@ databaseChangeLog:
             stripComments: false
       rollback:
         - sqlFile:
-            path: ../../05_rollbacks/01_ddl/04_alter/018_ticket_assignment.rollback.sql
+            path: ../../05_rollbacks/01_ddl/04_alter/019_document_number_max_10.rollback.sql
             relativeToChangelogFile: true
             splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260906-alert-rule-units-event-dedup
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,alert,integrity"
+      comment: "Aligns alert rule units with alert types and adds a deterministic deduplication key to alert events."
+      changes:
+        - sqlFile:
+            path: 020_alert_rule_units_and_event_dedup.sql
+            relativeToChangelogFile: true
+            splitStatements: false
             stripComments: false
       rollback:
         - sqlFile:
-            path: ../../05_rollbacks/01_ddl/04_alter/017_privacy_retention_and_tier_fks.rollback.sql
+            path: ../../05_rollbacks/01_ddl/04_alter/020_alert_rule_units_and_event_dedup.rollback.sql
             relativeToChangelogFile: true
-            splitStatements: true
+            splitStatements: false
             stripComments: false
+

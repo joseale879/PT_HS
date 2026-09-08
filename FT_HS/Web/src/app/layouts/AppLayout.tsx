@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
@@ -53,48 +54,78 @@ import { AuditLog } from '@features/admin/audit/AuditPage';
 import { SupportTickets } from '@features/support/pages/SupportPage';
 import { useTheme } from '@app/providers/ThemeProvider';
 import { toast } from 'sonner';
-import { homesApi, userApi } from '@shared/http/httpClient';
+import { useActiveHome } from '@app/providers/ActiveHomeProvider';
+import {
+  can,
+  getPrimaryRole,
+  roleBadgeClass,
+  roleTranslationKey,
+  type AuthorizationContext,
+} from '@shared/config/authorization';
+
+const viewPaths: Record<string, string> = {
+  dashboard: '/app',
+  'admin-panel': '/app/admin',
+  users: '/app/users',
+  audit: '/app/audit',
+  'support-panel': '/app/support/management',
+  homes: '/app/homes',
+  devices: '/app/devices',
+  reports: '/app/reports',
+  goals: '/app/goals',
+  notifications: '/app/alerts',
+  support: '/app/support',
+  settings: '/app/settings',
+};
+
+function getViewFromPath(pathname: string): string {
+  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return Object.entries(viewPaths).find(([, path]) => path === normalizedPath)?.[0] || 'dashboard';
+}
 
 interface DashboardLayoutProps {
-  userRole: 'admin' | 'technician' | 'user';
-  onLogout: () => void;
+  session: AuthorizationContext & {
+    fullName?: string;
+    email?: string;
+  };
+  onLogout: () => void | Promise<void>;
 }
 
 // RNF2.1 - Interfaz intuitiva y comprensible
 // RNF7.2 - Cumplimiento WCAG 2.1 para accesibilidad
 // RNF7.3 - Multiplataforma (móviles, tablets y escritorio)
-export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
-  const [activeView, setActiveView] = useState('dashboard');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [homes, setHomes] = useState<Array<{ homeId: string; name: string }>>([]);
-  const [selectedHomeId, setSelectedHomeId] = useState('');
-  const [profile, setProfile] = useState<{ fullName?: string; email?: string }>({});
+export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { homes, homeId: selectedHomeId, setHomeId: setSelectedHomeId } = useActiveHome();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const primaryRole = getPrimaryRole(session.roles);
+  const roleLabel = t(roleTranslationKey(primaryRole));
+  const roleIcon =
+    primaryRole === 'Administrator'
+      ? '👑'
+      : primaryRole === 'Support'
+        ? '🛠️'
+        : primaryRole === 'HomeUser'
+          ? '🏠'
+          : '👁️';
+  const canManageRoles = can(session.permissions, 'roles.manage');
+  const canManageUsers = can(session.permissions, 'users.manage');
+  const canReadAudit = can(session.permissions, 'audit.read');
+  const canManageTickets = can(session.permissions, 'tickets.manage');
+  const activeView = getViewFromPath(pathname);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const profile = { fullName: session.fullName, email: session.email };
 
-  useEffect(() => {
-    Promise.all([homesApi.list(), userApi.me()])
-      .then(([homesResponse, userResponse]) => {
-        const availableHomes =
-          (homesResponse.data as Array<{ homeId: string; name: string }>) || [];
-        setHomes(availableHomes);
-        setSelectedHomeId((current) => current || availableHomes[0]?.homeId || '');
-        setProfile(userResponse.data as { fullName?: string; email?: string });
-      })
-      .catch(() => {
-        setHomes([]);
-        setSelectedHomeId('');
-      });
-  }, []);
-
-  // RF6.2, RF20.1 - Menús según el rol del usuario
+  // La visibilidad se resuelve con permisos funcionales devueltos por BK_HS.
+  // La base de datos y sus políticas RLS continúan siendo la barrera final.
   const getMenuItems = () => {
     const baseItems = [
       {
         id: 'dashboard',
         label: t('nav.home'),
         icon: Home,
-        roles: ['admin', 'technician', 'user'],
         ariaLabel: t('nav.home'),
       },
     ];
@@ -104,32 +135,32 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
         id: 'admin-panel',
         label: t('nav.adminPanel'),
         icon: Shield,
-        roles: ['admin'],
+        requiredPermission: 'roles.manage',
         ariaLabel: t('nav.adminPanel'),
       },
       {
         id: 'users',
         label: t('nav.users'),
         icon: Users,
-        roles: ['admin'],
+        requiredPermission: 'users.manage',
         ariaLabel: t('nav.users'),
       },
       {
         id: 'audit',
         label: t('nav.audit'),
         icon: Database,
-        roles: ['admin'],
+        requiredPermission: 'audit.read',
         ariaLabel: t('nav.audit'),
       },
     ];
 
-    const technicianItems = [
+    const supportItems = [
       {
-        id: 'technician-panel',
-        label: t('nav.technicianPanel'),
+        id: 'support-panel',
+        label: t('nav.supportPanel'),
         icon: Wrench,
-        roles: ['technician'],
-        ariaLabel: t('nav.technicianPanel'),
+        requiredPermission: 'tickets.manage',
+        ariaLabel: t('nav.supportPanel'),
       },
     ];
 
@@ -138,64 +169,61 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
         id: 'homes',
         label: t('nav.homes'),
         icon: Building2,
-        roles: ['user'],
         ariaLabel: t('nav.homes'),
       },
       {
         id: 'devices',
         label: t('nav.devices'),
         icon: Droplets,
-        roles: ['admin', 'technician', 'user'],
         ariaLabel: t('nav.devices'),
       },
       {
         id: 'reports',
         label: t('nav.reports'),
         icon: BarChart3,
-        roles: ['admin', 'user'],
+        requiredPermission: 'reports.read',
         ariaLabel: t('nav.reports'),
       },
       {
         id: 'goals',
         label: t('nav.goals'),
         icon: Target,
-        roles: ['user'],
+        requiredPermission: 'homes.manage',
         ariaLabel: t('nav.goals'),
       },
       {
         id: 'notifications',
         label: t('nav.notifications'),
         icon: Bell,
-        roles: ['admin', 'technician', 'user'],
+        requiredPermission: 'alerts.manage',
         ariaLabel: t('nav.notifications'),
       },
       {
         id: 'support',
         label: t('nav.support'),
         icon: Users,
-        roles: ['admin', 'technician', 'user'],
         ariaLabel: t('nav.support'),
       },
       {
         id: 'settings',
         label: t('nav.settings'),
         icon: Settings,
-        roles: ['admin', 'technician', 'user'],
         ariaLabel: t('nav.settings'),
       },
     ];
 
-    const allItems = [...baseItems, ...adminItems, ...technicianItems, ...userItems];
+    const allItems = [...baseItems, ...adminItems, ...supportItems, ...userItems];
 
-    // RF20.2 - Filtrar según el rol para restringir vistas
-    return allItems.filter((item) => item.roles.includes(userRole));
+    return allItems.filter((item) =>
+      item.requiredPermission ? can(session.permissions, item.requiredPermission) : true
+    );
   };
 
   const menuItems = getMenuItems();
 
-  // Información del usuario según el rol
+  // Presentación del rol funcional, sin traducirlo a nombres internos.
   const getUserInfo = () => {
-    const name = profile.fullName || profile.email || t('roles.user');
+    const name = profile.fullName || profile.email || roleLabel;
     const initials =
       name
         .split(/\s+/)
@@ -204,14 +232,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
         .map((part) => part[0])
         .join('')
         .toUpperCase() || 'HS';
-    switch (userRole) {
-      case 'admin':
-        return { name, email: profile.email || '', initials, color: 'bg-red-600' };
-      case 'technician':
-        return { name, email: profile.email || '', initials, color: 'bg-orange-600' };
-      case 'user':
-        return { name, email: profile.email || '', initials, color: 'bg-blue-600' };
-    }
+    return { name, email: profile.email || '', initials, color: roleBadgeClass(primaryRole) };
   };
 
   const userInfo = getUserInfo();
@@ -229,19 +250,25 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
     onLogout();
   };
 
+  const RoleBadge = () => (
+    <Badge className={`${roleBadgeClass(primaryRole)} text-white`}>
+      {roleIcon} {roleLabel}
+    </Badge>
+  );
+
   // RF20.1 - Renderizar vista según permisos
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <DashboardHome userRole={userRole} homeId={selectedHomeId} />;
+        return <DashboardHome homeId={selectedHomeId} />;
       case 'admin-panel':
-        return userRole === 'admin' ? (
+        return canManageRoles ? (
           <AdminPanel />
         ) : (
           <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
         );
       case 'users':
-        return userRole === 'admin' ? (
+        return canManageUsers ? (
           <div className="text-center py-12 text-gray-600">
             {t('nav.users')} - {t('common.inDevelopment')}
           </div>
@@ -249,15 +276,15 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
           <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
         );
       case 'audit':
-        return userRole === 'admin' ? (
+        return canReadAudit ? (
           <AuditLog />
         ) : (
           <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
         );
       case 'support':
         return <SupportTickets />;
-      case 'technician-panel':
-        return userRole === 'technician' ? (
+      case 'support-panel':
+        return canManageTickets ? (
           <TechnicianPanel />
         ) : (
           <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
@@ -265,7 +292,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
       case 'homes':
         return <HomeManagement />;
       case 'devices':
-        return <DeviceManagement userRole={userRole} />;
+        return <DeviceManagement permissions={session.permissions} homeId={selectedHomeId} homes={homes} onHomeChange={setSelectedHomeId} />;
       case 'reports':
         return <ReportsAnalytics homeId={selectedHomeId} />;
       case 'goals':
@@ -273,9 +300,9 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
       case 'notifications':
         return <NotificationsPanel homeId={selectedHomeId} />;
       case 'settings':
-        return <AccountSettings userRole={userRole} />;
+        return <AccountSettings roles={session.roles} homeId={selectedHomeId} />;
       default:
-        return <DashboardHome userRole={userRole} homeId={selectedHomeId} />;
+        return <DashboardHome homeId={selectedHomeId} />;
     }
   };
 
@@ -304,23 +331,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
             <SheetTitle className="text-white text-2xl hidrosmart-logo">{t('app.name')}</SheetTitle>
           </div>
           <SheetDescription className="text-blue-100">{t('app.tagline')}</SheetDescription>
-          <div className="mt-4">
-            <Badge
-              className={`${
-                userRole === 'admin'
-                  ? 'bg-red-600'
-                  : userRole === 'technician'
-                    ? 'bg-orange-600'
-                    : 'bg-green-600'
-              } text-white`}
-            >
-              {userRole === 'admin'
-                ? `👑 ${t('roles.admin')}`
-                : userRole === 'technician'
-                  ? `🔧 ${t('roles.technician')}`
-                  : `👤 ${t('roles.user')}`}
-            </Badge>
-          </div>
+          <div className="mt-4"><RoleBadge /></div>
         </SheetHeader>
 
         <nav className="p-4 space-y-2" role="navigation" aria-label="Menú principal">
@@ -330,7 +341,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
               <button
                 key={item.id}
                 onClick={() => {
-                  setActiveView(item.id);
+                  navigate(viewPaths[item.id]);
                   setMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -377,7 +388,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
   );
 
   return (
-    <div className="flex h-dvh min-w-0 bg-gray-50">
+    <div className="flex h-dvh min-w-0 bg-gray-50 pt-[env(safe-area-inset-top)]">
       {/* RNF26.1 - Sidebar para desktop (oculto en móvil) */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-blue-900 text-white">
         <div className="p-6 flex-1 overflow-y-auto">
@@ -389,31 +400,15 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
           </div>
 
           {/* Badge de rol */}
-          <div className="mb-6">
-            <Badge
-              className={`${
-                userRole === 'admin'
-                  ? 'bg-red-600'
-                  : userRole === 'technician'
-                    ? 'bg-orange-600'
-                    : 'bg-green-600'
-              } text-white`}
-            >
-              {userRole === 'admin'
-                ? `👑 ${t('roles.admin')}`
-                : userRole === 'technician'
-                  ? `🔧 ${t('roles.technician')}`
-                  : `👤 ${t('roles.user')}`}
-            </Badge>
-          </div>
+          <div className="mb-6"><RoleBadge /></div>
 
           <nav className="space-y-2" role="navigation" aria-label="Menú principal">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
-                  key={item.id}
-                  onClick={() => setActiveView(item.id)}
+                key={item.id}
+                onClick={() => navigate(viewPaths[item.id])}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     activeView === item.id
                       ? 'bg-blue-700 text-white'
@@ -535,7 +530,7 @@ export function DashboardLayout({ userRole, onLogout }: DashboardLayoutProps) {
 
               <button
                 type="button"
-                onClick={() => setActiveView('settings')}
+                onClick={() => navigate(viewPaths.settings)}
                 className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                 aria-label="Ir a configuración del perfil"
               >
