@@ -13,8 +13,9 @@ import {
   DialogTrigger,
 } from '@shared/ui/dialog';
 import { Droplets, Plus, Trash2, Wifi, WifiOff } from 'lucide-react';
-import { devicesApi, homesApi } from '@shared/http/httpClient';
+import { devicesApi } from '@shared/http/httpClient';
 import { toast } from 'sonner';
+import { can } from '@shared/config/authorization';
 
 type Device = {
   deviceId: string;
@@ -28,14 +29,22 @@ type Device = {
 };
 type Home = { homeId: string; name: string };
 
-export function DeviceManagement({ userRole }: { userRole: 'admin' | 'technician' | 'user' }) {
-  const [homes, setHomes] = useState<Home[]>([]);
-  const [homeId, setHomeId] = useState('');
+export function DeviceManagement({
+  permissions,
+  homeId,
+  homes,
+  onHomeChange,
+}: {
+  permissions: string[];
+  homeId: string;
+  homes: Home[];
+  onHomeChange: (homeId: string) => void;
+}) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [threshold, setThreshold] = useState('');
-  const canManage = userRole !== 'user';
+  const canManage = can(permissions, 'devices.manage');
 
   const loadDevices = (id = homeId) => {
     if (!id) return;
@@ -50,18 +59,6 @@ export function DeviceManagement({ userRole }: { userRole: 'admin' | 'technician
         )
       );
   };
-  useEffect(() => {
-    homesApi
-      .list()
-      .then(({ data }) => {
-        const loaded = data as Home[];
-        setHomes(loaded);
-        setHomeId(loaded[0]?.homeId || '');
-      })
-      .catch((error) =>
-        toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los hogares')
-      );
-  }, []);
   useEffect(() => {
     loadDevices();
   }, [homeId]);
@@ -117,16 +114,16 @@ export function DeviceManagement({ userRole }: { userRole: 'admin' | 'technician
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl">Dispositivos IoT</h2>
           <p className="text-gray-600">Dispositivos asociados al hogar seleccionado.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <select
-            className="h-10 rounded-md border px-3"
+            className="h-11 w-full rounded-md border px-3 sm:w-auto"
             value={homeId}
-            onChange={(event) => setHomeId(event.target.value)}
+            onChange={(event) => onHomeChange(event.target.value)}
           >
             <option value="">Seleccionar hogar</option>
             {homes.map((home) => (
@@ -138,7 +135,7 @@ export function DeviceManagement({ userRole }: { userRole: 'admin' | 'technician
           {canManage && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Plus className="mr-2 size-4" />
                   Registrar
                 </Button>
@@ -214,17 +211,19 @@ export function DeviceManagement({ userRole }: { userRole: 'admin' | 'technician
                       ? new Date(device.lastConnectionAt).toLocaleString('es-CO')
                       : '—'}
                   </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedDevice(device);
-                        setThreshold(String(device.alertThreshold ?? ''));
-                      }}
-                    >
-                      Editar umbral
-                    </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {canManage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedDevice(device);
+                          setThreshold(String(device.alertThreshold ?? ''));
+                        }}
+                      >
+                        Editar umbral
+                      </Button>
+                    )}
                     {canManage && (
                       <Button
                         variant="ghost"

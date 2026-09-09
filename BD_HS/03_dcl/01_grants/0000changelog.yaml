@@ -463,6 +463,13 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/025_auth_security_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
   - changeSet:
       id: 20260901-active-password-policy-function-grant
       author: Hidro_Smarth
@@ -480,12 +487,6 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
-      rollback:
-        - sqlFile:
-            path: ../../05_rollbacks/03_dcl/01_grants/025_auth_security_function.rollback.sql
-            relativeToChangelogFile: true
-            splitStatements: true
-            stripComments: false
 
   - changeSet:
       id: 20260902-alert-generation-function-grant
@@ -498,7 +499,12 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
-
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/027_alert_generation_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
   - changeSet:
       id: 20260902-role-management-functions-grant
       author: Hidro_Smarth
@@ -547,3 +553,51 @@ databaseChangeLog:
             stripComments: false
       rollback:
         - sql: REVOKE SELECT ON preference.language, preference.currency FROM hidro_smart_app;
+  - changeSet:
+      id: 20260906-authorization-context-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,rbac"
+      comment: "Allows the authenticated session to read only its own functional authorization context."
+      changes:
+        - sqlFile:
+            path: 031_authorization_context_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/031_authorization_context_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260906-final-security-hardening
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,least-privilege"
+      comment: "Removes remaining direct account/RBAC mutation surfaces and PUBLIC maintenance execution."
+      changes:
+        - sqlFile:
+            path: 032_final_security_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/032_final_security_hardening.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260909-ingest-mqtt-resolve-device-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,ingest,mqtt,device"
+      comment: "Allows the ingest role to resolve MQTT device codes before inserting sensor readings."
+      changes:
+        - sqlFile:
+            path: 033_ingest_mqtt_resolve_device.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: REVOKE EXECUTE ON FUNCTION device.fn_resolve_ingest_device(VARCHAR) FROM hidro_smart_ingest;

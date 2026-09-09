@@ -1,4 +1,4 @@
-const { TYPES, UNITS } = require('./CreateAlertRule');
+const { TYPES, UNITS, TYPE_UNITS } = require('./CreateAlertRule');
 
 class UpdateAlertRule {
   constructor({ alertRepository }) { this.alertRepository = alertRepository; }
@@ -9,6 +9,7 @@ class UpdateAlertRule {
     if (threshold !== undefined && (!Number.isFinite(Number(threshold)) || Number(threshold) < 0)) throw this.badRequest('threshold debe ser un número mayor o igual a cero');
     if (unit !== undefined && !UNITS.includes(unit)) throw this.badRequest('unit no es válida');
     if (active !== undefined && typeof active !== 'boolean') throw this.badRequest('active debe ser booleano');
+    if (alertType !== undefined && unit !== undefined && TYPE_UNITS[alertType] !== unit) throw this.badRequest('unit no corresponde con alertType');
     if ([alertType, threshold, unit, active].every((value) => value === undefined)) throw this.badRequest('Debe enviar al menos un campo para actualizar');
     return this.alertRepository.updateRule({ userId, ruleId, alertType, threshold: threshold === undefined ? undefined : Number(threshold), unit, active });
   }

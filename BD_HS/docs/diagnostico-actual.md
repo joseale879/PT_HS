@@ -1,10 +1,12 @@
 # Diagnóstico actual de BD_HS
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-07.
 
 ## Resultado ejecutivo
 
-La base local `hidro_smart` está operativa en PostgreSQL 16.15. Liquibase 5.0.2 validó el changelog y reportó la base actualizada con 166 changesets.
+La configuración local de `hidro_smart` quedó verificada en la última ejecución con PostgreSQL 16 y Liquibase 5.0.2. El changelog actual contiene 177 changesets aplicados.
+
+> Último estado comprobado: `validate`, `update` y `status` fueron exitosos; PostgreSQL estaba saludable, `hidro_smart_app` autenticaba correctamente y el backend respondía `/health` con HTTP 200. Si Docker Desktop no está iniciado, estas comprobaciones deben repetirse antes de aplicar cambios.
 
 - PostgreSQL responde por `localhost:5433` desde Windows.
 - Dentro de Docker la conexión es `postgres:5432`.

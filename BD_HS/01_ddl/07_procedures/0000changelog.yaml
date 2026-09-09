@@ -94,3 +94,20 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: false
             stripComments: false
+  - changeSet:
+      id: 20260906-fix-clean-old-audit-logs
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,procedure,audit,fix"
+      comment: "Fixes the data-modifying CTE used to count deleted error logs and validates retention parameters."
+      changes:
+        - sqlFile:
+            path: 007_prc_clean_old_audit_logs_fixed.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: 003_prc_clean_old_audit_logs.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

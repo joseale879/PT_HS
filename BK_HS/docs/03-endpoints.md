@@ -1,6 +1,6 @@
 # Endpoints reales de la API — HidroSmart
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-07.
 
 Este documento refleja las rutas montadas actualmente en `BK_HS/src/app.js`. La URL base pública es `http://localhost:3000/api/v1` en desarrollo directo y `/api/v1` desde el frontend servido por Nginx.
 
@@ -135,7 +135,7 @@ Estas rutas consultan agregados de PostgreSQL. No son un endpoint de entrada MQT
 | GET | `/api/v1/support/tickets` | autenticado |
 | GET | `/api/v1/support/tickets/:ticketId` | autenticado y autorizado |
 | GET | `/api/v1/support/tickets/:ticketId/responses` | autenticado y autorizado |
-| POST | `/api/v1/support/tickets` | permiso de gestión del hogar |
+| POST | `/api/v1/support/tickets` | autenticado; crea un ticket propio |
 | PATCH | `/api/v1/support/tickets/:ticketId` | soporte |
 | POST | `/api/v1/support/tickets/:ticketId/responses` | soporte |
 
@@ -146,6 +146,12 @@ Estas rutas consultan agregados de PostgreSQL. No son un endpoint de entrada MQT
 | GET | `/api/v1/audit/logs` | `audit.read` |
 
 Parámetros de consulta disponibles para auditoría: `action`, `tableName`, `from`, `to`, `page` y `pageSize`.
+
+## Corrección de permisos de Support
+
+`POST /api/v1/support/tickets` requiere únicamente autenticación. La creación de tickets propios no requiere `homes.manage`.
+
+`POST /api/v1/support/tickets/:ticketId/responses` requiere autenticación y la autorización final de la fila se aplica mediante RLS. La administración de tickets (`PATCH`) sí requiere `tickets.manage`.
 
 ## MQTT no es REST
 

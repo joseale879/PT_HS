@@ -1,4 +1,10 @@
 databaseChangeLog:
+  # Los roles de conexion deben existir antes del DDL porque algunos
+  # cambios configuran atributos del rol hidro_smart_app.
+  - include:
+      file: 03_dcl/00_roles/0000changelog.yaml
+      relativeToChangelogFile: true
+
   - include:
       file: 01_ddl/changelog.yaml
       relativeToChangelogFile: true
@@ -10,4 +16,3 @@ databaseChangeLog:
   - include:
       file: 03_dcl/changelog.yaml
       relativeToChangelogFile: true
-

@@ -30,7 +30,7 @@ test('solicita recuperación solo con un correo electrónico válido', async () 
   await assert.rejects(() => useCase.execute({ email: 'usuario-invalido' }), (error) => error.status === 400);
 });
 
-test('rechaza cuentas inexistentes y no intenta enviar un correo', async () => {
+test('mantiene una respuesta neutra para cuentas inexistentes y no intenta enviar un correo', async () => {
   let sent = false;
   const useCase = new RequestPasswordReset({
     authRepository: { createPasswordResetToken: async () => null },
@@ -38,10 +38,8 @@ test('rechaza cuentas inexistentes y no intenta enviar un correo', async () => {
     notificationService: { isConfigured: () => true, sendPasswordReset: async () => { sent = true; } }
   });
 
-  await assert.rejects(
-    () => useCase.execute({ email: 'noexiste@ejemplo.com' }),
-    (error) => error.status === 404 && /no esta registrado/i.test(error.message)
-  );
+  const result = await useCase.execute({ email: 'noexiste@ejemplo.com' });
+  assert.ok(result.resetExpiresAt);
   assert.equal(sent, false);
 });
 

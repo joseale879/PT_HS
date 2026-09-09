@@ -22,12 +22,7 @@ class RequestPasswordReset {
       tokenHash: this.tokenService.hash(resetToken),
       expiresAt: resetExpiresAt
     });
-    if (!resetId) {
-      const error = new Error('El correo electronico no esta registrado en HidroSmart');
-      error.status = 404;
-      throw error;
-    }
-    await this.notificationService.sendPasswordReset({ recipient: normalizedEmail, resetToken });
+    if (resetId) await this.notificationService.sendPasswordReset({ recipient: normalizedEmail, resetToken });
     return { resetExpiresAt };
   }
 

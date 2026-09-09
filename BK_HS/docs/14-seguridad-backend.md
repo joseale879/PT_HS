@@ -1,5 +1,10 @@
 # Seguridad del Backend — Hidro Smart
 
+Estado de implementación: la autenticación activa usa JWT, refresh tokens,
+revocación de sesiones y recuperación por correo SMTP. Las secciones de MFA,
+Redis y actuadores describen capacidades futuras o legado y no deben tratarse
+como rutas disponibles mientras no aparezcan montadas en `src/app.js`.
+
 ## 1. Introducción
 
 Este documento define las medidas de seguridad que debe implementar el backend de Hidro Smart para proteger:

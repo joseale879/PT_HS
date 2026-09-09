@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS alert_rate.uq_alert_event_rule_home_dedup;

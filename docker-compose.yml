@@ -1,6 +1,7 @@
 name: hidro_smart_full
 
 services:
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -17,6 +18,7 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
 
   db-bootstrap:
     image: postgres:16-alpine
@@ -40,12 +42,14 @@ services:
         psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_app LOGIN PASSWORD '$${APP_PASSWORD}';"
     restart: "no"
 
+
   mailpit:
     image: axllent/mailpit:v1.21
     ports:
       - "${MAILPIT_SMTP_PORT:-1025}:1025"
       - "${MAILPIT_UI_PORT:-8025}:8025"
     restart: unless-stopped
+
 
   mosquitto:
     image: eclipse-mosquitto:2.0.21
@@ -54,6 +58,7 @@ services:
     volumes:
       - ./BK_HS/docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
     restart: unless-stopped
+
 
   backend:
     build:
@@ -64,6 +69,7 @@ services:
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost}
       MATERIALIZED_VIEWS_REFRESH_MS: ${MATERIALIZED_VIEWS_REFRESH_MS:-300000}
+      ALERT_GENERATION_INTERVAL_MS: ${ALERT_GENERATION_INTERVAL_MS:-300000}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
       DB_HOST: postgres
       DB_PORT: 5432
@@ -93,6 +99,8 @@ services:
       MQTT_QOS: ${MQTT_QOS:-1}
       MQTT_RECONNECT_PERIOD_MS: ${MQTT_RECONNECT_PERIOD_MS:-3000}
       MQTT_CONNECT_TIMEOUT_MS: ${MQTT_CONNECT_TIMEOUT_MS:-10000}
+      DB_INGEST_USER: ${DB_INGEST_USER:-hidro_smart_ingest}
+      DB_INGEST_PASSWORD: ${DB_INGEST_PASSWORD:?Set_DB_INGEST_PASSWORD_in_env}
     expose:
       - "3000"
     ports:
@@ -111,6 +119,7 @@ services:
       retries: 5
     restart: unless-stopped
 
+
   frontend:
     build:
       context: ./FT_HS/Web
@@ -123,6 +132,7 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
 
   liquibase:
     build:

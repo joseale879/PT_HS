@@ -35,7 +35,7 @@ class AuthController {
   }
 
   async logout(req, res) {
-    await this.sessionService.revoke(req.body?.refreshToken);
+    await this.sessionService.revoke({ refreshToken: req.body?.refreshToken, userId: req.user.id, sessionId: req.user.sessionId });
     res.status(204).send();
   }
 

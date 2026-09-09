@@ -617,3 +617,67 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260906-fn-generate-alert-events-consistent
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,alert,integrity"
+      comment: "Unifies periodic alert periods, vacation behavior, no-reading detection and concurrent idempotency."
+      changes:
+        - sqlFile:
+            path: 037_fn_generate_alert_events_consistent.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: 035_fn_generate_alert_events_no_reading.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260906-fn-authorization-context
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rbac"
+      comment: "Exposes only the authenticated user's own functional roles and permissions."
+      changes:
+        - sqlFile:
+            path: 038_fn_authorization_context.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP FUNCTION IF EXISTS user_account.fn_get_my_authorization_context();
+
+  - changeSet:
+      id: 20260906-fn-bootstrap-first-administrator
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rbac,bootstrap"
+      comment: "Adds an owner-only one-time bootstrap for the first functional Administrator."
+      changes:
+        - sqlFile:
+            path: 039_fn_bootstrap_first_administrator.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP FUNCTION IF EXISTS user_account.fn_bootstrap_first_administrator(UUID);
+ 
+  - changeSet:
+      id: 20260909-fn-resolve-ingest-device
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,ingest,mqtt"
+      comment: "Resolves an active MQTT device code to its active device and home identifiers."
+      changes:
+        - sqlFile:
+            path: 040_fn_resolve_ingest_device.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/040_fn_resolve_ingest_device.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

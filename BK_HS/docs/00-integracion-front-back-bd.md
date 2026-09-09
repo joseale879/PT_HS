@@ -1,6 +1,6 @@
 # Integración vigente: base de datos, backend y frontend
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-07.
 
 ## Topología local
 
