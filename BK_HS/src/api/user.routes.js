@@ -6,13 +6,15 @@ const { UpdateCurrentUser } = require('../core/application/use-cases/user/Update
 const { GetUserPreferences } = require('../core/application/use-cases/user/GetUserPreferences');
 const { UpdateUserPreferences } = require('../core/application/use-cases/user/UpdateUserPreferences');
 const { PostgresUserRepository } = require('../core/infrastructure/repositories/postgres/PostgresUserRepository');
+const { GetAuthorizationContext } = require('../core/application/use-cases/user/GetAuthorizationContext');
 const { UserController } = require('./controllers/UserController');
 const userRepository = new PostgresUserRepository();
 const userController = new UserController({
   getCurrentUser: new GetCurrentUser({ userRepository }),
   updateCurrentUser: new UpdateCurrentUser({ userRepository }),
   getUserPreferences: new GetUserPreferences({ userRepository }),
-  updateUserPreferences: new UpdateUserPreferences({ userRepository })
+  updateUserPreferences: new UpdateUserPreferences({ userRepository }),
+  getAuthorizationContext: new GetAuthorizationContext({ userRepository })
 });
 router.use(authenticate);
 router.get('/me', asyncHandler((req, res) => userController.getMe(req, res)));

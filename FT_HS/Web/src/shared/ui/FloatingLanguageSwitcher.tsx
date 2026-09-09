@@ -10,6 +10,7 @@ import {
 } from '@shared/ui/dropdown-menu';
 import { languageOptions, normalizeLanguage } from '@shared/i18n/locale';
 import { sessionTokens, userApi } from '@shared/http/httpClient';
+import { toast } from 'sonner';
 
 export function FloatingLanguageSwitcher() {
   const { i18n, t } = useTranslation();
@@ -19,14 +20,18 @@ export function FloatingLanguageSwitcher() {
     languageOptions.find((language) => language.code === currentCode) || languageOptions[0];
 
   const handleLanguageChange = async (code: string) => {
-    i18n.changeLanguage(code);
     if (sessionTokens.accessToken) {
       const language = languageOptions.find((option) => option.code === code);
-      if (language)
-        userApi
-          .updatePreferences({ language: code, currency: language.defaultCurrency })
-          .catch(() => undefined);
+      if (language) {
+        try {
+          await userApi.updatePreferences({ language: code, currency: language.defaultCurrency });
+        } catch {
+          toast.error('No fue posible guardar la preferencia de idioma');
+          return;
+        }
+      }
     }
+    await i18n.changeLanguage(code);
     setIsOpen(false);
   };
 

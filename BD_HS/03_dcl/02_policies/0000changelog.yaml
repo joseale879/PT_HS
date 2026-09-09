@@ -221,3 +221,20 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+  - changeSet:
+      id: 20260906-cross-tenant-policy-hardening
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,policy,security,rls"
+      comment: "Closes cross-ticket, cross-home report, notification reassignment and ARCO self-resolution gaps."
+      changes:
+        - sqlFile:
+            path: 020_cross_tenant_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/020_cross_tenant_hardening.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

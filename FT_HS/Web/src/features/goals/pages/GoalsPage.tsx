@@ -21,6 +21,7 @@ type Goal = {
 
 export function GoalsConfig({ homeId }: { homeId?: string }) {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [progressByGoal, setProgressByGoal] = useState<Record<string, number>>({});
   const [consumption, setConsumption] = useState(0);
   const [consumptionLimit, setConsumptionLimit] = useState('');
   const [budgetLimit, setBudgetLimit] = useState('');
@@ -35,10 +36,19 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
       goalsApi.list(homeId),
       consumptionApi.summary(new URLSearchParams({ homeId, from, to }).toString()),
     ])
-      .then(([goalResponse, summaryResponse]) => {
+      .then(async ([goalResponse, summaryResponse]) => {
         const loaded = goalResponse.data as Goal[];
+        const progressResponses = await Promise.all(
+          loaded.map((goal) => goalsApi.progress(goal.goalId).catch(() => null))
+        );
+        const nextProgress: Record<string, number> = {};
+        progressResponses.forEach((response, index) => {
+          const progress = Number((response?.data as { progress?: number } | undefined)?.progress);
+          if (Number.isFinite(progress)) nextProgress[loaded[index].goalId] = progress;
+        });
         const active = loaded.find((goal) => goal.type === 'monthly') || loaded[0];
         setGoals(loaded);
+        setProgressByGoal(nextProgress);
         setConsumption(Number((summaryResponse.data as any)?.totalM3 || 0));
         setConsumptionLimit(active ? String(active.targetM3) : '');
         setBudgetLimit(active?.targetBudget != null ? String(active.targetBudget) : '');
@@ -57,10 +67,17 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
       return;
     }
     const date = new Date();
-    const periodStart = date.toISOString().slice(0, 10);
-    const periodEnd = new Date(date.getFullYear(), date.getMonth() + 1, date.getDate())
-      .toISOString()
-      .slice(0, 10);
+    const formatDate = (value: Date) => {
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${value.getFullYear()}-${month}-${day}`;
+    };
+    const periodStart = formatDate(date);
+    const periodEndDate = new Date(date);
+    if (period === 'weekly') periodEndDate.setDate(periodEndDate.getDate() + 7);
+    if (period === 'monthly') periodEndDate.setMonth(periodEndDate.getMonth() + 1);
+    if (period === 'annual') periodEndDate.setFullYear(periodEndDate.getFullYear() + 1);
+    const periodEnd = formatDate(periodEndDate);
     const existing = goals.find((goal) => goal.type === period);
     const payload = {
       type: period,
@@ -163,9 +180,7 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
         <CardContent className="space-y-3">
           {goals.length ? (
             goals.map((goal) => {
-              const progress = goal.targetM3
-                ? Math.min((consumption / goal.targetM3) * 100, 100)
-                : 0;
+              const progress = progressByGoal[goal.goalId];
               return (
                 <div key={goal.goalId} className="rounded-lg border p-4">
                   <div className="flex items-center justify-between gap-3">
@@ -177,7 +192,11 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={goal.achieved ? 'default' : 'outline'}>
-                        {goal.achieved ? 'Lograda' : `${progress.toFixed(1)}%`}
+                        {goal.achieved
+                          ? 'Lograda'
+                          : progress === undefined
+                            ? '—'
+                            : `${progress.toFixed(1)}%`}
                       </Badge>
                       <Button
                         variant="ghost"
@@ -189,7 +208,7 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
                       </Button>
                     </div>
                   </div>
-                  <Progress value={progress} className="mt-3" />
+                  <Progress value={progress ?? 0} className="mt-3" />
                 </div>
               );
             })
