@@ -3,13 +3,13 @@ const { withTransaction } = require('../../../../infrastructure/db');
 const { UserRepository } = require('../../../application/ports/repositories/UserRepository');
 class PostgresUserRepository extends UserRepository {
   async findById(userId) {
-    const result = await withTransaction(userId, (client) => client.query(`SELECT ua.user_account_id, ua.username, ua.email, ua.status, ua.created_at, up.full_name, up.document_type, up.document_number, up.phone, up.city FROM user_account.user_account ua LEFT JOIN user_account.user_profile up ON up.user_account_id = ua.user_account_id WHERE ua.user_account_id = $1::uuid AND ua.deleted_at IS NULL`, [userId]));
+    const result = await withTransaction(userId, (client) => client.query(`SELECT ua.user_account_id, ua.username, ua.email, ua.status, ua.created_at, up.full_name, up.document_type, up.document_number, up.phone, up.city, up.avatar_data_url FROM user_account.user_account ua LEFT JOIN user_account.user_profile up ON up.user_account_id = ua.user_account_id WHERE ua.user_account_id = $1::uuid AND ua.deleted_at IS NULL`, [userId]));
     return result.rows[0] ? this.toEntity(result.rows[0]) : null;
   }
-  async updateProfile({ userId, fullName, phone, city }) {
+  async updateProfile({ userId, fullName, phone, city, avatarDataUrl }) {
     const result = await withTransaction(userId, async (client) => {
-      await client.query(`INSERT INTO user_account.user_profile (user_account_id, full_name, phone, city) VALUES ($1::uuid, $2::varchar, $3::varchar, $4::varchar) ON CONFLICT (user_account_id) DO UPDATE SET full_name = EXCLUDED.full_name, phone = EXCLUDED.phone, city = EXCLUDED.city`, [userId, fullName, phone, city]);
-      return client.query(`SELECT ua.user_account_id, ua.username, ua.email, ua.status, ua.created_at, up.full_name, up.document_type, up.document_number, up.phone, up.city FROM user_account.user_account ua JOIN user_account.user_profile up ON up.user_account_id = ua.user_account_id WHERE ua.user_account_id = $1::uuid AND ua.deleted_at IS NULL`, [userId]);
+      await client.query(`UPDATE user_account.user_profile SET full_name = $2::varchar, phone = $3::varchar, city = $4::varchar, avatar_data_url = $5::text WHERE user_account_id = $1::uuid`, [userId, fullName, phone, city, avatarDataUrl]);
+      return client.query(`SELECT ua.user_account_id, ua.username, ua.email, ua.status, ua.created_at, up.full_name, up.document_type, up.document_number, up.phone, up.city, up.avatar_data_url FROM user_account.user_account ua JOIN user_account.user_profile up ON up.user_account_id = ua.user_account_id WHERE ua.user_account_id = $1::uuid AND ua.deleted_at IS NULL`, [userId]);
     });
     return result.rows[0] ? this.toEntity(result.rows[0]) : null;
   }
@@ -57,6 +57,6 @@ class PostgresUserRepository extends UserRepository {
     ));
     return result.rows[0] || null;
   }
-  toEntity(row) { return new User({ id: row.user_account_id, username: row.username, email: row.email, status: row.status, fullName: row.full_name, documentType: row.document_type, documentNumber: row.document_number, phone: row.phone, city: row.city, createdAt: row.created_at }); }
+  toEntity(row) { return new User({ id: row.user_account_id, username: row.username, email: row.email, status: row.status, fullName: row.full_name, documentType: row.document_type, documentNumber: row.document_number, phone: row.phone, city: row.city, avatarDataUrl: row.avatar_data_url, createdAt: row.created_at }); }
 }
 module.exports = { PostgresUserRepository };

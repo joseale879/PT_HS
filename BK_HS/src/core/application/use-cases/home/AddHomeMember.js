@@ -1,3 +1,5 @@
+const { isValidEmail } = require('../../../../shared/validation');
+
 class AddHomeMember {
   constructor({ homeRepository }) {
     this.homeRepository = homeRepository;
@@ -6,7 +8,7 @@ class AddHomeMember {
   async execute({ userId, homeId, email, homeRole }) {
     if (!userId) throw this.badRequest('El usuario autenticado es obligatorio');
     if (!this.isUuid(homeId)) throw this.badRequest('homeId no es válido');
-    if (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    if (!isValidEmail(email)) {
       throw this.badRequest('El email no es válido');
     }
     if (!['Member', 'Guest'].includes(homeRole)) {

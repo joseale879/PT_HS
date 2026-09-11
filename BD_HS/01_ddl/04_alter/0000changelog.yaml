@@ -328,3 +328,35 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+  - changeSet:
+      id: 20260910-email-verification
+      author: Hidro_Smarth
+      changes:
+        - sqlFile:
+            path: 022_email_verification.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sql: DROP TABLE IF EXISTS user_account.email_verification_token; ALTER TABLE user_account.user_account DROP COLUMN IF EXISTS email_verified_at;
+  - changeSet:
+      id: 20260910-profile-avatar
+      author: Hidro_Smarth
+      changes:
+        - sqlFile:
+            path: 023_profile_avatar.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+      rollback:
+        - sql: ALTER TABLE user_account.user_profile DROP COLUMN IF EXISTS avatar_data_url;
+  - changeSet:
+      id: 20260911-profile-phone-max-60
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user-profile,validation"
+      comment: "Allows profile phone values up to 60 characters."
+      changes:
+        - sqlFile:
+            path: 024_profile_phone_max_60.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+      rollback:
+        - sql: ALTER TABLE user_account.user_profile ALTER COLUMN phone TYPE VARCHAR(20);

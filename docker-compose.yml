@@ -29,6 +29,7 @@ services:
       PGUSER: ${POSTGRES_USER:-hidro_smart_admin}
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD_in_env}
       APP_PASSWORD: ${DB_PASSWORD:?Set_DB_PASSWORD_in_env}
+      INGEST_PASSWORD: ${DB_INGEST_PASSWORD:?Set_DB_INGEST_PASSWORD_in_env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,6 +41,10 @@ services:
           psql -v ON_ERROR_STOP=1 -c "CREATE ROLE hidro_smart_app LOGIN;"
         fi
         psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_app LOGIN PASSWORD '$${APP_PASSWORD}';"
+        if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'hidro_smart_ingest'" | grep -q 1; then
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE hidro_smart_ingest LOGIN;"
+        fi
+        psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_ingest LOGIN PASSWORD '$${INGEST_PASSWORD}';"
     restart: "no"
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription } from '@shared/ui/alert';
 import { Badge } from '@shared/ui/badge';
 import { Button } from '@shared/ui/button';
@@ -7,13 +7,14 @@ import { Input } from '@shared/ui/input';
 import { Label } from '@shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui/tabs';
-import { Eye, EyeOff, Shield } from 'lucide-react';
+import { Camera, Eye, EyeOff, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@features/auth/api/auth.api';
 import { VacationMode } from '@features/vacation/pages/VacationPage';
 import { useAuth } from '@app/providers/AuthProvider';
 import { devicesApi, homesApi, userApi } from '@shared/http/apiClient';
 import { LanguageSelector } from '@shared/ui/LanguageSelector';
+import { isValidName, normalizeNameInput } from '@shared/lib/validators';
 import { toast } from 'sonner';
 import {
   getPrimaryRole,
@@ -34,6 +35,7 @@ type ProfileForm = {
   documentNumber: string;
   phone: string;
   city: string;
+  avatarDataUrl: string | null;
 };
 
 type AccountSummary = {
@@ -49,6 +51,7 @@ const emptyProfile: ProfileForm = {
   documentNumber: '',
   phone: '',
   city: '',
+  avatarDataUrl: null,
 };
 
 export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
@@ -63,12 +66,14 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [profile, setProfile] = useState<ProfileForm>(emptyProfile);
   const [savedProfile, setSavedProfile] = useState<ProfileForm>(emptyProfile);
+  const [profileError, setProfileError] = useState('');
   const [profileLoading, setProfileLoading] = useState(true);
   const [summary, setSummary] = useState<AccountSummary>({
     createdAt: null,
     homes: null,
     devices: null,
   });
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -83,6 +88,7 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
           documentNumber: user.documentNumber || '',
           phone: user.phone || '',
           city: user.city || '',
+          avatarDataUrl: user.avatarDataUrl || null,
         };
         const homes = (homesResponse.data as Array<{ homeId: string }>) || [];
         const deviceResponses = await Promise.all(
@@ -114,11 +120,26 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
   }, [t]);
 
   const handleSaveProfile = async () => {
+    if (!isValidName(profile.fullName)) {
+      const message = 'El nombre debe tener entre 3 y 60 caracteres y solo usar letras y espacios';
+      setProfileError(message);
+      toast.error(message);
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById('fullName');
+        if (target instanceof HTMLElement) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.focus();
+        }
+      });
+      return;
+    }
+    setProfileError('');
     try {
       await userApi.updateMe({
         fullName: profile.fullName,
         phone: profile.phone,
         city: profile.city,
+        avatarDataUrl: profile.avatarDataUrl,
       });
       await refreshSession();
       setSavedProfile(profile);
@@ -126,6 +147,22 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('settings.profileSaveError'));
     }
+  };
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Selecciona una imagen JPG, PNG o WebP');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('La foto no puede superar 2 MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setProfile((current) => ({ ...current, avatarDataUrl: String(reader.result) }));
+    reader.readAsDataURL(file);
   };
 
   const handleChangePassword = async () => {
@@ -182,16 +219,22 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
-                <div className="flex size-20 items-center justify-center rounded-full bg-blue-600 text-2xl text-white">
-                  {profile.fullName
-                    .split(/\s+/)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join('')
-                    .toUpperCase() || 'HS'}
+                <div className="size-20 overflow-hidden rounded-full bg-blue-600 text-2xl text-white">
+                  {profile.avatarDataUrl ? (
+                    <img src={profile.avatarDataUrl} alt="Foto de perfil" className="size-full object-cover" />
+                  ) : (
+                    <div className="flex size-full items-center justify-center">
+                      {profile.fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'HS'}
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-gray-600">{t('settings.photoUploadUnavailable')}</p>
+                <div className="space-y-2">
+                  <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
+                  <Button type="button" variant="outline" size="sm" disabled={profileLoading} onClick={() => avatarInputRef.current?.click()}>
+                    <Camera className="mr-2 size-4" /> Cambiar foto
+                  </Button>
+                  <p className="text-xs text-gray-600">JPG, PNG o WebP. Máximo 2 MB.</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -199,10 +242,19 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
                   <Label htmlFor="fullName">{t('settings.fullName')} *</Label>
                   <Input
                     id="fullName"
+                    className={profileError ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     value={profile.fullName}
                     disabled={profileLoading}
-                    onChange={(event) => setProfile({ ...profile, fullName: event.target.value })}
+                    onChange={(event) => {
+                      setProfile({ ...profile, fullName: normalizeNameInput(event.target.value) });
+                      setProfileError('');
+                    }}
+                    maxLength={60}
+                    autoComplete="name"
+                    aria-invalid={Boolean(profileError)}
+                    aria-describedby={profileError ? 'fullName-error' : undefined}
                   />
+                  {profileError && <p id="fullName-error" className="text-xs text-red-600">{profileError}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">{t('auth.email')} *</Label>
@@ -231,6 +283,8 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
                     value={profile.phone}
                     disabled={profileLoading}
                     onChange={(event) => setProfile({ ...profile, phone: event.target.value })}
+                    maxLength={60}
+                    aria-label="Teléfono (máximo 60 caracteres)"
                   />
                 </div>
                 <div className="space-y-2">

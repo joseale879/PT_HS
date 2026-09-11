@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { LoginScreen } from '@features/auth/pages/LoginPage';
 import { DashboardLayout } from '@app/layouts/AppLayout';
@@ -10,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import logoImage from '../imports/aaa-Photoroom-1.png';
 import { useAuth } from '@app/providers/AuthProvider';
 import { ActiveHomeProvider } from '@app/providers/ActiveHomeProvider';
+import { RenderErrorBoundary } from '@app/components/RenderErrorBoundary';
 
 type RegistrationDraft = {
   name: string;
@@ -58,9 +60,20 @@ function PublicOnlyRoute() {
   return isAuthenticated ? <Navigate to="/app" replace /> : <Outlet />;
 }
 
+function FallbackRoute() {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  return (
+    <Navigate
+      to={isAuthenticated ? '/app' : { pathname: '/login', search: location.search }}
+      replace
+    />
+  );
+}
+
 function LoginRoute() {
   const navigate = useNavigate();
-  const { login, requestPasswordReset, resetPassword } = useAuth();
+  const { login, requestPasswordReset, resetPassword, getPasswordResetEmail } = useAuth();
   return (
     <LoginScreen
       onLogin={async (credentials) => {
@@ -69,6 +82,7 @@ function LoginRoute() {
       }}
       onPasswordReset={requestPasswordReset}
       onPasswordResetComplete={({ token, password }) => resetPassword({ token, password })}
+      onGetPasswordResetEmail={getPasswordResetEmail}
       onRegisterClick={() => navigate('/register')}
     />
   );
@@ -83,7 +97,7 @@ function RegisterRoute() {
     <RegisterScreen
       onRegister={async (payload) => {
         await register(payload);
-        navigate('/app', { replace: true });
+        navigate('/login', { replace: true, state: { verificationPending: true } });
       }}
       onBack={() => navigate('/login')}
       initialFormData={state.draft || null}
@@ -91,6 +105,17 @@ function RegisterRoute() {
       onReviewTerms={(draft) => navigate('/privacy', { state: { draft } })}
     />
   );
+}
+
+function VerifyEmailRoute() {
+  const navigate = useNavigate();
+  const { verifyEmail } = useAuth();
+  const token = new URLSearchParams(useLocation().search).get('token');
+  useEffect(() => {
+    if (!token) { navigate('/login', { replace: true }); return; }
+    verifyEmail(token).then(() => navigate('/login', { replace: true, state: { emailVerified: true } })).catch(() => navigate('/login', { replace: true }));
+  }, [navigate, token, verifyEmail]);
+  return <LoadingScreen />;
 }
 
 function PrivacyRoute() {
@@ -133,20 +158,24 @@ export default function App() {
   if (isInitializing) return <LoadingScreen />;
 
   return (
-    <>
+    <RenderErrorBoundary
+      title="HidroSmart no pudo mostrar la aplicación"
+      description="La aplicación encontró un error inesperado. Reintenta la carga para continuar."
+    >
       <Routes>
         <Route element={<PublicOnlyRoute />}>
           <Route path="/login" element={<LoginRoute />} />
           <Route path="/register" element={<RegisterRoute />} />
           <Route path="/privacy" element={<PrivacyRoute />} />
+          <Route path="/verify-email" element={<VerifyEmailRoute />} />
         </Route>
         <Route element={<RequireAuthentication />}>
           <Route path="/app/*" element={<AuthenticatedApplication />} />
         </Route>
-        <Route path="*" element={<Navigate to={isAuthenticated ? '/app' : '/login'} replace />} />
+        <Route path="*" element={<FallbackRoute />} />
       </Routes>
       <FloatingLanguageSwitcher />
       <Toaster />
-    </>
+    </RenderErrorBoundary>
   );
 }
