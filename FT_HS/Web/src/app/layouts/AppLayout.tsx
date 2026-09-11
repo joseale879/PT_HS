@@ -55,6 +55,7 @@ import { SupportTickets } from '@features/support/pages/SupportPage';
 import { useTheme } from '@app/providers/ThemeProvider';
 import { toast } from 'sonner';
 import { useActiveHome } from '@app/providers/ActiveHomeProvider';
+import { RenderErrorBoundary } from '@app/components/RenderErrorBoundary';
 import {
   can,
   getPrimaryRole,
@@ -116,7 +117,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
   const canManageTickets = can(session.permissions, 'tickets.manage');
   const activeView = getViewFromPath(pathname);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const profile = { fullName: session.fullName, email: session.email };
+  const profile = { fullName: session.fullName, email: session.email, avatarDataUrl: session.avatarDataUrl };
 
   // La visibilidad se resuelve con permisos funcionales devueltos por BK_HS.
   // La base de datos y sus políticas RLS continúan siendo la barrera final.
@@ -232,7 +233,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
         .map((part) => part[0])
         .join('')
         .toUpperCase() || 'HS';
-    return { name, email: profile.email || '', initials, color: roleBadgeClass(primaryRole) };
+    return { name, email: profile.email || '', initials, color: roleBadgeClass(primaryRole), avatarDataUrl: profile.avatarDataUrl };
   };
 
   const userInfo = getUserInfo();
@@ -538,11 +539,8 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
                   <div className="text-sm text-gray-600">{userInfo.name}</div>
                   <div className="text-xs text-gray-500">{userInfo.email}</div>
                 </div>
-                <div
-                  className={`size-10 ${userInfo.color} rounded-full flex items-center justify-center text-white transition-opacity`}
-                  aria-hidden="true"
-                >
-                  {userInfo.initials}
+                <div className={`size-10 overflow-hidden ${userInfo.color} rounded-full flex items-center justify-center text-white transition-opacity`} aria-hidden="true">
+                  {userInfo.avatarDataUrl ? <img src={userInfo.avatarDataUrl} alt="" className="size-full object-cover" /> : userInfo.initials}
                 </div>
               </button>
             </div>
@@ -555,7 +553,13 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
           role="main"
           aria-label={t('common.mainContent')}
         >
-          {renderView()}
+          <RenderErrorBoundary
+            key={pathname}
+            title="No se pudo cargar este apartado"
+            description="La navegación funciona, pero esta vista encontró un error. Puedes reintentarla."
+          >
+            {renderView()}
+          </RenderErrorBoundary>
         </main>
       </div>
     </div>

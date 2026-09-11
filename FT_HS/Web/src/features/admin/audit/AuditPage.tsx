@@ -26,7 +26,9 @@ export function AuditLog() {
       .catch((error) =>
         toast.error(error instanceof Error ? error.message : 'No se pudo cargar la auditoría')
       );
-  useEffect(load, []);
+  useEffect(() => {
+    void load();
+  }, []);
   const filtered = events.filter((event) =>
     `${event.action} ${event.tableName || ''} ${event.description || ''}`
       .toLowerCase()

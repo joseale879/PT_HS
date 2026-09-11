@@ -100,6 +100,7 @@ async function request<T>(path: string, options: ApiOptions = {}, retry = true):
     ...requestOptions,
     body,
     headers: requestHeaders,
+    cache: requestOptions.cache ?? 'no-store',
   });
 
   if (response.status === 401 && retry && sessionTokens.refreshToken) {
@@ -168,11 +169,12 @@ export const authApi = {
     documentType: 'CC' | 'CE';
     documentNumber: string;
   }) =>
-    apiClient.post<{ data: { userId: string; accessToken: string; refreshToken: string } }>(
+    apiClient.post<{ data: { message: string } }>(
       '/auth/register',
       payload,
       { skipAuth: true }
     ),
+  verifyEmail: (token: string) => apiClient.post<void>('/auth/verify-email', { token }, { skipAuth: true }),
   refresh: (refreshToken: string) =>
     apiClient.post<{ data: { accessToken: string; refreshToken?: string } }>(
       '/auth/refresh',
@@ -192,13 +194,18 @@ export const authApi = {
       { resetToken: token, newPassword: password },
       { skipAuth: true }
     ),
+  passwordResetContext: (token: string) =>
+    apiClient.get<{ data: { email: string } }>(
+      `/auth/password-reset-context?resetToken=${encodeURIComponent(token)}`,
+      { skipAuth: true }
+    ),
   changePassword: (currentPassword: string, newPassword: string) =>
     apiClient.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 export const userApi = {
   me: () => apiClient.get<{ data: unknown }>('/users/me'),
-  updateMe: (payload: { fullName?: string; phone?: string; city?: string }) =>
+  updateMe: (payload: { fullName?: string; phone?: string; city?: string; avatarDataUrl?: string | null }) =>
     apiClient.put<{ data: unknown }>('/users/me', payload),
   preferences: () =>
     apiClient.get<{ data: { language: string; currency: string } }>('/users/me/preferences'),

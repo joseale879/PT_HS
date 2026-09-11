@@ -6,20 +6,20 @@ const { RequestPasswordResetRequest } = require('../../core/application/dtos/req
 const { ResetPasswordRequest } = require('../../core/application/dtos/requests/ResetPasswordRequest');
 
 class AuthController {
-  constructor({ registerUser, loginUser, sessionService, changePassword, requestPasswordReset, resetPassword }) {
+  constructor({ registerUser, loginUser, sessionService, changePassword, requestPasswordReset, resetPassword, getPasswordResetContext }) {
     this.registerUser = registerUser;
     this.loginUser = loginUser;
     this.sessionService = sessionService;
     this.changePassword = changePassword;
     this.requestPasswordReset = requestPasswordReset;
     this.resetPassword = resetPassword;
+    this.getPasswordResetContext = getPasswordResetContext;
   }
 
   async register(req, res) {
     const input = RegisterUserRequest.fromRequest(req.body);
-    const userId = await this.registerUser.execute(input);
-    const session = await this.sessionService.create(userId, this.meta(req));
-    res.status(201).json({ data: AuthResponse.fromSession(session) });
+    await this.registerUser.execute(input);
+    res.status(202).json({ data: { message: 'Revisa tu correo para activar la cuenta.' } });
   }
 
   async login(req, res) {
@@ -51,6 +51,17 @@ class AuthController {
 
   async reset(req, res) {
     await this.resetPassword.execute(ResetPasswordRequest.fromRequest(req.body));
+    res.status(204).send();
+  }
+
+  async passwordResetContext(req, res) {
+    const data = await this.getPasswordResetContext.execute({ resetToken: req.query.resetToken });
+    res.json({ data });
+  }
+
+  async verifyEmail(req, res) {
+    const userId = await this.registerUser.verifyEmail(req.body?.token);
+    if (!userId) { const error = new Error('El enlace de verificación no es válido o expiró'); error.status = 401; throw error; }
     res.status(204).send();
   }
 
