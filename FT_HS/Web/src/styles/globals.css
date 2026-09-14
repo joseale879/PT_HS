@@ -502,6 +502,16 @@ body,
   main[role='main'] {
     padding: 1.5rem !important;
   }
+
+  /* El registro necesita una composición más densa: evita los rellenos
+     generales de tarjetas que separaban las pestañas, título y primer campo. */
+  .register-card [data-slot='card-header'] {
+    padding: 0.5rem 1.5rem 0 !important;
+  }
+
+  .register-card [data-slot='card-content'] {
+    padding: 0.25rem 1.5rem 1rem !important;
+  }
 }
 
 /* Mejorar legibilidad en todos los dispositivos */

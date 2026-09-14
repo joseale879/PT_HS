@@ -601,3 +601,26 @@ databaseChangeLog:
             stripComments: false
       rollback:
         - sql: REVOKE EXECUTE ON FUNCTION device.fn_resolve_ingest_device(VARCHAR) FROM hidro_smart_ingest;
+  - changeSet:
+      id: 20260909-password-reset-context-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,auth,security"
+      comment: "Allows the application to resolve the email associated with a valid password reset token."
+      changes:
+        - sqlFile:
+            path: 034_password_reset_context.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sql: REVOKE EXECUTE ON FUNCTION user_account.fn_get_password_reset_email(TEXT) FROM hidro_smart_app;
+  - changeSet:
+      id: 20260910-email-verification-grants
+      author: Hidro_Smarth
+      changes:
+        - sqlFile:
+            path: 035_email_verification.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+      rollback:
+        - sql: REVOKE EXECUTE ON FUNCTION user_account.fn_create_email_verification_token(UUID, TEXT, TIMESTAMPTZ), user_account.fn_verify_email(TEXT) FROM hidro_smart_app;

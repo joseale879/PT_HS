@@ -18,6 +18,7 @@ export type AuthSession = AuthorizationContext & {
   userId?: string;
   fullName?: string;
   email?: string;
+  avatarDataUrl?: string | null;
   preferences?: { language?: string; currency?: string };
 };
 
@@ -39,10 +40,12 @@ type AuthContextValue = {
   can: (permission: string) => boolean;
   refreshSession: () => Promise<AuthSession>;
   login: (credentials: LoginCredentials) => Promise<AuthSession>;
-  register: (payload: RegistrationPayload) => Promise<AuthSession>;
+  register: (payload: RegistrationPayload) => Promise<void>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => ReturnType<typeof authApi.requestPasswordReset>;
   resetPassword: (payload: { token: string; password: string }) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
+  getPasswordResetEmail: (token: string) => Promise<string>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -85,11 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (payload: RegistrationPayload) => {
-      const response = await authApi.register(payload);
-      sessionTokens.save(response.data);
-      return refreshSession();
+      await authApi.register(payload);
     },
-    [refreshSession]
+    []
   );
 
   const logout = useCallback(async () => {
@@ -144,6 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPassword: async ({ token, password }) => {
         await authApi.resetPassword(token, password);
       },
+      getPasswordResetEmail: async (token) => (await authApi.passwordResetContext(token)).data.email,
+      verifyEmail: authApi.verifyEmail,
     }),
     [isInitializing, login, logout, refreshSession, register, session]
   );

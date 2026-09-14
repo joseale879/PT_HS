@@ -11,6 +11,7 @@ const { PasswordTokenService } = require('../core/application/services/auth/Pass
 const { ChangePassword } = require('../core/application/use-cases/auth/ChangePassword');
 const { RequestPasswordReset } = require('../core/application/use-cases/auth/RequestPasswordReset');
 const { ResetPassword } = require('../core/application/use-cases/auth/ResetPassword');
+const { GetPasswordResetContext } = require('../core/application/use-cases/auth/GetPasswordResetContext');
 const { NotificationService } = require('../core/application/services/notifications/NotificationService');
 const { SmtpEmailSender } = require('../core/infrastructure/notifications/SmtpEmailSender');
 const { getEnv } = require('../config/env');
@@ -31,12 +32,13 @@ const notificationService = new NotificationService({
   passwordResetUrl: env.passwordResetUrl
 });
 const authController = new AuthController({
-  registerUser: new RegisterUser({ authRepository, passwordHasher }),
+  registerUser: new RegisterUser({ authRepository, passwordHasher, tokenService: passwordTokenService, notificationService }),
   loginUser: new LoginUser({ authRepository, passwordHasher }),
   sessionService: new AuthSessionService({ authRepository, tokenService: new JwtTokenService() }),
   changePassword: new ChangePassword({ authRepository, passwordHasher }),
   requestPasswordReset: new RequestPasswordReset({ authRepository, tokenService: passwordTokenService, notificationService }),
-  resetPassword: new ResetPassword({ authRepository, passwordHasher, tokenService: passwordTokenService })
+  resetPassword: new ResetPassword({ authRepository, passwordHasher, tokenService: passwordTokenService }),
+  getPasswordResetContext: new GetPasswordResetContext({ authRepository, tokenService: passwordTokenService })
 });
 
 router.use(authRateLimiter);
@@ -46,6 +48,8 @@ router.post('/refresh', asyncHandler((req, res) => authController.refresh(req, r
 router.post('/logout', authenticate, asyncHandler((req, res) => authController.logout(req, res)));
 router.post('/change-password', authenticate, asyncHandler((req, res) => authController.change(req, res)));
 router.post('/request-password-reset', asyncHandler((req, res) => authController.requestReset(req, res)));
+router.post('/verify-email', asyncHandler((req, res) => authController.verifyEmail(req, res)));
+router.get('/password-reset-context', asyncHandler((req, res) => authController.passwordResetContext(req, res)));
 router.post('/reset-password', asyncHandler((req, res) => authController.reset(req, res)));
 
 module.exports = router;

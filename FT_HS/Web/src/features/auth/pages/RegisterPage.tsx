@@ -26,8 +26,10 @@ import { Eye, EyeOff, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   documentNumberPattern,
-  emailPattern,
+  isValidEmail,
+  isValidName,
   isValidPassword,
+  normalizeNameInput,
   normalizeDocumentNumber,
   passwordValidation as getPasswordValidation,
 } from '@shared/lib/validators';
@@ -62,6 +64,16 @@ interface RegisterScreenProps {
   }) => void;
 }
 
+type RegisterField =
+  | 'name'
+  | 'email'
+  | 'docType'
+  | 'docNumber'
+  | 'password'
+  | 'confirmPassword'
+  | 'legalConsent';
+type FieldErrors = Partial<Record<RegisterField, string>>;
+
 // RF1 - Registro de Usuario
 export function RegisterScreen({
   onRegister,
@@ -87,6 +99,7 @@ export function RegisterScreen({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [documentError, setDocumentError] = useState('');
   const [legalDocument, setLegalDocument] = useState<'terms' | 'privacy' | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // RF1.2 - Validación de contraseña
   const passwordValidation = getPasswordValidation(formData.password);
@@ -97,56 +110,71 @@ export function RegisterScreen({
     (passwordValidation.hasNumber ? 20 : 0) +
     (passwordValidation.hasSymbol ? 20 : 0);
 
+  const clearFieldError = (field: RegisterField) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const focusFirstError = (errors: FieldErrors) => {
+    const firstField = Object.keys(errors)[0] as RegisterField | undefined;
+    if (!firstField) return;
+    const targetId = firstField === 'legalConsent' ? 'reviewTerms' : firstField;
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(targetId);
+      if (!(target instanceof HTMLElement)) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.focus();
+    });
+  };
+
+  const validateForm = () => {
+    const errors: FieldErrors = {};
+
+    if (!formData.name.trim()) {
+      errors.name = 'El nombre es obligatorio';
+    } else if (!isValidName(formData.name)) {
+      errors.name = 'Debe tener entre 3 y 60 caracteres y solo usar letras y espacios';
+    }
+    if (!formData.email.trim()) {
+      errors.email = 'El correo es obligatorio';
+    } else if (!isValidEmail(formData.email)) {
+      errors.email = 'Escribe un correo completo, por ejemplo: usuario@gmail.com';
+    }
+    if (!formData.docType) errors.docType = 'Selecciona un tipo de documento';
+    if (!formData.docNumber) {
+      errors.docNumber = 'El número de documento es obligatorio';
+    } else if (!documentNumberPattern.test(formData.docNumber)) {
+      errors.docNumber = 'Usa solo dígitos y máximo 10 caracteres';
+    }
+    if (!formData.password) {
+      errors.password = 'La contraseña es obligatoria';
+    } else if (!isValidPassword(formData.password)) {
+      errors.password = 'La contraseña no cumple los requisitos de seguridad';
+    }
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Confirma la contraseña';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Las contraseñas no coinciden';
+    }
+    if (!acceptedLegal) errors.legalConsent = 'Debes leer y aceptar los términos y condiciones';
+
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      focusFirstError(errors);
+      toast.error('Revisa los campos marcados en rojo');
+      return false;
+    }
+    return true;
+  };
+
   // RF1.1, RF1.3 - Validar todos los campos
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validar campos obligatorios
-    if (
-      !formData.name ||
-      !formData.email ||
-      !formData.docType ||
-      !formData.docNumber ||
-      !formData.password
-    ) {
-      toast.error('Por favor completa todos los campos obligatorios');
-      return;
-    }
-
-    if (!documentNumberPattern.test(formData.docNumber)) {
-      toast.error('El número de documento debe contener solo dígitos y máximo 10 caracteres');
-      return;
-    }
-
-    // RF1.1 - No se admiten menores de edad (simulado con validación de documento)
-    if (formData.docType === 'TI') {
-      toast.error('No se admiten registros con Tarjeta de Identidad. Debes ser mayor de edad.');
-      return;
-    }
-
-    // Validar formato de email
-    if (!emailPattern.test(formData.email)) {
-      toast.error('Por favor ingresa un correo electrónico válido');
-      return;
-    }
-
-    // RF1.2 - Validar contraseña
-    if (!isValidPassword(formData.password)) {
-      toast.error('La contraseña no cumple con los requisitos de seguridad');
-      return;
-    }
-
-    // Validar confirmación de contraseña
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
-      return;
-    }
-
-    // RF7.1 - Validar aceptación de políticas
-    if (!acceptedLegal) {
-      toast.error('Debes aceptar los términos y condiciones y la política de privacidad');
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setIsSubmitting(true);
@@ -206,7 +234,7 @@ export function RegisterScreen({
           </div>
         </div>
 
-        <Card className="w-full max-w-2xl justify-self-center shadow-2xl">
+        <Card className="register-card w-full max-w-2xl justify-self-center gap-0 shadow-2xl">
           <div className="grid grid-cols-2 rounded-t-xl bg-gray-100 p-1">
             <Button type="button" variant="ghost" onClick={onBack} className="rounded-xl">
               Iniciar Sesión
@@ -215,35 +243,52 @@ export function RegisterScreen({
               Registrarse
             </div>
           </div>
-          <CardHeader className="pt-3 pb-1 sm:pt-4 sm:pb-2">
+          <CardHeader className="gap-0 px-4 pt-3 pb-2 sm:px-6 sm:pt-3 sm:pb-2">
             <CardTitle>{t('auth.createAccountTitle')}</CardTitle>
             <CardDescription>
               Completa todos los campos obligatorios para registrarte
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-3">
+          <form onSubmit={handleSubmit} noValidate>
+            <CardContent className="space-y-1.5 px-4 sm:px-6">
               {/* RF1.1 - Nombre completo */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="name">Nombre completo *</Label>
                 <Input
                   id="name"
+                  className={fieldErrors.name ? 'h-8 border-red-500 focus-visible:ring-red-500' : 'h-8'}
                   placeholder="Juan Pérez"
                   value={formData.name}
-                  onChange={(e) => updateFormData('name', e.target.value)}
-                  required
+                  onChange={(e) => {
+                    updateFormData('name', normalizeNameInput(e.target.value));
+                    clearFieldError('name');
+                  }}
+                  maxLength={60}
+                  autoComplete="name"
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? 'name-error' : undefined}
                 />
+                {fieldErrors.name && <p id="name-error" className="text-xs text-red-600">{fieldErrors.name}</p>}
               </div>
 
               {/* RF1.1 - Tipo y número de documento (C.C/C.E) */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="space-y-1">
                   <Label htmlFor="docType">Tipo de documento *</Label>
                   <Select
                     value={formData.docType}
-                    onValueChange={(value) => updateFormData('docType', value)}
+                      onValueChange={(value) => {
+                        updateFormData('docType', value);
+                        clearFieldError('docType');
+                      }}
                   >
-                    <SelectTrigger id="docType" type="button" aria-required="true">
+                  <SelectTrigger
+                    id="docType"
+                    type="button"
+                    aria-required="true"
+                    aria-invalid={Boolean(fieldErrors.docType)}
+                    className={fieldErrors.docType ? 'h-8 border-red-500 focus-visible:ring-red-500' : 'h-8'}
+                  >
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -252,18 +297,24 @@ export function RegisterScreen({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-600">No se admiten menores de edad (T.I)</p>
+                  {fieldErrors.docType && <p className="text-xs text-red-600">{fieldErrors.docType}</p>}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="docNumber">Número de documento *</Label>
                   <Input
                     id="docNumber"
+                    className={fieldErrors.docNumber ? 'h-8 border-red-500 focus-visible:ring-red-500' : 'h-8'}
                     placeholder="1234567890"
                     value={formData.docNumber}
-                    onChange={(e) => updateDocumentNumber(e.target.value)}
+                    onChange={(e) => {
+                      updateDocumentNumber(e.target.value);
+                      clearFieldError('docNumber');
+                    }}
                     inputMode="numeric"
                     pattern="[0-9]{1,10}"
-                    required
+                    aria-invalid={Boolean(fieldErrors.docNumber)}
+                    aria-describedby={fieldErrors.docNumber ? 'docNumber-error' : undefined}
                   />
                   <p className={`text-xs ${documentError ? 'text-red-600' : 'text-gray-500'}`}>
                     {documentError || `${formData.docNumber.length}/10 dígitos`}
@@ -272,29 +323,42 @@ export function RegisterScreen({
               </div>
 
               {/* RF1.1 - Correo electrónico */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="email">Correo electrónico *</Label>
                 <Input
                   id="email"
+                  className={fieldErrors.email ? 'h-8 border-red-500 focus-visible:ring-red-500' : 'h-8'}
                   type="email"
                   placeholder="usuario@ejemplo.com"
                   value={formData.email}
-                  onChange={(e) => updateFormData('email', e.target.value)}
-                  required
+                  onChange={(e) => {
+                    updateFormData('email', e.target.value);
+                    clearFieldError('email');
+                  }}
+                  maxLength={150}
+                  autoComplete="email"
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                 />
+                {fieldErrors.email && <p id="email-error" className="text-xs text-red-600">{fieldErrors.email}</p>}
               </div>
 
               {/* RF1.2 - Contraseña con requisitos */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="password">Contraseña *</Label>
                 <div className="relative">
                   <Input
                     id="password"
+                    className={fieldErrors.password ? 'h-8 border-red-500 focus-visible:ring-red-500' : 'h-8'}
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={formData.password}
-                    onChange={(e) => updateFormData('password', e.target.value)}
-                    required
+                    onChange={(e) => {
+                      updateFormData('password', e.target.value);
+                      clearFieldError('password');
+                    }}
+                    aria-invalid={Boolean(fieldErrors.password)}
+                    aria-describedby={fieldErrors.password ? 'password-error' : undefined}
                   />
                   <button
                     type="button"
@@ -307,7 +371,7 @@ export function RegisterScreen({
 
                 {/* RF1.2 - Indicador de fortaleza de contraseña */}
                 {formData.password && (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Progress value={passwordStrength} className="flex-1" />
                       <span className="text-xs text-gray-600">{passwordStrength}%</span>
@@ -368,16 +432,21 @@ export function RegisterScreen({
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
+                    className={fieldErrors.confirmPassword ? 'h-8 border-red-500 focus-visible:ring-red-500' : 'h-8'}
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={formData.confirmPassword}
-                    onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-                    required
+                    onChange={(e) => {
+                      updateFormData('confirmPassword', e.target.value);
+                      clearFieldError('confirmPassword');
+                    }}
+                    aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                    aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
                   />
                   <button
                     type="button"
@@ -397,40 +466,52 @@ export function RegisterScreen({
               </div>
 
               {/* RF7.1 - Aceptar políticas */}
-              <div className="space-y-3 pt-4 border-t">
-                <div className="flex items-start space-x-3">
-                  <Checkbox id="legalConsent" checked={acceptedLegal} disabled />
-                  <Label htmlFor="legalConsent" className="text-sm leading-relaxed">
+              <div className="space-y-1.5 border-t pt-1.5">
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="legalConsent"
+                    checked={acceptedLegal}
+                    disabled
+                    aria-invalid={Boolean(fieldErrors.legalConsent)}
+                  />
+                  <Label htmlFor="legalConsent" className="text-sm leading-snug">
                     <span className="text-red-600">*</span> Acepto los términos y condiciones y la
                     política de privacidad de HidroSmart.
                   </Label>
                 </div>
                 <Button
+                  id="reviewTerms"
                   type="button"
                   variant="outline"
-                  className="w-full"
-                  onClick={() => onReviewTerms(formData)}
+                  className={fieldErrors.legalConsent ? 'w-full border-red-500 text-red-600' : 'w-full'}
+                  onClick={() => {
+                    clearFieldError('legalConsent');
+                    onReviewTerms(formData);
+                  }}
                 >
                   {acceptedLegal
                     ? 'Volver a leer términos y condiciones'
                     : 'Leer términos y condiciones'}
                 </Button>
+                {fieldErrors.legalConsent && (
+                  <p className="text-xs text-red-600">{fieldErrors.legalConsent}</p>
+                )}
               </div>
 
               {/* RF1.5 - Información sobre verificación */}
-              <Alert>
+              <Alert className="py-2">
                 <AlertCircle className="size-4" />
                 <AlertDescription className="text-sm">
-                  El correo de verificación estará disponible cuando se configure SMTP en el
-                  servidor.
+                  Te enviaremos un enlace de verificación. La cuenta se activará únicamente
+                  cuando confirmes el correo electrónico.
                 </AlertDescription>
               </Alert>
             </CardContent>
-            <CardFooter className="flex flex-col gap-3 sm:flex-row">
-              <Button type="button" variant="outline" onClick={onBack} className="flex-1">
+            <CardFooter className="flex flex-col gap-2 px-4 pb-3 sm:flex-row sm:px-6 sm:pb-3">
+              <Button type="button" variant="outline" onClick={onBack} className="h-8 flex-1">
                 Volver
               </Button>
-              <Button type="submit" className="flex-1" disabled={isSubmitting || !acceptedLegal}>
+              <Button type="submit" className="h-8 flex-1" disabled={isSubmitting || !acceptedLegal}>
                 {isSubmitting ? 'Creando cuenta...' : 'Crear Cuenta'}
               </Button>
             </CardFooter>

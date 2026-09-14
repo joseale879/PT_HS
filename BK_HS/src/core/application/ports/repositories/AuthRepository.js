@@ -20,6 +20,8 @@ class AuthRepository {
   async createPasswordResetToken() { throw new Error('AuthRepository.createPasswordResetToken no implementado'); }
 
   async consumePasswordReset() { throw new Error('AuthRepository.consumePasswordReset no implementado'); }
+
+  async findPasswordResetEmail() { throw new Error('AuthRepository.findPasswordResetEmail no implementado'); }
 }
 
 module.exports = { AuthRepository };

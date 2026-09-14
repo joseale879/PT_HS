@@ -59,7 +59,9 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
       );
   };
 
-  useEffect(load, [homeId]);
+  useEffect(() => {
+    load();
+  }, [homeId]);
 
   const save = async () => {
     if (!homeId || Number(consumptionLimit) <= 0) {

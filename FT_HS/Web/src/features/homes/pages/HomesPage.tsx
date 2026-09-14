@@ -13,6 +13,7 @@ import {
 import { Badge } from '@shared/ui/badge';
 import { Building2, Plus, UserPlus } from 'lucide-react';
 import { homesApi } from '@shared/http/httpClient';
+import { isValidEmail } from '@shared/lib/validators';
 import { toast } from 'sonner';
 import { MembershipRequestsPanel } from '../ui/MembershipRequestsPanel';
 
@@ -51,7 +52,9 @@ export function HomeManagement() {
       .catch((error) =>
         toast.error(error instanceof Error ? error.message : 'No se pudieron cargar los hogares')
       );
-  useEffect(load, []);
+  useEffect(() => {
+    void load();
+  }, []);
   useEffect(() => {
     if (selectedHome)
       homesApi
@@ -83,9 +86,14 @@ export function HomeManagement() {
     event.preventDefault();
     if (!selectedHome) return;
     const form = new FormData(event.currentTarget);
+    const email = String(form.get('email') || '').trim();
+    if (!isValidEmail(email)) {
+      toast.error('Ingresa un correo completo, por ejemplo: usuario@gmail.com');
+      return;
+    }
     try {
       await homesApi.addMember(selectedHome.homeId, {
-        email: String(form.get('email')),
+        email,
         homeRole: String(form.get('role')) as 'Owner' | 'Member' | 'Guest',
       });
       toast.success('Miembro agregado');
@@ -174,7 +182,14 @@ export function HomeManagement() {
                       <DialogTitle>Agregar miembro</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                      <Input name="email" type="email" placeholder="Correo electrónico" required />
+                      <Input
+                        name="email"
+                        type="email"
+                        placeholder="Correo electrónico"
+                        maxLength={150}
+                        autoComplete="email"
+                        required
+                      />
                       <select
                         name="role"
                         className="h-10 w-full rounded-md border px-3"

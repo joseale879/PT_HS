@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
 import { Button } from '@shared/ui/button';
 import { Input } from '@shared/ui/input';
@@ -29,35 +29,76 @@ type Device = {
 };
 type Home = { homeId: string; name: string };
 
-export function DeviceManagement({
+type DeviceManagementProps = {
+  permissions: string[];
+  homeId?: string;
+  homes: Home[];
+  onHomeChange: (homeId: string) => void;
+};
+
+class DeviceErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(_error: Error, _info: ErrorInfo) {}
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>No fue posible abrir Dispositivos IoT</CardTitle>
+            <CardDescription>Recarga la página. El resto de HidroSmart continúa disponible.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.reload()}>Recargar página</Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function DeviceManagementContent({
   permissions,
   homeId,
   homes,
   onHomeChange,
-}: {
-  permissions: string[];
-  homeId: string;
-  homes: Home[];
-  onHomeChange: (homeId: string) => void;
-}) {
+}: DeviceManagementProps) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [threshold, setThreshold] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const canManage = can(permissions, 'devices.manage');
 
   const loadDevices = (id = homeId) => {
-    if (!id) return;
+    if (!id) {
+      setDevices([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
     devicesApi
       .list(id)
-      .then(({ data }) =>
-        setDevices((data as any[]).map((device) => ({ ...device, homeId: id })) as Device[])
-      )
-      .catch((error) =>
-        toast.error(
-          error instanceof Error ? error.message : 'No se pudieron cargar los dispositivos'
-        )
-      );
+      .then(({ data }) => {
+        const items = Array.isArray(data) ? data : [];
+        setDevices(items.map((device) => ({ ...device, homeId: id })) as Device[]);
+      })
+      .catch((error) => {
+        const message =
+          error instanceof Error ? error.message : 'No se pudieron cargar los dispositivos';
+        setDevices([]);
+        setLoadError(message);
+        toast.error(message);
+      })
+      .finally(() => setLoading(false));
   };
   useEffect(() => {
     loadDevices();
@@ -65,6 +106,10 @@ export function DeviceManagement({
 
   const register = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!homeId) {
+      toast.error('Selecciona un hogar antes de registrar un dispositivo');
+      return;
+    }
     const form = new FormData(event.currentTarget);
     try {
       await devicesApi.register({
@@ -181,7 +226,13 @@ export function DeviceManagement({
         </Card>
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {devices.length ? (
+        {loading ? (
+          <p className="col-span-full text-sm text-gray-500">Cargando dispositivos...</p>
+        ) : loadError ? (
+          <div className="col-span-full rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {loadError}
+          </div>
+        ) : devices.length ? (
           devices.map((device) => {
             const isOnline = ['active', 'online'].includes(String(device.status).toLowerCase());
             return (
@@ -263,5 +314,13 @@ export function DeviceManagement({
         </Dialog>
       )}
     </div>
+  );
+}
+
+export function DeviceManagement(props: DeviceManagementProps) {
+  return (
+    <DeviceErrorBoundary>
+      <DeviceManagementContent {...props} />
+    </DeviceErrorBoundary>
   );
 }

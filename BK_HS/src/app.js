@@ -25,7 +25,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({ origin: getEnv().corsOrigin.split(',').map((origin) => origin.trim()) }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '3mb' }));
 
 app.get('/', (_req, res) => {
   res.json({ name: 'Hidro Smart API', version: 'v1', status: 'ok' });

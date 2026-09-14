@@ -117,11 +117,28 @@ class PostgresAuthRepository extends AuthRepository {
     return result.rows[0]?.reset_id || null;
   }
 
+  async createEmailVerificationToken({ userId, tokenHash, expiresAt }) {
+    await pool.query('SELECT user_account.fn_create_email_verification_token($1::uuid, $2::text, $3::timestamptz)', [userId, tokenHash, expiresAt]);
+  }
+
+  async verifyEmail({ tokenHash }) {
+    const result = await pool.query('SELECT user_account.fn_verify_email($1::text) AS user_id', [tokenHash]);
+    return result.rows[0]?.user_id || null;
+  }
+
   async consumePasswordReset({ tokenHash, passwordHash }) {
     const result = await withTransaction(null, (client) => client.query(
       `SELECT user_account.fn_consume_password_reset($1::text, $2::text) AS user_id`, [tokenHash, passwordHash]
     ));
     return result.rows[0]?.user_id || null;
+  }
+
+  async findPasswordResetEmail({ tokenHash }) {
+    const result = await pool.query(
+      'SELECT user_account.fn_get_password_reset_email($1::text) AS email',
+      [tokenHash]
+    );
+    return result.rows[0]?.email || null;
   }
 }
 
