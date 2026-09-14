@@ -60,3 +60,31 @@ test('rechaza ticket, usuario o mensaje inválidos', () => {
     { status: 400 },
   );
 });
+
+test('rechaza prioridades y estados que no existen en los catálogos', async () => {
+  const repository = { create: async () => null, update: async () => null };
+  const create = new CreateTicket({ repository });
+  const update = new UpdateTicket({ repository });
+
+  assert.throws(
+    () => create.execute({ userId, category: 'Otros', priority: 'Urgente', title: 'Falla válida', description: 'Descripción válida' }),
+    { status: 400 }
+  );
+  assert.throws(
+    () => create.execute({ userId, category: 'Otros', priority: 0, title: 'Falla válida', description: 'Descripción válida' }),
+    { status: 400 }
+  );
+  assert.throws(
+    () => update.execute({ userId, ticketId, status: 'Inexistente' }),
+    { status: 400 }
+  );
+});
+
+test('normaliza valores de estado y prioridad sin cambiar su catálogo', async () => {
+  let input;
+  const repository = { update: async (value) => { input = value; return value; } };
+
+  await new UpdateTicket({ repository }).execute({ userId, ticketId, status: 'en proceso', priority: 'alta' });
+  assert.equal(input.status, 'En Proceso');
+  assert.equal(input.priority, 'Alta');
+});

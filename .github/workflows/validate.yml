@@ -1,0 +1,72 @@
+name: HidroSmart validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  full-validation:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_DB: hidro_smart
+      POSTGRES_USER: hidro_smart_admin
+      POSTGRES_PASSWORD: ci_admin_password
+      DB_USER: hidro_smart_app
+      DB_PASSWORD: ci_app_password
+      DB_INGEST_USER: hidro_smart_ingest
+      DB_INGEST_PASSWORD: ci_ingest_password
+      JWT_SECRET: ci-only-jwt-secret-change-me
+      RUN_INTEGRATION: '1'
+      INTEGRATION_DATABASE_URL: postgresql://hidro_smart_app:ci_app_password@localhost:5433/hidro_smart
+      INTEGRATION_ADMIN_DATABASE_URL: postgresql://hidro_smart_admin:ci_admin_password@localhost:5433/hidro_smart
+      INTEGRATION_MQTT_URL: mqtt://localhost:1883
+      INTEGRATION_USER_EMAIL: ci-homeuser@hidrosmart.local
+      INTEGRATION_USER_PASSWORD: CiHomeuser123!
+      INTEGRATION_ADMIN_EMAIL: ci-administrator@hidrosmart.local
+      INTEGRATION_ADMIN_PASSWORD: CiAdministrator123!
+      INTEGRATION_SUPPORT_EMAIL: ci-support@hidrosmart.local
+      INTEGRATION_SUPPORT_PASSWORD: CiSupport123!
+      INTEGRATION_HOMEUSER_EMAIL: ci-homeuser@hidrosmart.local
+      INTEGRATION_HOMEUSER_PASSWORD: CiHomeuser123!
+      INTEGRATION_GUEST_EMAIL: ci-guest@hidrosmart.local
+      INTEGRATION_GUEST_PASSWORD: CiGuest123!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            BK_HS/package-lock.json
+            FT_HS/frontend/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci --prefix BK_HS
+          npm ci --prefix FT_HS/frontend
+      - name: Start local stack
+        run: docker compose up -d postgres db-bootstrap mosquitto mailpit
+      - name: Validate and update database
+        run: |
+          docker compose --profile tooling run --rm liquibase validate
+          docker compose --profile tooling run --rm liquibase update
+      - name: Start API and web
+        run: |
+          docker compose up -d backend frontend
+          for attempt in {1..30}; do curl --fail --silent http://localhost:3000/health && break || sleep 2; done
+          curl --fail --silent http://localhost:5173/ > /dev/null
+      - name: Seed integration role users
+        run: npm run seed:integration --prefix BK_HS
+      - name: Backend quality
+        run: |
+          npm run check --prefix BK_HS
+          npm run lint --prefix BK_HS
+          npm test --prefix BK_HS
+          npm run test:integration --prefix BK_HS
+      - name: Frontend quality
+        run: |
+          npm run lint --prefix FT_HS/frontend
+          npm run typecheck --prefix FT_HS/frontend
+          npm test --prefix FT_HS/frontend
+          npm run build --prefix FT_HS/frontend
+      - name: Mobile quality
+        run: npm run mobile:prepare --prefix FT_HS/frontend

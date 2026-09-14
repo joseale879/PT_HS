@@ -1,5 +1,6 @@
 const TYPES = ['excessive_consumption', 'leak_detected', 'monthly_limit', 'daily_limit', 'no_reading'];
-const UNITS = ['m3_day', 'm3_month', 'lpm'];
+const UNITS = ['m3_day', 'm3_month', 'minutes'];
+const TYPE_UNITS = { daily_limit: 'm3_day', monthly_limit: 'm3_month', excessive_consumption: 'm3_day', leak_detected: 'minutes', no_reading: 'minutes' };
 
 class CreateAlertRule {
   constructor({ alertRepository }) { this.alertRepository = alertRepository; }
@@ -15,6 +16,7 @@ class CreateAlertRule {
     if (!TYPES.includes(alertType)) throw this.badRequest('alertType no es válido');
     if (!Number.isFinite(Number(threshold)) || Number(threshold) < 0) throw this.badRequest('threshold debe ser un número mayor o igual a cero');
     if (!UNITS.includes(unit)) throw this.badRequest('unit no es válida');
+    if (TYPE_UNITS[alertType] !== unit) throw this.badRequest('unit no corresponde con alertType');
     if (typeof active !== 'boolean') throw this.badRequest('active debe ser booleano');
   }
 
@@ -22,4 +24,4 @@ class CreateAlertRule {
   badRequest(message) { const error = new Error(message); error.status = 400; return error; }
 }
 
-module.exports = { CreateAlertRule, TYPES, UNITS };
+module.exports = { CreateAlertRule, TYPES, UNITS, TYPE_UNITS };

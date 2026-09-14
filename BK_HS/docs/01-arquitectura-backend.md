@@ -1,5 +1,10 @@
 # Arquitectura del Backend — Hidro Smart
 
+Nota de estado (2026-09-07): esta guía conserva la arquitectura objetivo. Para
+el estado implementado prevalecen `00-estado-actual.md`, `03-endpoints.md` y
+el código de `src/app.js`. Actuadores HTTP, persistencia MQTT, Redis y MFA no
+forman parte de la API activa actual.
+
 ## 1. Introducción
 
 El backend de **Hidro Smart** será el encargado de conectar el frontend, la base de datos PostgreSQL y los dispositivos IoT utilizados para el monitoreo y control del consumo de agua.

@@ -106,10 +106,15 @@ El rollback correspondiente restaura el SELECT directo únicamente como reversi�
 El changeset 20260828-ingest-references otorga únicamente REFERENCES sobre home.home_device al rol hidro_smart_ingest. Esto permite que PostgreSQL valide el FK compuesto de sensor_reading durante la ingesta, sin concederle lectura ni escritura general sobre home_device.
 
 El changeset 20260828-homeuser-device-permission asigna devices.manage al rol funcional HomeUser. El usuario normal puede registrar un dispositivo mediante device.fn_register_device, pero la asociación y las actualizaciones continúan limitadas por permisos, membresía activa y RLS.
-## Estado de permisos para MQTT (2026-09-04)
+## Estado de permisos para MQTT (2026-09-13)
 
-El rol `hidro_smart_ingest` tiene permisos parciales para la futura ingesta de lecturas. La infraestructura MQTT del backend todavía no escribe en PostgreSQL, por lo que no se deben ampliar grants de forma manual.
+La ingesta MQTT ya está conectada al backend mediante `IngestReading` y `PostgresTelemetryRepository`. Los changesets `20260913-telemetry-ingest-function-grant` y `20260913-revoke-ingest-direct-insert` dejan al rol `hidro_smart_ingest` con ejecución de `device.fn_ingest_sensor_reading(...)`, sin `INSERT` directo sobre `consumption.sensor_reading`. La función `SECURITY DEFINER` mantiene la validación de dispositivo, asociación activa, rangos e idempotencia. No se deben ampliar grants de forma manual.
 
-Antes de activar `reading.handler` deben versionarse en Liquibase los permisos mínimos para insertar `consumption.sensor_reading` y, si aplica, `device.device_telemetry_history`, manteniendo la resolución segura de `deviceCode`, la asociación `home_device`, RLS y la separación respecto de `hidro_smart_app`.
+El `reading.handler` ya está activo. Los permisos mínimos quedaron versionados
+en Liquibase: `hidro_smart_ingest` ejecuta la función protegida de ingesta y no
+recibe `INSERT` directo sobre `consumption.sensor_reading`. Se conserva la
+resolución segura de `deviceCode`, la asociación `home_device`, RLS y la
+separación respecto de `hidro_smart_app`.
 
-La documentación de diagnóstico y el checklist de implementación registran este bloqueo: `diagnostico-actual.md` y `../../BK_HS/docs/pendientes-proyecto.md`.
+Lo que permanece pendiente es revisar la precisión de las lecturas y validar el
+flujo con un ESP32 real; no se deben ampliar grants manualmente.

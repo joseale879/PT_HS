@@ -1,18 +1,21 @@
 # Estado actual del sistema
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-14.
 
 Este documento es el resumen operativo del backend y debe leerse junto con la documentación de BD y frontend. Distingue las funciones comprobadas de las que todavía requieren integración.
 
 ## Resumen
 
-- PostgreSQL está disponible en Docker y Liquibase reporta la base actualizada con 166 changesets.
+- PostgreSQL y Liquibase fueron verificados en Docker con 206 changesets aplicados. Si Docker Desktop está detenido, la verificación debe repetirse.
 - El backend Node.js/Express está disponible en `http://localhost:3000` y usa el rol de aplicación `hidro_smart_app`.
 - La API REST se monta bajo `/api/v1`; el health público está en `GET /health`.
+- La operación expone `GET /health/live` para liveness y `GET /health/ready` para readiness de PostgreSQL y MQTT.
 - JWT, refresh tokens persistentes, logout, cambio y recuperación de contraseña están implementados.
-- Hogares, membresías, dispositivos, consumo, tarifas, alertas, metas, vacaciones, soporte, roles y auditoría tienen rutas implementadas.
+- La gestión de sesiones permite listar sesiones propias, cerrar una, cerrar las demás o cerrar todas sin exponer tokens.
+- Hogares, membresías, dispositivos, consumo, tarifas, alertas, metas, vacaciones, recomendaciones, soporte, roles y auditoría tienen rutas implementadas.
 - MQTT ya tiene configuración, cliente, publicación, suscripción, parser y handlers básicos.
-- MQTT todavía no persiste la lectura en PostgreSQL. La recepción termina en el handler y queda registrada en logs.
+- El job de limpieza de auditoría usa el procedimiento SQL protegido y bloqueo advisory.
+- MQTT persiste lecturas en PostgreSQL mediante una función protegida, con métricas, timestamps separados e idempotencia por mensaje.
 
 ## Rutas REST montadas
 
@@ -32,8 +35,11 @@ Las rutas se montan en `src/app.js`:
 | `/api/v1/roles` | administración de roles |
 | `/api/v1/support` | catálogos, tickets y respuestas |
 | `/api/v1/audit` | consulta administrativa de auditoría |
+| `/api/v1/privacy` | consentimientos, exportación propia y solicitudes ARCO |
+| `/api/v1/reports` | exportación de consumo en PDF y Excel, historial propio y descarga posterior |
+| `/api/v1/recommendations` | recomendaciones propias y resumen por hogar |
 
-El inventario completo de métodos, parámetros y permisos está en `03-endpoints.md`. No existe actualmente una ruta REST montada para recibir telemetría MQTT: la telemetría entra por el broker.
+El inventario completo de métodos, parámetros y permisos está en `03-endpoints.md`. No existe actualmente una ruta REST montada para recibir telemetría MQTT: la telemetría entra por el broker. Los reportes resumidos se descargan mediante `/api/v1/reports/consumption.pdf` o `/api/v1/reports/consumption.xlsx`; cada descarga queda registrada y puede consultarse en `/api/v1/reports/history`.
 
 ## Autenticación
 
@@ -43,6 +49,7 @@ Públicas, además de `GET /` y `GET /health`:
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/request-password-reset`
+- `GET /api/v1/auth/password-reset-context?resetToken=...`
 - `POST /api/v1/auth/reset-password`
 
 Protegidas:
@@ -71,34 +78,35 @@ Suscripciones actuales:
 - `hidrosmart/devices/+/status`
 - `hidrosmart/devices/+/actuators/+/status`
 
-El parser acepta las métricas del YF-S201: `pulses`, `flowRateLpm`, `consumptionLiters`, `totalLiters`, `timestamp` y calidad de señal mediante `signalQuality` o `wifiRssiDbm`. También reconoce métricas opcionales de salud como batería, voltaje y temperatura.
+El parser acepta las métricas del YF-S201: `pulses`, `flowRateLpm`, `consumptionLiters`, `totalLiters`, `timestamp` y calidad de señal mediante `signalQuality` o `wifiRssiDbm`. También reconoce métricas opcionales de salud como batería, voltaje y temperatura. Los timestamps deben incluir zona horaria ISO-8601 y se normalizan a UTC; si faltan se usa la recepción como fallback.
 
 La configuración Docker usa `mqtt://mosquitto:1883`. Mosquitto está en modo anónimo y sin TLS únicamente para desarrollo local.
 
-## Bloque pendiente de persistencia IoT
+## Persistencia IoT
 
-El handler aún no invoca un caso de uso tipo `ReceiveReading` ni un repositorio de lecturas. Antes de activar la escritura hay que:
+El handler delega en `IngestReading` y `PostgresTelemetryRepository`. El circuito:
 
-1. Resolver `deviceCode` del topic contra `device.device.code`.
-2. Verificar que el dispositivo esté activo y pertenezca a un hogar autorizado.
-3. Insertar en `consumption.sensor_reading` con una conexión/rol de ingestión controlado.
-4. Definir idempotencia, validación de timestamp y estrategia ante mensajes duplicados.
-5. Revisar el permiso para `device.device_telemetry_history` si también se guardará la salud del dispositivo.
+1. Resuelve `deviceCode` del topic contra `device.device.code`.
+2. Verifica que el dispositivo esté activo y pertenezca a un hogar autorizado.
+3. Inserta en `consumption.sensor_reading` mediante la función SQL protegida.
+4. Aplica idempotencia, validación de timestamp y estrategia ante mensajes duplicados.
+5. El handler de estado persiste el historial de telemetría disponible mediante su función SQL protegida; falta validar el contrato final de `online/offline` y `last_seen` con el firmware.
 
 Advertencia de precisión: `consumption.sensor_reading.consumption_liters` es actualmente `NUMERIC(10,2)`. Una muestra de `0.040 L` se redondearía a `0.04 L`, y los agregados basados en `consumption_m3` pueden perder precisión. Esto debe resolverse en una migración antes de ingerir lecturas por segundo.
 
 ## Verificaciones realizadas
 
-- `npm test`: 82 pruebas unitarias aprobadas.
+- `npm test`: 131 pruebas unitarias aprobadas en la última ejecución.
 - `npm run check`: aprobado.
 - Frontend: formato y build aprobados.
 - Liquibase: `validate` y `status --verbose` aprobados.
-- Docker: frontend, backend, PostgreSQL, Mailpit y Mosquitto levantados en la pila integrada.
-- MQTT: una telemetría de prueba fue recibida y normalizada por el backend.
+- Docker: la pila integrada quedó validada en la última ejecución; requiere Docker Desktop activo para repetirla.
+- MQTT: una telemetría de prueba fue recibida, normalizada y persistida por el backend.
 - Pruebas de integración externas: quedan omitidas cuando no están configuradas sus credenciales.
 
 ## No confundir con pendiente
 
-- El endpoint de actuadores HTTP y el envío de comandos desde casos de uso todavía no están implementados; `MqttPublisher` existe como infraestructura preparada.
-- La navegación web es interna por estado de React; todavía no hay deep links con React Router.
-- Algunas métricas visuales del dashboard continúan siendo valores de presentación y no deben tomarse como telemetría MQTT real.
+- El endpoint de actuadores HTTP y el envío de comandos desde casos de uso ya están implementados; requieren prueba con ESP32 real y endurecimiento de Mosquitto antes de producción.
+- Recomendaciones tiene API backend disponible; la pantalla frontend actual es visual y la generación automática a partir de reglas de consumo sigue pendiente de una decisión de producto.
+- La navegación web usa React Router 7.18.3; el contrato de deep links se mantiene en la documentación del frontend.
+- El indicador de flujo actual del dashboard usa el último agregado horario disponible y no debe tomarse como telemetría MQTT en tiempo real. Las tarjetas principales sí consultan los agregados del backend.

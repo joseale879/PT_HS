@@ -15,6 +15,15 @@ class NotificationService {
       buttonUrl: resetUrl.toString(), footer: 'Este enlace vence en una hora. Si no hiciste la solicitud, puedes ignorar este correo.' });
   }
 
+  async sendEmailVerification({ recipient, token }) {
+    const verificationUrl = new URL(this.frontendUrl);
+    verificationUrl.pathname = '/verify-email';
+    verificationUrl.searchParams.set('token', token);
+    return this.sendTemplate({ recipient, subject: 'Verifica tu correo de HidroSmart', title: 'Verificación de correo',
+      paragraphs: ['Confirma tu correo electrónico para mantener segura tu cuenta.'], buttonText: 'Verificar correo',
+      buttonUrl: verificationUrl.toString(), footer: 'Este enlace vence en 24 horas.' });
+  }
+
   async sendWelcome({ recipient, name }) { return this.sendTemplate({ recipient, subject: 'Bienvenido a HidroSmart', title: `Bienvenido, ${name}`,
     paragraphs: ['Tu cuenta fue creada correctamente. Ya puedes monitorear y gestionar tu consumo de agua.'], buttonText: 'Ingresar a HidroSmart', buttonUrl: this.frontendUrl, footer: 'Gracias por utilizar HidroSmart.' }); }
 

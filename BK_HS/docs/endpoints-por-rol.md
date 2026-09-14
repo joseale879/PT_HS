@@ -1,8 +1,8 @@
 # Endpoints accesibles por rol
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-14.
 
-La ruta exacta de cada método está en `03-endpoints.md`. Este documento resume el control de acceso real y no incluye endpoints de actuadores que todavía no están montados.
+La ruta exacta de cada método está en `03-endpoints.md`. Este documento resume el control de acceso real, incluidos los endpoints de actuadores.
 
 ## Públicos
 
@@ -12,6 +12,7 @@ La ruta exacta de cada método está en `03-endpoints.md`. Este documento resume
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/request-password-reset`
+- `GET /api/v1/auth/password-reset-context?resetToken=...`
 - `POST /api/v1/auth/reset-password`
 
 ## Cualquier usuario autenticado
@@ -30,6 +31,7 @@ La ruta exacta de cada método está en `03-endpoints.md`. Este documento resume
 |---|---|
 | `homes.manage` | crear/actualizar hogares, miembros, solicitudes, metas y vacaciones |
 | `devices.manage` | registrar, configurar, actualizar estado, desactivar y desvincular dispositivos |
+| `actuators.manage` | consultar estados y publicar comandos de válvula o bomba en hogares autorizados |
 | gestión de alertas | crear/actualizar/eliminar reglas y umbrales, cambiar estados |
 | `roles.manage` | listar, asignar y quitar roles globales |
 | `audit.read` | consultar `GET /api/v1/audit/logs` |
@@ -46,7 +48,7 @@ La ruta también comprueba pertenencia al hogar, propiedad o autorización del r
 
 ## Soporte
 
-Las rutas reales son `GET /support/catalogs`, `GET/POST /support/tickets`, `GET /support/tickets/:ticketId`, `GET/POST /support/tickets/:ticketId/responses` y `PATCH /support/tickets/:ticketId`, siempre con el prefijo `/api/v1` y sus guardas correspondientes. No están pendientes de creación; lo pendiente es terminar su consumo en las pantallas.
+Las rutas reales son `GET /support/catalogs`, `GET/POST /support/tickets`, `GET /support/tickets/:ticketId`, `GET/POST /support/tickets/:ticketId/responses` y `PATCH /support/tickets/:ticketId`, siempre con el prefijo `/api/v1` y sus guardas correspondientes. El frontend ya consume el detalle, historial, respuestas y actualización de estado desde el panel de soporte.
 
 ## Auditoría
 
@@ -54,6 +56,6 @@ Las rutas reales son `GET /support/catalogs`, `GET/POST /support/tickets`, `GET 
 
 ## MQTT
 
-MQTT no tiene permisos HTTP por rol. El backend mantiene la conexión técnica con Mosquitto. La futura orden de actuador deberá validar el permiso de negocio y auditarse antes de publicar.
+MQTT no tiene permisos HTTP por rol. El backend mantiene la conexión técnica con Mosquitto; la ruta REST valida `actuators.manage`, pertenencia al hogar y compatibilidad de comando antes de publicar. Los ACK se correlacionan mediante `correlationId`.
 
 Para el detalle completo, consulta `03-endpoints.md`, `00-estado-actual.md` y `14-mqtt-protocol.md`.

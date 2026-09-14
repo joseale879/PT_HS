@@ -1,10 +1,12 @@
 # Diagnóstico actual de BD_HS
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-14.
 
 ## Resultado ejecutivo
 
-La base local `hidro_smart` está operativa en PostgreSQL 16.15. Liquibase 5.0.2 validó el changelog y reportó la base actualizada con 166 changesets.
+La configuración local de `hidro_smart` quedó verificada en la última ejecución con PostgreSQL 16 y Liquibase 5.0.2. El changelog actual contiene 206 changesets aplicados.
+
+> Último estado comprobado: `validate`, `update` y `status` fueron exitosos; PostgreSQL estaba saludable, `hidro_smart_app` autenticaba correctamente y el backend respondía `/health` con HTTP 200. Si Docker Desktop no está iniciado, estas comprobaciones deben repetirse antes de aplicar cambios.
 
 - PostgreSQL responde por `localhost:5433` desde Windows.
 - Dentro de Docker la conexión es `postgres:5432`.
@@ -35,17 +37,19 @@ La base ya contiene objetos para:
 - `device.device_telemetry_history`: historial de salud/telemetría del dispositivo.
 - funciones y vistas de consumo que alimentan la API.
 
-Los conteos actuales de dispositivos y lecturas son cero en la base de desarrollo, por lo que todavía no existe una lectura MQTT persistida que pueda mostrar el frontend.
+Los conteos de dispositivos y lecturas dependen de los datos cargados en la base de desarrollo; una instalación limpia puede mostrar cero registros. La capacidad de persistencia se verifica mediante la función de ingesta y las pruebas del backend.
 
-## Bloqueo de ingestión MQTT
+## Estado de ingestión MQTT
 
-La infraestructura MQTT del backend ya recibe y normaliza mensajes, pero la persistencia no está implementada. El rol `hidro_smart_ingest` tiene permisos parciales para ingestión de lecturas; deben revisarse y versionarse los permisos mínimos antes de activar el handler:
+La infraestructura MQTT del backend recibe, normaliza y persiste mensajes mediante `IngestReading` y `PostgresTelemetryRepository`. La función SQL resuelve el dispositivo, valida su asociación y estado, aplica deduplicación y guarda las métricas. El rol `hidro_smart_ingest` tiene el permiso `EXECUTE` versionado por Liquibase sobre la función protegida y no tiene `INSERT` directo sobre la tabla.
+
+Comprobaciones vigentes:
 
 1. resolver `deviceCode` a `device_id` y `home_id`;
 2. verificar dispositivo activo y relación con el hogar;
-3. insertar la lectura con el rol/conexión adecuada;
-4. guardar historial de salud solo si forma parte del contrato;
-5. probar RLS, límites e idempotencia.
+3. insertar la lectura mediante la función y el pool de ingesta;
+4. guardar las métricas de telemetría incluidas en el contrato;
+5. probar límites e idempotencia.
 
 No se debe dar al backend permiso administrativo ni acceso amplio a todos los esquemas.
 

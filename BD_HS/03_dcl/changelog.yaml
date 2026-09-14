@@ -1,14 +1,11 @@
 ﻿databaseChangeLog:
-  - include:
-      file: 00_roles/0000changelog.yaml
-      relativeToChangelogFile: true
-      contextFilter: 03_dcl
-      labels: 00_roles
+  # 00_roles se carga antes del DDL desde changelog-master.yaml.
   - include:
       file: 01_grants/0000changelog.yaml
       relativeToChangelogFile: true
       contextFilter: 03_dcl
       labels: 01_grants
+
   - include:
       file: 02_policies/0000changelog.yaml
       relativeToChangelogFile: true

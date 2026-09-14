@@ -1,7 +1,12 @@
 databaseChangeLog:
-  # ===================================================================
-  # DML INSERTS — BASE DATA
-  # ===================================================================
+
+  # ============================================================
+  # DML INSERTS — DATOS BASE DEL SISTEMA
+  # ============================================================
+
+  # ------------------------------------------------------------
+  # Roles funcionales
+  # ------------------------------------------------------------
 
   - changeSet:
       id: dml-insert-roles
@@ -16,6 +21,11 @@ databaseChangeLog:
       rollback:
         - sql: DELETE FROM user_account.role WHERE name IN ('Administrator', 'Support', 'HomeUser', 'Guest');
 
+
+  # ------------------------------------------------------------
+  # Idiomas
+  # ------------------------------------------------------------
+
   - changeSet:
       id: dml-insert-languages
       author: Hidro_Smarth
@@ -27,7 +37,12 @@ databaseChangeLog:
             relativeToChangelogFile: true
             stripComments: false
       rollback:
-        - sql: DELETE FROM preference.language WHERE code IN ('es', 'en');
+        - sql: DELETE FROM preference.language WHERE code IN ('es', 'en', 'pt', 'it');
+
+
+  # ------------------------------------------------------------
+  # Monedas
+  # ------------------------------------------------------------
 
   - changeSet:
       id: dml-insert-currencies
@@ -40,7 +55,12 @@ databaseChangeLog:
             relativeToChangelogFile: true
             stripComments: false
       rollback:
-        - sql: DELETE FROM preference.currency WHERE code IN ('COP', 'USD', 'EUR', 'MXN');
+        - sql: DELETE FROM preference.currency WHERE code IN ('COP', 'USD', 'EUR', 'BRL', 'MXN');
+
+
+  # ------------------------------------------------------------
+  # Temas
+  # ------------------------------------------------------------
 
   - changeSet:
       id: dml-insert-themes
@@ -55,6 +75,11 @@ databaseChangeLog:
       rollback:
         - sql: DELETE FROM preference.theme WHERE name IN ('Light', 'Dark', 'High Contrast');
 
+
+  # ------------------------------------------------------------
+  # Estratos
+  # ------------------------------------------------------------
+
   - changeSet:
       id: dml-insert-estratos
       author: Hidro_Smarth
@@ -67,6 +92,11 @@ databaseChangeLog:
             stripComments: false
       rollback:
         - sql: DELETE FROM alert_rate.estratos WHERE numero_estrato IN (1, 2, 3, 4, 5, 6);
+
+
+  # ------------------------------------------------------------
+  # Categorías de tickets
+  # ------------------------------------------------------------
 
   - changeSet:
       id: dml-insert-ticket-categories
@@ -81,6 +111,11 @@ databaseChangeLog:
       rollback:
         - sql: DELETE FROM analytics_support.ticket_category WHERE name IN ('Dispositivo', 'Reportes', 'Tarifas', 'Detección', 'Otros');
 
+
+  # ------------------------------------------------------------
+  # Prioridades de tickets
+  # ------------------------------------------------------------
+
   - changeSet:
       id: dml-insert-ticket-priorities
       author: Hidro_Smarth
@@ -93,6 +128,11 @@ databaseChangeLog:
             stripComments: false
       rollback:
         - sql: DELETE FROM analytics_support.ticket_priority WHERE name IN ('Baja', 'Media', 'Alta');
+
+
+  # ------------------------------------------------------------
+  # Estados de tickets
+  # ------------------------------------------------------------
 
   - changeSet:
       id: dml-insert-ticket-statuses
@@ -107,6 +147,11 @@ databaseChangeLog:
       rollback:
         - sql: DELETE FROM analytics_support.ticket_status WHERE name IN ('Abierto', 'En Proceso', 'Resuelto', 'Cerrado');
 
+
+  # ------------------------------------------------------------
+  # Política de contraseña
+  # ------------------------------------------------------------
+
   - changeSet:
       id: 20260822-default-password-policy
       author: Hidro_Smarth
@@ -120,6 +165,11 @@ databaseChangeLog:
             stripComments: false
       rollback:
         - sql: DELETE FROM user_account.password_policy WHERE name = 'Default';
+
+
+  # ------------------------------------------------------------
+  # RBAC
+  # ------------------------------------------------------------
 
   - changeSet:
       id: 20260825-rbac-permissions

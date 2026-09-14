@@ -1,6 +1,6 @@
 # Endpoints reales de la API — HidroSmart
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-14.
 
 Este documento refleja las rutas montadas actualmente en `BK_HS/src/app.js`. La URL base pública es `http://localhost:3000/api/v1` en desarrollo directo y `/api/v1` desde el frontend servido por Nginx.
 
@@ -20,18 +20,28 @@ Este documento refleja las rutas montadas actualmente en `BK_HS/src/app.js`. La 
 | POST | `/api/v1/auth/login` | público |
 | POST | `/api/v1/auth/refresh` | público con refresh token |
 | POST | `/api/v1/auth/logout` | autenticado |
+| GET | `/api/v1/auth/sessions` | autenticado; solo sesiones propias |
+| DELETE | `/api/v1/auth/sessions/:sessionId` | autenticado; solo una sesion propia |
+| POST | `/api/v1/auth/sessions/revoke-others` | autenticado; conserva la sesion actual |
+| POST | `/api/v1/auth/sessions/revoke-all` | autenticado; cierra todas las sesiones |
 | POST | `/api/v1/auth/change-password` | autenticado |
 | POST | `/api/v1/auth/request-password-reset` | público |
+| GET | `/api/v1/auth/password-reset-context?resetToken=...` | público con token vigente; devuelve solo el correo asociado |
 | POST | `/api/v1/auth/reset-password` | público con token de un solo uso |
+
+`GET /auth/sessions` nunca devuelve hashes ni tokens. `DELETE /auth/sessions/:sessionId` responde `204` al cerrar una sesion propia; una sesion inexistente, ajena o ya cerrada responde `404`. Las operaciones masivas devuelven `{ data: { revokedCount } }`.
 
 ## Users — `/users`
 
 | Método | Ruta completa | Acceso |
 |---|---|---|
 | GET | `/api/v1/users/me` | autenticado |
+| GET | `/api/v1/users` | `users.manage`; búsqueda, estado, paginación y ordenamiento |
 | PUT | `/api/v1/users/me` | autenticado |
 | GET | `/api/v1/users/me/preferences` | autenticado |
 | PUT | `/api/v1/users/me/preferences` | autenticado |
+| PATCH | `/api/v1/users/:userId/status` | `users.manage` |
+| DELETE | `/api/v1/users/:userId` | `users.manage`; eliminación lógica |
 
 El correo y el documento se mantienen inmutables en la actualización de perfil según el caso de uso actual.
 
@@ -56,7 +66,7 @@ El correo y el documento se mantienen inmutables en la actualización de perfil 
 | Método | Ruta completa | Acceso |
 |---|---|---|
 | POST | `/api/v1/devices` | `devices.manage` |
-| GET | `/api/v1/devices` | autenticado; lista dispositivos autorizados |
+| GET | `/api/v1/devices` | autenticado; lista dispositivos autorizados con `homeId`, `page`, `pageSize`, `sort` y `order` |
 | GET | `/api/v1/devices/:deviceId` | autenticado y con acceso al dispositivo |
 | GET | `/api/v1/devices/:deviceId/status` | autenticado y con acceso al dispositivo |
 | PUT | `/api/v1/devices/:deviceId` | `devices.manage` |
@@ -66,6 +76,26 @@ El correo y el documento se mantienen inmutables en la actualización de perfil 
 | DELETE | `/api/v1/devices/:deviceId/home/:homeId` | `devices.manage` |
 
 El `device.code` de este módulo es el identificador que debe aparecer en el topic MQTT como `{deviceCode}`. Registrar el dispositivo por REST no genera por sí solo una lectura MQTT.
+
+## Actuators — `/actuators`
+
+| Método | Ruta completa | Acceso |
+|---|---|---|
+| GET | `/api/v1/actuators/states?homeId={uuid}` | autenticado; estados de actuadores de hogares autorizados |
+| GET | `/api/v1/actuators/:deviceId/status` | autenticado y con acceso al dispositivo |
+| GET | `/api/v1/actuators/commands?homeId={uuid}&status={status}` | autenticado; comandos del hogar autorizado, con paginación |
+| POST | `/api/v1/actuators/:deviceId/:actuator/commands` | `actuators.manage`; `actuator` es `valve` o `pump` |
+
+El cuerpo del comando acepta `command` (`OPEN`/`CLOSED` para `VALVE`, `ON`/`OFF` para `PUMP`) y un `correlationId` UUID opcional. Si no se envía, el backend lo genera. La respuesta `202` deja el comando en `Published` cuando Mosquitto lo acepta; si el broker falla, el registro queda en `Failed` y la API responde `503`.
+
+```json
+{
+  "command": "OPEN",
+  "correlationId": "33333333-3333-4333-8333-333333333333"
+}
+```
+
+El estado reportado por el dispositivo actualiza `device.actuator_state`. Si el payload MQTT incluye el mismo `correlationId`, el comando pasa a `Acknowledged`. Los comandos `Pending` o `Published` sin ACK se marcan automáticamente como `TimedOut` y la transición queda en `audit.audit_log`.
 
 ## Consumption — `/consumption`
 
@@ -77,7 +107,7 @@ El `device.code` de este módulo es el identificador que debe aparecer en el top
 | GET | `/api/v1/consumption/hourly` | `consumption.read` |
 | GET | `/api/v1/consumption/cost` | `consumption.read` |
 
-Estas rutas consultan agregados de PostgreSQL. No son un endpoint de entrada MQTT ni representan por sí mismas caudal instantáneo.
+Estas rutas consultan agregados de PostgreSQL. No son un endpoint de entrada MQTT ni representan por sí mismas caudal instantáneo. Para proteger consultas grandes, `summary` y `cost` aceptan periodos de máximo 366 días; los reportes PDF/Excel aplican el mismo límite.
 
 ## Tariffs — `/tariffs`
 
@@ -135,9 +165,9 @@ Estas rutas consultan agregados de PostgreSQL. No son un endpoint de entrada MQT
 | GET | `/api/v1/support/tickets` | autenticado |
 | GET | `/api/v1/support/tickets/:ticketId` | autenticado y autorizado |
 | GET | `/api/v1/support/tickets/:ticketId/responses` | autenticado y autorizado |
-| POST | `/api/v1/support/tickets` | permiso de gestión del hogar |
+| POST | `/api/v1/support/tickets` | autenticado; crea un ticket propio |
 | PATCH | `/api/v1/support/tickets/:ticketId` | soporte |
-| POST | `/api/v1/support/tickets/:ticketId/responses` | soporte |
+| POST | `/api/v1/support/tickets/:ticketId/responses` | autenticado y autorizado por RLS; propio o `tickets.manage` |
 
 ## Audit — `/audit`
 
@@ -147,11 +177,51 @@ Estas rutas consultan agregados de PostgreSQL. No son un endpoint de entrada MQT
 
 Parámetros de consulta disponibles para auditoría: `action`, `tableName`, `from`, `to`, `page` y `pageSize`.
 
+## Privacy/ARCO — `/privacy`
+
+| Método | Ruta completa | Acceso |
+|---|---|---|
+| GET | `/api/v1/privacy/consents` | autenticado; consentimientos propios |
+| GET | `/api/v1/privacy/export` | autenticado; exportación JSON propia sin secretos |
+| POST | `/api/v1/privacy/consents` | autenticado; agrega un consentimiento aceptado |
+| POST | `/api/v1/privacy/requests` | autenticado; crea una solicitud propia |
+| GET | `/api/v1/privacy/requests` | autenticado; solicitudes propias, paginadas |
+| GET | `/api/v1/privacy/requests/:requestId` | autenticado; solicitud propia o autorizada por RLS |
+| GET | `/api/v1/privacy/requests/manage` | `users.manage`; bandeja administrativa paginada |
+| PATCH | `/api/v1/privacy/requests/:requestId` | `users.manage`; estado y respuesta |
+
+Los consentimientos son append-only desde la aplicación. Las solicitudes ARCO nuevas reciben una fecha límite de 15 días y solo la administración puede modificar su estado, respuesta y trazabilidad; PostgreSQL/RLS aplica el alcance final.
+
+## Reports — `/reports`
+
+| Método | Ruta completa | Acceso |
+|---|---|---|
+| GET | `/api/v1/reports/history?homeId={uuid}&type={pdf|excel}&status={Generating|Ready|Error}&page={n}&pageSize={n}` | `reports.read`; historial propio paginado y filtrable |
+| GET | `/api/v1/reports/:reportId/download` | `reports.read`; descarga un reporte propio con estado `Ready` |
+| GET | `/api/v1/reports/consumption.pdf?homeId={uuid}&from=YYYY-MM-DD&to=YYYY-MM-DD` | `reports.read`; PDF resumido del hogar autorizado; máximo 366 días |
+| GET | `/api/v1/reports/consumption.xlsx?homeId={uuid}&from=YYYY-MM-DD&to=YYYY-MM-DD` | `reports.read`; Excel resumido del hogar autorizado; máximo 366 días |
+
+Las descargas reutilizan `consumption.fn_calculate_consumption(...)`, no exponen hashes, tokens ni lecturas de otros hogares y generan el archivo a partir de datos autorizados. Cada archivo se registra en `analytics_support.generated_report`, se almacena en el volumen privado de reportes y puede consultarse o descargarse después mediante las dos rutas de historial.
+
+## Recomendaciones — `/recommendations`
+
+| Método | Ruta completa | Acceso |
+|---|---|---|
+| GET | `/api/v1/recommendations?homeId={uuid}&status={Pending|Read|Dismissed|Applied}` | `reports.read`; recomendaciones propias, filtradas por RLS |
+| GET | `/api/v1/recommendations/home/:homeId/summary` | `reports.read`; resumen del hogar autorizado |
+| PATCH | `/api/v1/recommendations/:userRecommendationId` | `reports.read`; actualiza `status` o `usefulness` de una recomendación propia |
+
+El listado admite `page`, `pageSize`, `sort`, `order` y `category`. El backend no permite devolver una recomendación de otro usuario: la consulta se ejecuta con el contexto de usuario de PostgreSQL y la política RLS de `analytics_support.user_recommendation`. El estado inicial `Pending` no se puede restaurar desde la API; `Read`, `Dismissed` y `Applied` actualizan el registro, y `Read` conserva `read_at`.
+
+## Corrección de permisos de Support
+
+`POST /api/v1/support/tickets` requiere únicamente autenticación. La creación de tickets propios no requiere `homes.manage`.
+
+`POST /api/v1/support/tickets/:ticketId/responses` requiere autenticación y la autorización final de la fila se aplica mediante RLS. La administración de tickets (`PATCH`) sí requiere `tickets.manage`.
+
 ## MQTT no es REST
 
-Actualmente no están montadas rutas como `/api/v1/telemetry` ni `/api/v1/actuators`. La telemetría entra por Mosquitto y se procesa con `MqttSubscriber`, `message-parser` y los handlers descritos en `14-mqtt-protocol.md`.
-
-`MqttPublisher` ya existe, pero las rutas/casos de uso para comandos de válvula y bomba son una tarea futura. Las secciones de actuadores de documentos conceptuales anteriores deben considerarse propuesta, no API disponible.
+Actualmente no existe una ruta REST de ingesta de telemetría: la telemetría entra por Mosquitto y se procesa con `MqttSubscriber`, `message-parser` y los handlers descritos en `14-mqtt-protocol.md`. Los comandos de actuadores sí tienen API REST y se publican por `MqttPublisher`; la confirmación de estado se persiste en PostgreSQL.
 
 ## Comprobación rápida
 

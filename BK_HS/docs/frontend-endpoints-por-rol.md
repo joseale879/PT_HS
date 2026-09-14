@@ -1,54 +1,57 @@
-# Frontend HidroSmart: endpoints y roles
+﻿# Frontend HidroSmart: endpoints y roles
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisiÃ³n: 2026-09-14.
 
 ## Roles
 
-El backend usa roles globales `Administrator`, `Support`, `HomeUser` y `Guest`. Dentro de un hogar existe además la relación de membresía, por ejemplo `Owner`, miembro o invitado. No se deben mezclar el rol global y la membresía del hogar.
+El backend usa roles globales `Administrator`, `Support`, `HomeUser` y `Guest`. Dentro de un hogar existe ademÃ¡s la relaciÃ³n de membresÃ­a, por ejemplo `Owner`, miembro o invitado. No se deben mezclar el rol global y la membresÃ­a del hogar.
 
-- `Administrator`: administración global, roles y auditoría.
-- `Support`: atención de tickets y operaciones autorizadas de soporte.
-- `HomeUser`: gestión de sus hogares y recursos autorizados.
+- `Administrator`: administraciÃ³n global, roles y auditorÃ­a.
+- `Support`: atenciÃ³n de tickets y operaciones autorizadas de soporte.
+- `HomeUser`: gestiÃ³n de sus hogares y recursos autorizados.
 - `Guest`: lectura autorizada.
 
 El backend es la autoridad final. El frontend solo puede ocultar o mostrar controles como ayuda visual.
 
-## Integración actual
+## IntegraciÃ³n actual
 
-- El cliente vigente está en `FT_HS/Web/src/shared/http/apiClient.ts`.
+- El cliente vigente estÃ¡ en `FT_HS/frontend/src/shared/http/apiClient.ts`.
 - La base de URL viene de `VITE_API_URL`.
-- Docker usa `/api/v1` detrás de Nginx; desarrollo directo usa `http://localhost:3000/api/v1`.
-- Autenticación y restauración de sesión están conectadas.
-- El dashboard usa consultas reales de resumen, consumo agregado, dispositivos y alertas, aunque conserva algunos indicadores visuales.
-- Las demás pantallas deben validarse por estados de carga, vacío, error y permisos antes de retirar todos los datos de presentación.
+- Docker usa `/api/v1` detrÃ¡s de Nginx; desarrollo directo usa `http://localhost:3000/api/v1`.
+- AutenticaciÃ³n y restauraciÃ³n de sesiÃ³n estÃ¡n conectadas.
+- El dashboard usa consultas reales de resumen, consumo agregado, dispositivos y alertas; el indicador de flujo actual es el Ãºltimo agregado horario y no tiempo real MQTT.
+- Las pantallas principales de hogares, dispositivos, consumo, reportes, alertas, metas, vacaciones, soporte, privacidad y administraciÃ³n ya consumen sus APIs; aÃºn deben uniformarse sus estados de carga, vacÃ­o, error y permisos.
 
-## Acceso por módulo
+## Acceso por mÃ³dulo
 
-| Módulo | Lectura | Escritura |
+| MÃ³dulo | Lectura | Escritura |
 |---|---|---|
 | Perfil | usuario autenticado | solo la cuenta propia |
 | Hogares | usuario con acceso | `homes.manage` |
 | Dispositivos | usuario autorizado | `devices.manage` |
 | Consumo | `consumption.read` | no hay escritura REST general |
-| Alertas | usuario con acceso al hogar | permiso de gestión de alertas |
+| Alertas | usuario con acceso al hogar | permiso de gestiÃ³n de alertas |
 | Metas | usuario autorizado | `homes.manage` |
 | Vacaciones | usuario autorizado | `homes.manage` |
-| Soporte | usuario autorizado | creación propia o permisos de soporte |
+| Soporte | usuario autorizado | creaciÃ³n propia o permisos de soporte |
 | Roles | `roles.manage` | `roles.manage` |
-| Auditoría | `audit.read` | no aplica |
+| AuditorÃ­a | `audit.read` | no aplica |
 
-El inventario de rutas exactas está en `BK_HS/docs/03-endpoints.md` y la matriz de permisos en `BK_HS/docs/endpoints-por-rol.md`.
+El inventario de rutas exactas estÃ¡ en `BK_HS/docs/03-endpoints.md` y la matriz de permisos en `BK_HS/docs/endpoints-por-rol.md`.
 
 ## Reglas para la interfaz
 
 1. Obtener el `homeId` real desde `/api/v1/homes`.
-2. No usar `CURRENT_USER_ID`, hogares, dispositivos ni membresías quemadas.
-3. Consultar los endpoints de cada módulo mediante `apiClient`.
-4. Mantener estados de carga, vacío, error y reintento.
-5. No confiar en el rol local para autorizar una mutación.
+2. No usar `CURRENT_USER_ID`, hogares, dispositivos ni membresÃ­as quemadas.
+3. Consultar los endpoints de cada mÃ³dulo mediante `apiClient`.
+4. Mantener estados de carga, vacÃ­o, error y reintento.
+5. No confiar en el rol local para autorizar una mutaciÃ³n.
 6. No llamar a PostgreSQL, Mosquitto ni SMTP desde el navegador.
-7. Mostrar MQTT solo después de que la lectura se persista y exista una consulta REST o canal de tiempo real.
+7. Mostrar MQTT solo despuÃ©s de que la lectura se persista y exista una consulta REST o canal de tiempo real.
 
-## Estado de navegación
+## Estado de navegaciÃ³n
 
-La navegación actual es interna por estado de React. No hay todavía un contrato de URL/deep links completo. El rol usado para construir parte del menú está fijado como `user` en varios puntos y debe reemplazarse por la sesión/rol real cuando se cierre el panel administrativo.
+La navegaciÃ³n usa React Router. El menÃº y las rutas protegidas consultan los
+roles/permisos de la sesiÃ³n; `Administrator` y `Support` tienen paneles
+separados y `HomeUser`/`Guest` no acceden a soporte ni notificaciones. Quedan
+pruebas manuales de deep links y permisos con usuarios funcionales reales.

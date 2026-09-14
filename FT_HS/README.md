@@ -1,20 +1,15 @@
 # HidroSmart Frontend
 
-El frontend web vive en `Web` y el cliente móvil en `mobile`.
+Web y Mobile comparten el proyecto único ubicado en `frontend`.
 
-## Estado actual
+- Web: Vite + React + TypeScript, con entrada en `frontend/index.html`.
+- Mobile: Expo + React Native + WebView, con entrada en `frontend/index.js`.
+- Fuente compartida: `frontend/src`.
+- Dependencias: `frontend/package.json` y `frontend/package-lock.json`.
 
-- Web React/Vite organizada por features.
-- Cliente HTTP centralizado en `Web/src/shared/http/apiClient.ts`.
-- Imagen web servida por Nginx y conectada al backend mediante `/api/v1`.
-- Mobile preparado para cargar el bundle web mediante WebView.
+La documentación operativa está en [`docs/README.md`](docs/README.md); el
+estado transversal del sistema está en
+[`../docs/estado-integral.md`](../docs/estado-integral.md).
 
-## Ejecución integrada
-
-Desde la raíz:
-
-```powershell
-docker compose --env-file .env up -d --build
-```
-
-Abre `http://localhost:5173`. La guía de rutas y estado de las pantallas está en `Web/INTEGRACION.md`.
+La bitácora de cambios verificados del 2026-09-14 está en
+[`../docs/cambios-2026-09-14.md`](../docs/cambios-2026-09-14.md).

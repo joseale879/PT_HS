@@ -463,6 +463,13 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/025_auth_security_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
   - changeSet:
       id: 20260901-active-password-policy-function-grant
       author: Hidro_Smarth
@@ -480,12 +487,6 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
-      rollback:
-        - sqlFile:
-            path: ../../05_rollbacks/03_dcl/01_grants/025_auth_security_function.rollback.sql
-            relativeToChangelogFile: true
-            splitStatements: true
-            stripComments: false
 
   - changeSet:
       id: 20260902-alert-generation-function-grant
@@ -498,7 +499,12 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
-
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/027_alert_generation_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
   - changeSet:
       id: 20260902-role-management-functions-grant
       author: Hidro_Smarth
@@ -547,3 +553,249 @@ databaseChangeLog:
             stripComments: false
       rollback:
         - sql: REVOKE SELECT ON preference.language, preference.currency FROM hidro_smart_app;
+  - changeSet:
+      id: 20260906-authorization-context-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,rbac"
+      comment: "Allows the authenticated session to read only its own functional authorization context."
+      changes:
+        - sqlFile:
+            path: 031_authorization_context_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/031_authorization_context_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260906-final-security-hardening
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,least-privilege"
+      comment: "Removes remaining direct account/RBAC mutation surfaces and PUBLIC maintenance execution."
+      changes:
+        - sqlFile:
+            path: 032_final_security_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/032_final_security_hardening.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-auth-and-iot-functions-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,auth,iot"
+      comment: "Allows the backend to use only controlled email, session and IoT ingestion functions."
+      changes:
+        - sqlFile:
+            path: 033_auth_and_iot_functions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/033_auth_and_iot_functions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-auth-hardening-functions-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,auth"
+      comment: "Allows logout only through the ownership-checked security-definer function."
+      changes:
+        - sqlFile:
+            path: 034_auth_hardening_functions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/034_auth_hardening_functions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-iot-ingest-metrics-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,iot,telemetry,security"
+      comment: "Allows the backend to persist validated IoT metrics through the controlled ingestion function."
+      changes:
+        - sqlFile:
+            path: 035_iot_ingest_metrics_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/035_iot_ingest_metrics_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-device-status-ingest-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,iot,security"
+      comment: "Allows MQTT status handlers to persist connectivity telemetry through a controlled function."
+      changes:
+        - sqlFile:
+            path: 036_device_status_ingest_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/036_device_status_ingest_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-session-management-functions-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,auth,sessions"
+      comment: "Grants the backend only the ownership-checked session management functions."
+      changes:
+        - sqlFile:
+            path: 037_session_management_functions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/037_session_management_functions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260912-account-lifecycle-functions-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,auth,users"
+      comment: "Grants the backend only the controlled account lifecycle functions."
+      changes:
+        - sqlFile:
+            path: 038_account_lifecycle_functions.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/038_account_lifecycle_functions.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260912-list-managed-users-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,users,pagination"
+      comment: "Grants the backend the controlled paginated administrative user listing."
+      changes:
+        - sqlFile:
+            path: 039_list_managed_users_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/039_list_managed_users_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260913-telemetry-ingest-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,iot,security"
+      comment: "Allows the dedicated MQTT ingestion role to execute the controlled telemetry function."
+      changes:
+        - sqlFile:
+            path: 040_telemetry_ingest_function.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/040_telemetry_ingest_function.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260913-revoke-ingest-direct-insert
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,iot,security"
+      comment: "Removes direct table insertion from the MQTT ingestion role."
+      changes:
+        - sqlFile:
+            path: 041_revoke_ingest_direct_insert.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/041_revoke_ingest_direct_insert.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260913-password-reset-context-function-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,security,auth,password-reset"
+      comment: "Allows the application role to validate the context of a password reset token."
+      changes:
+        - sqlFile:
+            path: 042_password_reset_context.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/042_password_reset_context.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260913-actuator-command-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,actuators,mqtt,security"
+      comment: Grants the backend scoped access to actuator commands and the MQTT status function.
+      changes:
+        - sqlFile:
+            path: 043_actuator_command.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/043_actuator_command.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260913-actuator-timeout-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,actuators,audit,security"
+      comment: Allows the backend to expire actuator commands through the protected function.
+      changes:
+        - sqlFile:
+            path: 044_actuator_timeout.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/044_actuator_timeout.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

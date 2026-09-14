@@ -1,6 +1,6 @@
 # Guía de ejecución de HidroSmart
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-14.
 
 Esta guía usa el `docker-compose.yml` de la raíz del repositorio. La base de datos se ejecuta en PostgreSQL y los cambios se administran con Liquibase mediante el servicio `tooling`.
 
@@ -8,8 +8,8 @@ Esta guía usa el `docker-compose.yml` de la raíz del repositorio. La base de d
 
 - PostgreSQL 16 está saludable.
 - Puerto externo: `5433`; puerto interno Docker: `5432`.
-- Liquibase 5.0.2 ejecutó `validate` y `update` correctamente.
-- Hay 166 changesets aplicados y `status --verbose` reporta `up to date`.
+- Liquibase 5.0.2 está configurado en el servicio `tooling`; la última ejecución de `validate`, `update` y `status` fue exitosa.
+- Hay 206 changesets aplicados y `status --verbose` reporta `up to date` en el último estado verificado.
 - Existen los roles `hidro_smart_admin`, `hidro_smart_liquibase`, `hidro_smart_app`, `hidro_smart_ingest` y `hidro_smart_readonly`.
 - El backend utiliza `hidro_smart_app`; el servicio Liquibase utiliza el administrador de PostgreSQL definido por `POSTGRES_USER` y `POSTGRES_PASSWORD`.
 
@@ -74,13 +74,18 @@ docker compose --env-file .env --profile tooling run --rm liquibase update
 
 ## Relación con MQTT
 
-Las tablas `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` ya existen para soportar IoT. La persistencia del subscriber MQTT todavía no está conectada.
+Las tablas `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` ya existen para soportar IoT. El subscriber MQTT persiste mediante la función protegida de ingesta y el pool configurado con `DB_INGEST_*`.
 
-Antes de activar esa persistencia se debe crear una migración para:
+La persistencia ya está activa. Las siguientes comprobaciones sirven para mantenerla:
 
 1. revisar la precisión de `consumption.sensor_reading.consumption_liters`, hoy `NUMERIC(10,2)`;
 2. ajustar la columna generada `consumption_m3` y las funciones/vistas dependientes;
-3. versionar los grants mínimos de ingestión;
-4. agregar pruebas de inserción, RLS e idempotencia.
+
+### Verificación de entorno
+
+En la revisión del 2026-09-13 los archivos Compose pasaron `config --quiet`. PostgreSQL quedó saludable, Liquibase pasó `validate`, reportó 206 changesets y el healthcheck del backend respondió HTTP 200.
+
+3. verificar los grants mínimos de ingestión;
+4. mantener pruebas de inserción, RLS e idempotencia.
 
 El diagnóstico de la base está en `diagnostico-actual.md` y el flujo MQTT en `../../BK_HS/docs/14-mqtt-protocol.md`.

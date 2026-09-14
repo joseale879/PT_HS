@@ -1,6 +1,6 @@
 # Ambiente local
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-14.
 
 La pila oficial de desarrollo se ejecuta desde el `docker-compose.yml` de la raíz. Los Compose individuales de BD y backend se conservan solo por compatibilidad.
 
@@ -44,3 +44,26 @@ Mailpit es el proveedor local recomendado. Gmail se configura solo en el `.env` 
 ## MQTT
 
 Mosquitto está configurado sin autenticación, sin TLS y sin persistencia para pruebas locales. El contrato vigente está en `BK_HS/docs/14-mqtt-protocol.md`.
+
+## Prueba funcional de roles
+
+La matriz de `Administrator`, `Support`, `HomeUser` y `Guest` está en
+`tests/integration/roles-permissions.test.js`. El sembrador prepara cuentas
+exclusivas de integración y no usa usuarios reales de la aplicación.
+Configura `INTEGRATION_*_EMAIL`, `INTEGRATION_*_PASSWORD` e
+`INTEGRATION_ADMIN_DATABASE_URL`, y ejecuta antes de la prueba:
+
+```powershell
+npm.cmd run seed:integration
+```
+
+Después define `RUN_INTEGRATION=1`, `INTEGRATION_DATABASE_URL` y
+`INTEGRATION_USER_EMAIL`/`INTEGRATION_USER_PASSWORD`, y ejecuta:
+
+```powershell
+npm.cmd run test:integration
+```
+
+La prueba RLS crea un hogar temporal, verifica el aislamiento y lo elimina al
+terminar. Si faltan credenciales, las pruebas autenticadas se omiten; eso no
+equivale a aprobar la autorización real.

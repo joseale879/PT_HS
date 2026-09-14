@@ -133,3 +133,20 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: false
             stripComments: false
+  - changeSet:
+      id: 20260906-alert-trigger-consistency
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,trigger,alert_rate,integrity"
+      comment: "Uses the same rule thresholds and deterministic event deduplication as the periodic alert generator."
+      changes:
+        - sqlFile:
+            path: 010_trg_after_reading_alert_consistency.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: 009_trg_after_reading_alert_periods.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

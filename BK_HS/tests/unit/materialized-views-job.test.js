@@ -4,8 +4,18 @@ const { startMaterializedViewsRefreshJob } = require('../../src/jobs/materialize
 
 test('el job refresca las vistas sin solaparse', async () => {
   const calls = [];
+  const pool = {
+    connect: async () => ({
+      query: async (sql) => {
+        if (sql.includes('pg_try_advisory_lock')) return { rows: [{ acquired: true }] };
+        calls.push(sql);
+        return { rows: [{ acquired: true }] };
+      },
+      release() {}
+    })
+  };
   const stop = startMaterializedViewsRefreshJob({
-    pool: { query: async (sql) => calls.push(sql) },
+    pool,
     intervalMs: 5,
     logger: { error: () => {} }
   });

@@ -1,12 +1,17 @@
 require('dotenv').config();
 
 const app = require('./src/app');
-const { pool } = require('./src/infrastructure/db');
+const { pool, ingestPool } = require('./src/infrastructure/db');
 const { getEnv } = require('./src/config/env');
 const { startMaterializedViewsRefreshJob } = require('./src/jobs/materializedViewsRefreshJob');
 const { startAlertGenerationJob } = require('./src/jobs/alertGenerationJob');
-const { MqttClient } = require('./src/core/infrastructure/services/mqtt/MqttClient');
+const { startAuditCleanupJob } = require('./src/jobs/auditCleanupJob');
+const { startActuatorCommandTimeoutJob } = require('./src/jobs/actuatorCommandTimeoutJob');
+const { mqttClient } = require('./src/core/infrastructure/services/mqtt/mqttClientSingleton');
 const { MqttSubscriber } = require('./src/core/infrastructure/services/mqtt/MqttSubscriber');
+const { IngestReading } = require('./src/core/application/use-cases/telemetry/IngestReading');
+const { PostgresTelemetryRepository } = require('./src/core/infrastructure/repositories/postgres/PostgresTelemetryRepository');
+const { PostgresDeviceRepository } = require('./src/core/infrastructure/repositories/postgres/PostgresDeviceRepository');
 
 const port = Number(process.env.PORT || 3000);
 const server = app.listen(port, () => {
@@ -18,11 +23,29 @@ const stopRefreshJob = startMaterializedViewsRefreshJob({
 });
 const stopAlertGenerationJob = startAlertGenerationJob({
   pool,
-  intervalMs: getEnv().materializedViewsRefreshMs
+  intervalMs: getEnv().alertGenerationIntervalMs
+});
+const stopAuditCleanupJob = startAuditCleanupJob({
+  pool,
+  intervalMs: getEnv().auditCleanupIntervalMs,
+  retentionDays: getEnv().auditRetentionDays,
+  batchSize: getEnv().auditCleanupBatchSize
+});
+const stopActuatorCommandTimeoutJob = startActuatorCommandTimeoutJob({
+  pool,
+  intervalMs: getEnv().actuatorCommandTimeoutMs,
+  timeoutMs: getEnv().actuatorCommandTimeoutMs,
+  batchSize: getEnv().actuatorCommandTimeoutBatchSize
 });
 const mqttConfig = require('./src/config/mqtt').getMqttConfig();
-const mqttClient = new MqttClient();
-const mqttSubscriber = new MqttSubscriber({ mqttClient, qos: mqttConfig.qos });
+const telemetryRepository = new PostgresTelemetryRepository();
+const mqttSubscriber = new MqttSubscriber({
+  mqttClient,
+  qos: mqttConfig.qos,
+  maxPayloadBytes: mqttConfig.maxPayloadBytes,
+  ingestReading: new IngestReading({ telemetryRepository }),
+  deviceRepository: new PostgresDeviceRepository()
+});
 mqttSubscriber.start();
 
 async function shutdown(signal) {
@@ -30,8 +53,11 @@ async function shutdown(signal) {
   server.close(async (error) => {
     stopRefreshJob();
     stopAlertGenerationJob();
+    stopAuditCleanupJob();
+    stopActuatorCommandTimeoutJob();
     await mqttSubscriber.stop();
     await pool.end();
+    await ingestPool.end();
     if (error) process.exitCode = 1;
     process.exit();
   });

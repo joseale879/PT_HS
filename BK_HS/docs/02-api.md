@@ -8,6 +8,11 @@ Su función principal es recibir solicitudes HTTP, validar la información recib
 
 La API no debe contener directamente las reglas principales del negocio ni consultas SQL.
 
+> Nota de estado: el código vigente usa archivos `src/api/*.routes.js` y registra
+> las rutas directamente en `src/app.js`. Los árboles `routes/v1` y los nombres de
+> controllers de este documento son una referencia arquitectónica histórica; para
+> rutas disponibles prevalece `03-endpoints.md`.
+
 ---
 
 # 2. Ubicación
@@ -85,7 +90,7 @@ Ejemplo:
 /api/v1/tariffs
 /api/v1/goals
 /api/v1/vacation
-/api/v1/actuators
+/api/v1/recommendations
 ```
 
 ---
@@ -581,7 +586,7 @@ Ejemplos:
 
 ```text
 deviceId
-actuatorId
+actuator
 command
 ```
 
@@ -616,7 +621,7 @@ API
 Por ejemplo, para abrir la electroválvula:
 
 ```text
-POST /api/v1/actuators/123/valve/open
+POST /api/v1/actuators/{deviceId}/valve/commands
                 ↓
         Actuator Route
                 ↓
@@ -626,9 +631,9 @@ POST /api/v1/actuators/123/valve/open
                 ↓
       Actuator Controller
                 ↓
-          OpenValve
+   SendActuatorCommand
                 ↓
-         IMqttService
+        MqttPublisher
                 ↓
             MQTT
                 ↓
@@ -792,6 +797,8 @@ La API no será responsable directamente de:
 Estas responsabilidades pertenecen a las capas correspondientes del Core e Infrastructure.
 ## Advertencia de implementación (2026-09-04)
 
-Este documento conserva material conceptual de arquitectura. Para las rutas que realmente existen debe usarse `03-endpoints.md`, que se verificó contra `src/app.js`. Las secciones de `/api/v1/actuators` y los controladores de actuadores son una propuesta futura: actualmente no están montados.
+Este documento conserva material conceptual de arquitectura. Para las rutas que realmente existen debe usarse `03-endpoints.md`, que se verificó contra `src/app.js`. El dominio `/api/v1/actuators` ya está montado; cualquier detalle de contrato debe contrastarse con `03-endpoints.md` y el código de `src/api/actuator.routes.js`.
 
-La integración MQTT vigente está documentada en `14-mqtt-protocol.md`; el backend recibe y normaliza mensajes, pero aún no persiste lecturas en PostgreSQL.
+La integración MQTT vigente está documentada en `14-mqtt-protocol.md`; el
+backend recibe, valida y persiste lecturas en PostgreSQL mediante una función
+SQL protegida e idempotente.

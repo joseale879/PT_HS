@@ -617,3 +617,245 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260906-fn-generate-alert-events-consistent
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,alert,integrity"
+      comment: "Unifies periodic alert periods, vacation behavior, no-reading detection and concurrent idempotency."
+      changes:
+        - sqlFile:
+            path: 037_fn_generate_alert_events_consistent.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: 035_fn_generate_alert_events_no_reading.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260906-fn-authorization-context
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rbac"
+      comment: "Exposes only the authenticated user's own functional roles and permissions."
+      changes:
+        - sqlFile:
+            path: 038_fn_authorization_context.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP FUNCTION IF EXISTS user_account.fn_get_my_authorization_context();
+
+  - changeSet:
+      id: 20260906-fn-bootstrap-first-administrator
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,rbac,bootstrap"
+      comment: "Adds an owner-only one-time bootstrap for the first functional Administrator."
+      changes:
+        - sqlFile:
+            path: 039_fn_bootstrap_first_administrator.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sql: DROP FUNCTION IF EXISTS user_account.fn_bootstrap_first_administrator(UUID);
+
+  - changeSet:
+      id: 20260912-fn-auth-and-iot-ingest
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,auth,iot"
+      comment: "Adds controlled email verification, active-session validation and idempotent IoT ingestion."
+      changes:
+        - sqlFile:
+            path: 040_fn_auth_and_iot_ingest.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/040_fn_auth_and_iot_ingest.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-fn-auth-hardening
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,auth,rbac"
+      comment: "Fixes authorization ordering for users without roles and encapsulates owned logout."
+      changes:
+        - sqlFile:
+            path: 041_fn_auth_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/041_fn_auth_hardening.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-fn-iot-ingest-returning-fix
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,iot,bugfix"
+      comment: "Qualifies the reading id returned by idempotent IoT ingestion."
+      changes:
+        - sqlFile:
+            path: 042_fn_iot_ingest_returning_fix.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/042_fn_iot_ingest_returning_fix.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-fn-iot-ingest-metrics-and-timestamps
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,iot,integrity,telemetry"
+      comment: "Persists sensor metrics, separates measured and received timestamps and rejects ambiguous device assignments."
+      changes:
+        - sqlFile:
+            path: 043_fn_iot_ingest_metrics_and_timestamps.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/043_fn_iot_ingest_metrics_and_timestamps.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-fn-device-status-ingest
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,iot,telemetry"
+      comment: "Persists MQTT connectivity status and device telemetry without changing administrative status."
+      changes:
+        - sqlFile:
+            path: 044_fn_device_status_ingest.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/044_fn_device_status_ingest.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260912-fn-session-management
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,auth,sessions"
+      comment: "Adds ownership-checked session listing and revocation operations without exposing token material."
+      changes:
+        - sqlFile:
+            path: 045_fn_session_management.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/045_fn_session_management.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260912-fn-account-lifecycle
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,auth,users"
+      comment: "Adds permission-checked account suspension, reactivation and logical deletion with session revocation."
+      changes:
+        - sqlFile:
+            path: 046_fn_account_lifecycle.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/046_fn_account_lifecycle.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20260912-fn-list-managed-users
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,users,pagination"
+      comment: "Adds a permission-checked paginated user listing for the administrative panel without credential data."
+      changes:
+        - sqlFile:
+            path: 047_fn_list_managed_users.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/047_fn_list_managed_users.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260913-fn-password-reset-context
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,security,auth,password-reset"
+      comment: "Returns the email for an active, unused and unexpired password reset token without exposing token data."
+      changes:
+        - sqlFile:
+            path: 048_fn_get_password_reset_email.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/048_fn_get_password_reset_email.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260913-fn-actuator-status
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,actuators,mqtt"
+      comment: Persists actuator status events and acknowledges matching commands.
+      changes:
+        - sqlFile:
+            path: 049_fn_actuator_status.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/049_fn_actuator_status.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260913-fn-timeout-actuator-commands
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,actuators,audit"
+      comment: Marks actuator commands without ACK as timed out and records the transition in audit.
+      changes:
+        - sqlFile:
+            path: 050_fn_timeout_actuator_commands.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/050_fn_timeout_actuator_commands.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

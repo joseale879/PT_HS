@@ -1,0 +1,36 @@
+// Infraestructura HTTP compartida. Los endpoints concretos viven en cada feature.
+export {
+  apiClient,
+  ApiError,
+  sessionTokens,
+  authApi,
+  userApi,
+  homesApi,
+  devicesApi,
+  actuatorsApi,
+  consumptionApi,
+  reportsApi,
+  recommendationsApi,
+  alertsApi,
+  tariffApi,
+  goalsApi,
+  vacationApi,
+  rolesApi,
+  supportApi,
+  auditApi,
+  privacyApi,
+} from './apiClient';
+
+export type {
+  CollectionPagination,
+  DeviceListOptions,
+  DeviceListResponse,
+  Recommendation,
+  RecommendationSummary,
+  ActuatorType,
+  ActuatorCommandValue,
+  ActuatorState,
+  ActuatorCommandRecord,
+  ActuatorCommandListOptions,
+  GeneratedReport,
+} from './apiClient';

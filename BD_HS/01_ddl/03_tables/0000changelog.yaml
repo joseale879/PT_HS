@@ -178,3 +178,23 @@
             path: ../../05_rollbacks/01_ddl/03_tables/009_Privacy_arco.rollback.sql
             relativeToChangelogFile: true
             stripComments: false
+
+  # ============================================================
+  # DOMINIO 10: ESTADO Y COMANDOS DE ACTUADORES (device)
+  # ============================================================
+
+  - changeSet:
+      id: 20260913-actuator-command-state-tables
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,base,device,actuators"
+      comment: Creates the persisted actuator state and command lifecycle tables.
+      changes:
+        - sqlFile:
+            path: 010_Actuators.sql
+            relativeToChangelogFile: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/03_tables/010_Actuators.rollback.sql
+            relativeToChangelogFile: true
+            stripComments: false

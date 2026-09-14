@@ -1,8 +1,9 @@
 class RequestPasswordReset {
-  constructor({ authRepository, tokenService, notificationService }) {
+  constructor({ authRepository, tokenService, notificationService, logger = console }) {
     this.authRepository = authRepository;
     this.tokenService = tokenService;
     this.notificationService = notificationService;
+    this.logger = logger;
   }
 
   async execute({ email }) {
@@ -10,11 +11,7 @@ class RequestPasswordReset {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.length > 150) {
       this.badRequest('El correo electrónico es obligatorio y debe ser válido');
     }
-    if (!this.notificationService.isConfigured()) {
-      const error = new Error('El correo de recuperación no está configurado');
-      error.status = 503;
-      throw error;
-    }
+
     const resetToken = this.tokenService.generate();
     const resetExpiresAt = this.tokenService.expiresAt();
     const resetId = await this.authRepository.createPasswordResetToken({
@@ -22,12 +19,16 @@ class RequestPasswordReset {
       tokenHash: this.tokenService.hash(resetToken),
       expiresAt: resetExpiresAt
     });
-    if (!resetId) {
-      const error = new Error('El correo electronico no esta registrado en HidroSmart');
-      error.status = 404;
-      throw error;
+
+    // La respuesta pública es siempre neutral. Un fallo SMTP nunca revela
+    // si el correo pertenece a una cuenta ni convierte el flujo en 500.
+    if (resetId && this.notificationService.isConfigured()) {
+      try {
+        await this.notificationService.sendPasswordReset({ recipient: normalizedEmail, resetToken });
+      } catch (error) {
+        this.logger.error('[AUTH] No se pudo enviar el correo de recuperación:', error.message);
+      }
     }
-    await this.notificationService.sendPasswordReset({ recipient: normalizedEmail, resetToken });
     return { resetExpiresAt };
   }
 

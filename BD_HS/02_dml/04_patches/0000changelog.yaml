@@ -67,3 +67,21 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260913-actuators-permission
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dml,patch,rbac,device,actuators,security"
+      comment: Adds scoped actuator management to Administrator and HomeUser.
+      changes:
+        - sqlFile:
+            path: 005_actuators_permission.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/02_dml/04_patches/005_actuators_permission.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

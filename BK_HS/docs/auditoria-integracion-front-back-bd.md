@@ -1,21 +1,23 @@
-# Auditoría de integración Frontend -> Backend -> Base de datos
+﻿# AuditorÃ­a de integraciÃ³n Frontend -> Backend -> Base de datos
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisiÃ³n: 2026-09-14.
 
 ## Resultado general
 
 | Circuito | Resultado |
 |---|---|
-| Frontend -> backend | Centralizado y funcional para autenticación, sesión y consultas usadas por el dashboard |
-| Backend -> PostgreSQL | Rutas/repositorios alineados para los módulos REST implementados |
+| Frontend -> backend | Centralizado y funcional para autenticaciÃ³n, sesiÃ³n y mÃ³dulos principales |
+| Backend -> PostgreSQL | Rutas, repositorios y funciones alineados para los mÃ³dulos REST implementados |
 | Backend -> permisos/RLS | Protegido por middleware, permisos PostgreSQL y acceso al hogar/recurso |
-| Frontend -> API -> BD completo | Parcial por pantallas aún no migradas y por persistencia MQTT pendiente |
+| Frontend -> API -> BD | Conectado en los mÃ³dulos principales; faltan estados visuales uniformes, pruebas manuales y E2E |
+| MQTT -> PostgreSQL | Persistencia de telemetrÃ­a conectada mediante funciÃ³n protegida e idempotencia |
 
 ## Cliente HTTP real
 
-La ubicación vigente es `FT_HS/Web/src/shared/http/apiClient.ts`. `FT_HS/Web/src/shared/http/httpClient.ts` conserva el cliente común. La documentación antigua que menciona `src/services/apiClient.ts` ya no describe la estructura actual.
-
-La capa centralizada resuelve la URL base desde `VITE_API_URL`, agrega autorización, procesa errores y reintenta la renovación de sesión ante un `401`.
+La ubicaciÃ³n vigente es `FT_HS/frontend/src/shared/http/apiClient.ts`.
+`FT_HS/frontend/src/shared/http/httpClient.ts` conserva el cliente comÃºn. La capa
+centralizada resuelve la URL desde `VITE_API_URL`, agrega autorizaciÃ³n, procesa
+errores y reintenta la renovaciÃ³n de sesiÃ³n ante un `401`.
 
 ## Flujos conectados
 
@@ -23,27 +25,35 @@ La capa centralizada resuelve la URL base desde `VITE_API_URL`, agrega autorizac
 - Login: `POST /api/v1/auth/login`.
 - Refresh: `POST /api/v1/auth/refresh`.
 - Logout: `POST /api/v1/auth/logout`.
-- Recuperación: `POST /api/v1/auth/request-password-reset` y `POST /api/v1/auth/reset-password`.
-- Perfil: `GET/PUT /api/v1/users/me`.
-- Dashboard: resumen, consumo horario/diario, dispositivos y alertas mediante el cliente API.
+- RecuperaciÃ³n: `POST /api/v1/auth/request-password-reset`,
+  `GET /api/v1/auth/password-reset-context?resetToken=...` y
+  `POST /api/v1/auth/reset-password`.
+- Perfil y preferencias: `GET/PUT /api/v1/users/me` y
+  `GET/PUT /api/v1/users/me/preferences`.
+- Dashboard: resumen, consumo horario/diario, dispositivos y alertas.
+- Hogares, miembros, dispositivos, consumo, tarifas, alertas, metas, vacaciones,
+  soporte, privacidad, reportes PDF/Excel y administraciÃ³n.
 
-## Módulos que requieren verificación por pantalla
+## Contratos que deben conservarse
 
-Los métodos de API existen para hogares, miembros, dispositivos, consumo, tarifas, alertas, metas, vacaciones, soporte y auditoría. Cada pantalla debe comprobar que use el `homeId` real y maneje carga, vacío, error, permisos y actualización posterior.
-
-Tener el método declarado en `apiClient` no demuestra que la vista ya esté conectada. El dashboard aún contiene indicadores visuales de presentación y no debe interpretarse como telemetría en tiempo real.
-
-## Correcciones de contrato que deben conservarse
-
-- Recuperación usa `{ resetToken, newPassword }`.
-- El listado de dispositivos es `GET /api/v1/devices`; no se debe asumir que `?homeId=` filtra hasta que el backend lo implemente formalmente.
+- RecuperaciÃ³n usa `{ resetToken, newPassword }`.
+- El listado de dispositivos es `GET /api/v1/devices?homeId={uuid}&page={n}&pageSize={n}`;
+  el backend valida el UUID, filtra por hogar autorizado y entrega paginaciÃ³n.
 - El frontend debe usar UUID como texto para `userId`, `homeId` y `deviceId`.
-- La autorización del backend prevalece sobre cualquier rol local de la interfaz.
+- La autorizaciÃ³n del backend prevalece sobre cualquier rol local de la interfaz.
+- El navegador no accede directamente a PostgreSQL, Mosquitto ni SMTP.
 
 ## MQTT
 
-El circuito IoT es `ESP32 -> Mosquitto -> MqttSubscriber -> parser -> handler`. La recepción y normalización están verificadas. La persistencia en `consumption.sensor_reading` y `device.device_telemetry_history` todavía no está conectada; por ello aún no existe un circuito `MQTT -> BD -> API -> frontend` comprobable.
+El circuito IoT es `ESP32 -> Mosquitto -> MqttSubscriber -> parser -> handler ->
+IngestReading -> PostgreSQL`. La recepciÃ³n, normalizaciÃ³n, persistencia e
+idempotencia estÃ¡n conectadas. Falta completar tiempo real del frontend, probar
+con firmware fÃ­sico y cerrar la precisiÃ³n de `consumption_liters`.
 
-## Conclusión
+## ConclusiÃ³n
 
-La autenticación ya recorre el circuito completo. La API REST y la base están alineadas en los módulos implementados, pero la integración visual debe terminarse pantalla por pantalla. La siguiente integración técnica es cerrar la persistencia MQTT después de resolver identidad del dispositivo, permisos, idempotencia y precisión.
+La autenticaciÃ³n recorre el circuito completo. La API REST y la base estÃ¡n
+alineadas en los mÃ³dulos implementados, y la persistencia MQTT estÃ¡ cerrada en
+backend/BD para el alcance local. La matriz local de roles/RLS ya estÃ¡ probada;
+el siguiente cierre es validar estados del frontend, Gmail real y el flujo con
+firmware real.

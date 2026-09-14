@@ -1,11 +1,13 @@
 # Dominios de la base de datos Hidro Smart
 
-Hidro Smart administra consumo de agua mediante nueve schemas funcionales:
+Hidro Smart administra consumo de agua mediante nueve schemas funcionales y
+los dominios asociados:
 
 - `user_account`: usuarios, perfiles, autenticación, sesiones, credenciales, roles y políticas de contraseña.
 - `preference`: idiomas, monedas, temas y preferencias personales.
 - `home`: hogares, miembros, dispositivos asociados, vacaciones y metas de ahorro.
-- `device`: dispositivos IoT, historial de estados, calibraciones y telemetría.
+- `device`: dispositivos IoT, historial de estados, calibraciones, telemetría,
+  estado actual de actuadores y ciclo de vida de comandos.
 - `consumption`: lecturas de agua en litros/m³, resúmenes diarios, horarios, mensuales y predicciones.
 - `alert_rate`: umbrales, reglas, eventos, notificaciones y tarifas por hogar.
 - `analytics_support`: recomendaciones, reportes y tickets de soporte.
@@ -19,6 +21,11 @@ El perfil de usuario puede guardar `user_profile.photo_url` para la imagen del u
 El backend autentica al usuario y establece `app.user_id`. Las políticas RLS usan ese valor para limitar hogares, dispositivos, lecturas, alertas, reportes y tickets.
 
 La ingesta IoT utiliza el rol PostgreSQL separado `hidro_smart_ingest`, que solo tiene permiso de insertar en `consumption.sensor_reading`. El backend usa `hidro_smart_app` para las operaciones de aplicación.
+
+El dominio de actuadores usa `device.actuator_state` para conservar el último
+estado reportado por válvulas y bombas, y `device.actuator_command` para guardar
+la solicitud, publicación, confirmación o fallo. La base valida que las órdenes
+sean compatibles con el tipo de actuador y aplica RLS por hogar.
 
 Para crear el primer propietario de un hogar se utiliza `home.fn_create_home_with_owner(...)`; así la creación del hogar y su primer registro `Owner` ocurre como una operación controlada.
 
@@ -52,8 +59,8 @@ La relación `home.home_device` se mantiene N:N: un dispositivo puede estar asoc
 ## Costo por periodo
 
 `consumption.fn_calculate_cost(...)` calcula solo el costo variable de una lectura. `consumption.fn_calculate_period_cost(...)` agrega el `fixed_charge` una vez por cada mes incluido en el rango, siempre que exista una tarifa vigente para ese mes.
-## Estado de integración MQTT (2026-09-04)
+## Estado de integración MQTT (2026-09-13)
 
-La base contiene las tablas `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` que soportarán la ingestión IoT. El backend ya recibe y normaliza MQTT, pero todavía no persiste esas lecturas.
+La base contiene las tablas `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history`, conectadas a la ingesta IoT protegida del backend. Las lecturas conservan métricas, `mqtt_message_id`, `measured_at` y `received_at`.
 
-Antes de activar la escritura se debe resolver `deviceCode` contra `device.device.code`, comprobar la asociación activa con el hogar y versionar los grants mínimos para la conexión de ingestión. La columna `consumption.sensor_reading.consumption_liters` es actualmente `NUMERIC(10,2)`, por lo que debe revisarse su precisión para muestras del ESP32 como `0.040 L`.
+La escritura ya resuelve `deviceCode` contra `device.device.code`, comprueba la asociación activa con el hogar y usa grants versionados para la conexión de ingestión. La columna `consumption.sensor_reading.consumption_liters` es actualmente `NUMERIC(10,2)`, por lo que debe revisarse su precisión para muestras del ESP32 como `0.040 L`.
