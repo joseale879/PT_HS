@@ -30,7 +30,9 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(requestContext);
 app.use(cors({ origin: getEnv().corsOrigin.split(',').map((origin) => origin.trim()) }));
-app.use(express.json({ limit: '1mb' }));
+// Permite transportar un avatar de hasta 2 MB en base64; el caso de uso
+// comprueba el tamaño binario real antes de persistirlo.
+app.use(express.json({ limit: '4mb' }));
 
 app.get('/', (_req, res) => {
   res.json({ name: 'Hidro Smart API', version: 'v1', status: 'ok' });

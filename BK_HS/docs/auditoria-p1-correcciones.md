@@ -20,10 +20,10 @@ Fecha: 2026-09-13.
 
 ## Verificacion
 
-- Liquibase: `validate` y `update` correctos; 206 changesets aplicados.
-- Backend: `npm run check` correcto y 131/131 pruebas unitarias exitosas.
+- Liquibase: `validate` y `update` correctos; 217 changesets aplicados.
+- Backend: `npm run check` correcto y 156/156 pruebas unitarias exitosas.
 - Frontend: `npm run typecheck` y `npm run build` correctos.
-- Docker: PostgreSQL, backend, frontend, Mosquitto y Mailpit activos.
+- Docker: PostgreSQL, backend, frontend y Mosquitto activos.
 - Ingesta bajo `hidro_smart_ingest`: primera lectura insertada y repeticiÃ³n ignorada por `mqttMessageId`.
 
 ## P1 que continua pendiente

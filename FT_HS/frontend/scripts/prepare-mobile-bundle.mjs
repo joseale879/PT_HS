@@ -30,6 +30,24 @@ function assertPathExists(target, label) {
   }
 }
 
+function readEnvValue(name) {
+  for (const fileName of ['.env.local', '.env']) {
+    const filePath = path.join(frontendRoot, fileName);
+    if (!fs.existsSync(filePath)) continue;
+
+    const line = fs
+      .readFileSync(filePath, 'utf8')
+      .split(/\r?\n/)
+      .find((entry) => entry.match(new RegExp(`^\\s*${name}\\s*=`)));
+    if (!line) continue;
+
+    const value = line.replace(new RegExp(`^\\s*${name}\\s*=`), '').trim();
+    return value.replace(/^("|')|("|')$/g, '');
+  }
+
+  return undefined;
+}
+
 function toDataUri(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const mime = mimeTypes.get(ext) ?? 'application/octet-stream';
@@ -62,14 +80,23 @@ function replaceAssetReferences(content, assets) {
 }
 
 assertPathExists(webRoot, 'Proyecto web');
+// El WebView contiene el build web dentro de la aplicación. Por eso la URL
+// del backend debe pasar al build como VITE_API_URL; de lo contrario, un
+// teléfono físico intentaría llamar a localhost en lugar del equipo de
+// desarrollo. La variable de entorno del proceso tiene prioridad para CI.
+const mobileApiUrl = process.env.EXPO_PUBLIC_API_URL || readEnvValue('EXPO_PUBLIC_API_URL');
+const buildEnv = mobileApiUrl ? { ...process.env, VITE_API_URL: mobileApiUrl } : process.env;
+
 if (process.platform === 'win32') {
   execFileSync(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `npm run build -- --outDir .web-dist --emptyOutDir`], {
     cwd: webRoot,
+    env: buildEnv,
     stdio: 'inherit'
   });
 } else {
   execFileSync('npm', ['run', 'build', '--', '--outDir', distRoot, '--emptyOutDir'], {
     cwd: webRoot,
+    env: buildEnv,
     stdio: 'inherit'
   });
 }

@@ -73,6 +73,28 @@ class PostgresConsumptionRepository {
     const value = result.rows[0]?.total_cost;
     return { homeId, from, to, totalCost: value === null ? null : Number(value) };
   }
+
+  async getSeries({ userId, homeId, from, to, groupBy }) {
+    const result = await withTransaction(userId, (client) => client.query(
+      `SELECT group_key, bucket_date, bucket_hour, location,
+              consumption_liters, consumption_m3, reading_count,
+              average_flow_lpm, peak_flow_lpm
+         FROM consumption.fn_get_consumption_series($1::uuid, $2::date, $3::date, $4::varchar)`,
+      [homeId, from, to, groupBy]
+    ));
+
+    return result.rows.map((row) => ({
+      groupKey: row.group_key,
+      bucketDate: row.bucket_date,
+      bucketHour: row.bucket_hour === null ? null : Number(row.bucket_hour),
+      location: row.location,
+      consumptionLiters: Number(row.consumption_liters || 0),
+      consumptionM3: Number(row.consumption_m3 || 0),
+      readingCount: Number(row.reading_count || 0),
+      averageFlowLpm: row.average_flow_lpm === null ? null : Number(row.average_flow_lpm),
+      peakFlowLpm: row.peak_flow_lpm === null ? null : Number(row.peak_flow_lpm)
+    }));
+  }
 }
 
 module.exports = { PostgresConsumptionRepository };

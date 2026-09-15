@@ -1,3 +1,4 @@
+const { randomUUID } = require('node:crypto');
 const { parseTelemetryMessage } = require('../message-parser');
 const { getTopicContext } = require('../topics');
 
@@ -7,7 +8,7 @@ function assertReportedDevice(context, reportedDeviceId) {
   }
 }
 
-async function handleReading({ topic, message, context, logger = console, readingRepository = null, ingestReading = null, maxPayloadBytes }) {
+async function handleReading({ topic, message, context, logger = console, readingRepository = null, ingestReading = null, maxPayloadBytes, allowLegacyTelemetry = true }) {
   const topicContext = context || getTopicContext(topic);
   if (!topicContext || topicContext.type !== 'telemetry') {
     throw new Error(`Topic MQTT de telemetría inválido: ${topic}`);
@@ -15,9 +16,17 @@ async function handleReading({ topic, message, context, logger = console, readin
 
   const telemetry = parseTelemetryMessage(message, { maxPayloadBytes });
   assertReportedDevice(topicContext, telemetry.reportedDeviceId);
-  if (readingRepository && !telemetry.mqttMessageId) {
+  const usedLegacyMessageId = !telemetry.mqttMessageId;
+  if (usedLegacyMessageId && !allowLegacyTelemetry) {
     throw new Error('mqttMessageId es obligatorio para persistir una lectura MQTT');
   }
+
+  // El firmware actualmente instalado publica las métricas correctamente,
+  // pero no incluye mqttMessageId. Generamos un identificador único solo como
+  // compatibilidad de transición para no perder esas lecturas. El firmware
+  // actualizado seguirá enviando su propio identificador y mantendrá la
+  // deduplicación MQTT de extremo a extremo.
+  const mqttMessageId = telemetry.mqttMessageId || `legacy-${topicContext.deviceId}-${randomUUID()}`;
 
   const reading = {
     deviceId: topicContext.deviceId,
@@ -32,7 +41,8 @@ async function handleReading({ topic, message, context, logger = console, readin
     voltage: telemetry.voltage,
     temperature: telemetry.temperature,
     timestamp: telemetry.timestamp,
-    mqttMessageId: telemetry.mqttMessageId
+    mqttMessageId,
+    mqttMessageIdGenerated: usedLegacyMessageId
   };
 
   const persistenceInput = {

@@ -1,7 +1,7 @@
 const { parseActuatorStatusMessage } = require('../message-parser');
 const { getTopicContext } = require('../topics');
 
-async function handleActuatorStatus({ topic, message, context, logger = console, maxPayloadBytes }) {
+async function handleActuatorStatus({ topic, message, context, logger = console, maxPayloadBytes, deviceRepository = null }) {
   const topicContext = context || getTopicContext(topic);
   if (!topicContext || topicContext.type !== 'actuator-status') {
     throw new Error(`Topic MQTT de actuador inválido: ${topic}`);

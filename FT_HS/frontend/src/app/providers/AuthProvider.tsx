@@ -22,12 +22,13 @@ export type AuthSession = AuthorizationContext & {
   sessionId?: string;
   fullName?: string;
   email?: string;
+  avatarDataUrl?: string | null;
   preferences?: { language?: string; currency?: string };
 };
 
 type LoginCredentials = { login: string; password: string };
 
-type RegistrationPayload = {
+export type RegistrationPayload = {
   username: string;
   email: string;
   password: string;
@@ -40,6 +41,8 @@ type RegistrationPayload = {
   termsVersion: string;
 };
 
+export type RegistrationResult = { message: string; email: string };
+
 type AuthContextValue = {
   session: AuthSession | null;
   isInitializing: boolean;
@@ -47,7 +50,7 @@ type AuthContextValue = {
   can: (permission: string) => boolean;
   refreshSession: () => Promise<AuthSession>;
   login: (credentials: LoginCredentials) => Promise<AuthSession>;
-  register: (payload: RegistrationPayload) => Promise<AuthSession>;
+  register: (payload: RegistrationPayload) => Promise<RegistrationResult>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => ReturnType<typeof authApi.requestPasswordReset>;
   passwordResetContext: (token: string) => ReturnType<typeof authApi.passwordResetContext>;
@@ -93,14 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [refreshSession]
   );
 
-  const register = useCallback(
-    async (payload: RegistrationPayload) => {
-      const response = await authApi.register(payload);
-      sessionTokens.save(response.data);
-      return refreshSession();
-    },
-    [refreshSession]
-  );
+  const register = useCallback(async (payload: RegistrationPayload) => {
+    const response = await authApi.register(payload);
+    return response.data;
+  }, []);
+
+  const restoreFromRefreshToken = useCallback(async () => {
+    const refreshToken = sessionTokens.refreshToken;
+    if (!refreshToken) throw new Error('No hay un refresh token disponible');
+    const refreshed = await authApi.refresh(refreshToken);
+    sessionTokens.save(refreshed.data);
+    return refreshSession();
+  }, [refreshSession]);
 
   const logout = useCallback(async () => {
     const refreshToken = sessionTokens.refreshToken;
@@ -119,11 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initialize = async () => {
       try {
         if (sessionTokens.accessToken) {
-          await refreshSession();
+          try {
+            await refreshSession();
+          } catch (error) {
+            // Un access token vencido no debe cerrar la sesión si el refresh
+            // token sigue vigente. El cliente HTTP también usa este mismo flujo.
+            if (!sessionTokens.refreshToken) throw error;
+            await restoreFromRefreshToken();
+          }
         } else if (sessionTokens.refreshToken) {
-          const refreshed = await authApi.refresh(sessionTokens.refreshToken);
-          sessionTokens.save(refreshed.data);
-          await refreshSession();
+          await restoreFromRefreshToken();
         }
       } catch {
         clearLocalSession();
@@ -135,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [clearLocalSession, refreshSession]);
+  }, [clearLocalSession, refreshSession, restoreFromRefreshToken]);
 
   useEffect(() => {
     const handleExpiredSession = () => clearLocalSession();

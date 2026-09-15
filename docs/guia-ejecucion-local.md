@@ -62,7 +62,6 @@ cuenta.
 | PostgreSQL | 5433 |
 | Backend API | 3000 |
 | Frontend | 5173 |
-| Mailpit SMTP/UI | 1025 / 8025 |
 | MQTT | 1883 |
 
 Usa solo un modo a la vez si todos conservan estos puertos. Por ejemplo, no
@@ -104,7 +103,7 @@ base independiente anterior o el PostgreSQL del Compose integrado. Levanta
 los servicios auxiliares del backend:
 
 ~~~powershell
-docker compose --env-file BK_HS/.env -p hidro_smart_backend -f BK_HS/docker-compose.yml up -d mosquitto mailpit
+docker compose --env-file BK_HS/.env -p hidro_smart_backend -f BK_HS/docker-compose.yml up -d mosquitto
 ~~~
 
 Instala y verifica dependencias desde BK_HS:
@@ -196,7 +195,7 @@ Ejecuta todo desde PT_HS usando el Compose de la raÃ­z.
 
 ~~~powershell
 docker compose --env-file .env config --quiet
-docker compose --env-file .env up -d postgres db-bootstrap mosquitto mailpit
+docker compose --env-file .env up -d postgres db-bootstrap mosquitto
 docker compose --env-file .env --profile tooling run --rm liquibase validate
 docker compose --env-file .env --profile tooling run --rm liquibase status --verbose
 docker compose --env-file .env --profile tooling run --rm liquibase update
@@ -218,7 +217,6 @@ Direcciones:
 - Health backend: http://localhost:3000/health
 - Health de preparaciÃ³n: http://localhost:3000/health/ready
 - PostgreSQL desde Windows: localhost:5433
-- Mailpit: http://localhost:8025
 - MQTT: localhost:1883
 
 Dentro del Compose integrado el backend usa postgres:5432,
@@ -276,7 +274,7 @@ reinicio normal.
 ## 10. Problemas habituales
 
 - Puerto ocupado: ejecuta docker compose ps y detÃ©n la pila que estÃ© usando
-  5433, 3000, 5173, 1025, 8025 o 1883.
+  5433, 3000, 5173 o 1883.
 - Backend no conecta a BD: directo con Node debe usar DB_HOST=localhost;
   dentro de Docker debe usar DB_DOCKER_HOST=host.docker.internal cuando la
   BD estÃ¡ en otro Compose.
@@ -286,7 +284,7 @@ reinicio normal.
   de ejecutar el perfil tooling.
 - Correo no llega: revisa SMTP_USER, SMTP_PASSWORD y que la clave sea una
   contraseÃ±a de aplicaciÃ³n de Gmail. En local tambiÃ©n puedes revisar
-  http://localhost:8025 si configuras SMTP contra Mailpit.
+  la cuenta Gmail configurada en las variables `SMTP_*`.
 - Si cambiaste una contraseÃ±a con el volumen existente, actualiza el rol de
   PostgreSQL y el .env al mismo tiempo. Cambiar solamente
   POSTGRES_PASSWORD no modifica por sÃ­ solo una base ya inicializada.
@@ -296,6 +294,6 @@ reinicio normal.
 - Nunca subas .env, claves de Gmail, secretos JWT ni
   BD_HS/docs/credenciales-locales.md.
 - Usa secretos nuevos para producciÃ³n y una cuenta SMTP separada.
-- No publiques PostgreSQL, MQTT ni Mailpit en Internet.
+- No publiques PostgreSQL ni MQTT en Internet.
 - Cambia las credenciales de los usuarios funcionales locales antes de usar
   cualquier ambiente compartido.

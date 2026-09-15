@@ -32,10 +32,12 @@ function notFound(req, _res, next) {
 }
 
 function errorHandler(error, req, res, _next) {
-  const status = error.status || databaseErrorStatus(error) || (error instanceof SyntaxError ? 400 : 500);
+  const status = normalizedErrorStatus(error);
   const requestId = req?.id || req?.headers?.['x-request-id'] || randomUUID();
   const message = status === 500
     ? 'Error interno del servidor'
+    : status === 413
+      ? 'La solicitud supera el tamaño permitido'
     : error instanceof SyntaxError
       ? 'El cuerpo de la solicitud contiene JSON inválido'
       : databaseErrorMessage(error) || error.message;
@@ -44,8 +46,14 @@ function errorHandler(error, req, res, _next) {
   res.status(status).json({ error: { code: errorCode(status), message }, meta: { requestId } });
 }
 
+function normalizedErrorStatus(error) {
+  const status = Number(error?.status);
+  if (Number.isInteger(status) && status >= 400 && status <= 599) return status;
+  return databaseErrorStatus(error) || (error instanceof SyntaxError ? 400 : 500);
+}
+
 function errorCode(status) {
-  return ({ 400: 'BAD_REQUEST', 401: 'UNAUTHORIZED', 403: 'FORBIDDEN', 404: 'NOT_FOUND', 409: 'CONFLICT', 422: 'UNPROCESSABLE_ENTITY', 429: 'TOO_MANY_REQUESTS', 500: 'INTERNAL_SERVER_ERROR' })[status] || 'HTTP_ERROR';
+  return ({ 400: 'BAD_REQUEST', 401: 'UNAUTHORIZED', 403: 'FORBIDDEN', 404: 'NOT_FOUND', 409: 'CONFLICT', 413: 'PAYLOAD_TOO_LARGE', 422: 'UNPROCESSABLE_ENTITY', 429: 'TOO_MANY_REQUESTS', 500: 'INTERNAL_SERVER_ERROR' })[status] || 'HTTP_ERROR';
 }
 
 function getPagination(query = {}) {

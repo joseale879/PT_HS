@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { homesApi } from '@shared/http/apiClient';
 
-export type ActiveHome = { homeId: string; name: string };
+export type ActiveHome = { homeId: string; name: string; homeRole?: 'Owner' | 'Member' | 'Guest' };
 
 type ActiveHomeContextValue = {
   homes: ActiveHome[];
@@ -24,10 +24,15 @@ export function ActiveHomeProvider({ children }: { children: ReactNode }) {
       .list()
       .then(({ data }) => {
         if (!active) return;
-        const loaded = (data as Array<{ homeId: string; name: string }>).map((home) => ({
-          homeId: String(home.homeId),
-          name: String(home.name),
-        }));
+        const loaded = (data as Array<{ homeId: string; name: string; homeRole?: string }>).map(
+          (home) => ({
+            homeId: String(home.homeId),
+            name: String(home.name),
+            homeRole: ['Owner', 'Member', 'Guest'].includes(String(home.homeRole))
+              ? (String(home.homeRole) as 'Owner' | 'Member' | 'Guest')
+              : undefined,
+          })
+        );
         const stored = sessionStorage.getItem(ACTIVE_HOME_KEY);
         setHomes(loaded);
         setHomeIdState(

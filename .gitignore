@@ -1,5 +1,5 @@
 # Secretos y configuracion local
-.env*
+
 !.env.example
 !**/.env.example
 !**/.env.local.example

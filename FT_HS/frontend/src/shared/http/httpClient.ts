@@ -23,8 +23,12 @@ export {
 
 export type {
   CollectionPagination,
+  HomeMemberNotification,
   DeviceListOptions,
   DeviceListResponse,
+  DeviceTelemetry,
+  DeviceTelemetryListOptions,
+  DeviceTelemetryListResponse,
   Recommendation,
   RecommendationSummary,
   ActuatorType,
@@ -33,4 +37,5 @@ export type {
   ActuatorCommandRecord,
   ActuatorCommandListOptions,
   GeneratedReport,
+  AlertEvent,
 } from './apiClient';

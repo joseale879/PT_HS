@@ -11,7 +11,6 @@ el inventario completo de rutas de `FT_HS/docs/rutas-y-api-frontend.md`.
 Navegador -> Frontend/Nginx :5173 -> Backend :3000 -> PostgreSQL :5432
                                       |              (contenedor postgres)
                                       +-> Mosquitto :1883
-                                      +-> Mailpit :1025
 ```
 
 En Docker el navegador consume `/api/v1`; Nginx reenvÃ­a `/api/` al servicio
@@ -68,10 +67,9 @@ el contrato estable de eventos y estados del dispositivo.
 
 ## Correo
 
-El backend usa Nodemailer. Para pruebas locales se recomienda Mailpit:
+El backend usa Nodemailer y Gmail SMTP. El frontend nunca se conecta directamente al proveedor de correo:
 
-- SMTP Docker: `mailpit:1025`.
-- Bandeja: `http://localhost:8025`.
+- SMTP: `smtp.gmail.com:587` mediante las variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` y `SMTP_PASSWORD`.
 - Gmail: variables `SMTP_*` en el `.env` local y clave de aplicaciÃ³n.
 
 La prueba con Gmail real, las plantillas definitivas y sus enlaces de expiraciÃ³n

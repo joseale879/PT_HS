@@ -29,7 +29,6 @@ URLs locales:
 | Backend API | <http://localhost:3000> |
 | Salud del frontend | <http://localhost:5173/health> |
 | Salud del backend | <http://localhost:3000/health/ready> |
-| Mailpit | <http://localhost:8025> |
 
 ## 2. Iniciar sesión
 

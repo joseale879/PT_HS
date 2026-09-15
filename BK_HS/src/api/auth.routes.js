@@ -34,7 +34,12 @@ const notificationService = new NotificationService({
   passwordResetUrl: env.passwordResetUrl
 });
 const authController = new AuthController({
-  registerUser: new RegisterUser({ authRepository, passwordHasher }),
+  registerUser: new RegisterUser({
+    authRepository,
+    passwordHasher,
+    tokenService: passwordTokenService,
+    notificationService
+  }),
   loginUser: new LoginUser({ authRepository, passwordHasher }),
   sessionService: new AuthSessionService({ authRepository, tokenService: new JwtTokenService() }),
   changePassword: new ChangePassword({ authRepository, passwordHasher, notificationService }),

@@ -6,13 +6,18 @@ Este documento es el resumen operativo del backend y debe leerse junto con la do
 
 ## Resumen
 
-- PostgreSQL y Liquibase fueron verificados en Docker con 206 changesets aplicados. Si Docker Desktop está detenido, la verificación debe repetirse.
+- PostgreSQL y Liquibase fueron verificados en Docker con 217 changesets aplicados. Si Docker Desktop está detenido, la verificación debe repetirse.
 - El backend Node.js/Express está disponible en `http://localhost:3000` y usa el rol de aplicación `hidro_smart_app`.
 - La API REST se monta bajo `/api/v1`; el health público está en `GET /health`.
 - La operación expone `GET /health/live` para liveness y `GET /health/ready` para readiness de PostgreSQL y MQTT.
-- JWT, refresh tokens persistentes, logout, cambio y recuperación de contraseña están implementados.
+- Registro, verificación de correo, JWT, refresh tokens persistentes, logout,
+  cambio y recuperación de contraseña están implementados.
+- El perfil devuelve y actualiza avatar opcional y teléfono de hasta 60 caracteres.
 - La gestión de sesiones permite listar sesiones propias, cerrar una, cerrar las demás o cerrar todas sin exponer tokens.
 - Hogares, membresías, dispositivos, consumo, tarifas, alertas, metas, vacaciones, recomendaciones, soporte, roles y auditoría tienen rutas implementadas.
+- El flujo de dispositivos incluye registro con `location`, vinculación por
+  `device.code`, edición de nombre/ubicación, configuración y telemetría
+  persistida; los detalles operativos están en `../../docs/dispositivos-iot.md`.
 - MQTT ya tiene configuración, cliente, publicación, suscripción, parser y handlers básicos.
 - El job de limpieza de auditoría usa el procedimiento SQL protegido y bloqueo advisory.
 - MQTT persiste lecturas en PostgreSQL mediante una función protegida, con métricas, timestamps separados e idempotencia por mensaje.
@@ -26,7 +31,7 @@ Las rutas se montan en `src/app.js`:
 | `/api/v1/auth` | registro, login, sesión, contraseñas |
 | `/api/v1/homes` | hogares, miembros y solicitudes |
 | `/api/v1/devices` | dispositivos, configuración, estado y vinculación |
-| `/api/v1/consumption` | resumen, lecturas agregadas, costos |
+| `/api/v1/consumption` | resumen, lecturas agregadas, costos y series avanzadas por día, hora, mes o ubicación |
 | `/api/v1/users` | perfil y preferencias |
 | `/api/v1/tariffs` | tarifa vigente por hogar |
 | `/api/v1/alerts` | alertas, reglas, umbrales e historial |
@@ -92,11 +97,14 @@ El handler delega en `IngestReading` y `PostgresTelemetryRepository`. El circuit
 4. Aplica idempotencia, validación de timestamp y estrategia ante mensajes duplicados.
 5. El handler de estado persiste el historial de telemetría disponible mediante su función SQL protegida; falta validar el contrato final de `online/offline` y `last_seen` con el firmware.
 
-Advertencia de precisión: `consumption.sensor_reading.consumption_liters` es actualmente `NUMERIC(10,2)`. Una muestra de `0.040 L` se redondearía a `0.04 L`, y los agregados basados en `consumption_m3` pueden perder precisión. Esto debe resolverse en una migración antes de ingerir lecturas por segundo.
+La precisión del consumo ya está corregida: `consumption_liters` usa
+`NUMERIC(14,3)` y el m³ generado usa `NUMERIC(14,6)`. Una muestra de `0.040 L`
+se conserva como `0.000040 m³`; falta validarlo con el ESP32 y el caudalímetro
+reales.
 
 ## Verificaciones realizadas
 
-- `npm test`: 131 pruebas unitarias aprobadas en la última ejecución.
+- `npm test`: 156 pruebas unitarias aprobadas en la última ejecución.
 - `npm run check`: aprobado.
 - Frontend: formato y build aprobados.
 - Liquibase: `validate` y `status --verbose` aprobados.

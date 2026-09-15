@@ -7,6 +7,7 @@ class HomeResponse {
       city: home.city,
       tier: home.tier,
       status: home.status,
+      homeRole: home.homeRole,
       createdAt: home.createdAt
     };
   }

@@ -6,7 +6,7 @@ HidroSmart es una plataforma local para monitoreo inteligente de consumo de agua
 
 RevisiÃ³n: 2026-09-14.
 
-- PostgreSQL y Liquibase están operativos; la base local está actualizada con 206 changesets.
+- PostgreSQL y Liquibase están operativos; la base local está actualizada con 217 changesets.
 - El backend Express estÃ¡ conectado a PostgreSQL y expone la API REST bajo `/api/v1`.
 - El frontend React/Vite estÃ¡ compilado y servido por Nginx en Docker.
 - Registro, autenticaciÃ³n, sesiones, hogares, dispositivos, consumo, alertas, metas, vacaciones, soporte, tarifas, roles y auditorÃ­a tienen rutas de backend implementadas.
@@ -35,10 +35,9 @@ RevisiÃ³n: 2026-09-14.
 | Health backend | `http://localhost:3000/health` | ComprobaciÃ³n directa |
 | Health frontend | `http://localhost:5173/health` | ComprobaciÃ³n a travÃ©s de Nginx |
 | PostgreSQL | `localhost:5433` | Acceso externo de desarrollo |
-| Mailpit | `http://localhost:8025` | Bandeja de correo local |
 | MQTT | `localhost:1883` | Broker Mosquitto sin TLS para desarrollo |
 
-Dentro de Docker, el backend usa `postgres:5432`, `mailpit:1025` y `mosquitto:1883`. El navegador no accede directamente a PostgreSQL ni al broker: usa Nginx y la API.
+Dentro de Docker, el backend usa `postgres:5432` y `mosquitto:1883`. El navegador no accede directamente a PostgreSQL ni al broker: usa Nginx y la API.
 
 ## Inicio desde cero con Docker
 
@@ -59,10 +58,10 @@ Ejecuta los comandos desde `PT_HS`. Requiere Docker Desktop iniciado.
    docker compose --env-file .env config --quiet
    ```
 
-3. Levanta PostgreSQL, el bootstrap del usuario de aplicaciÃ³n, Mosquitto y Mailpit:
+3. Levanta PostgreSQL, el bootstrap del usuario de aplicaciÃ³n y Mosquitto:
 
    ```powershell
-   docker compose --env-file .env up -d postgres db-bootstrap mosquitto mailpit
+   docker compose --env-file .env up -d postgres db-bootstrap mosquitto
    ```
 
 4. Valida y aplica las migraciones antes de iniciar la aplicaciÃ³n:
@@ -87,8 +86,7 @@ Ejecuta los comandos desde `PT_HS`. Requiere Docker Desktop iniciado.
    Invoke-WebRequest http://localhost:5173/health
    ```
 
-El correo usa Gmail si el `.env` contiene las variables `SMTP_*`. Mailpit queda
-disponible como bandeja local en `http://localhost:8025`. Las credenciales reales
+El correo usa Gmail si el `.env` contiene las variables `SMTP_*`. Las credenciales reales
 deben permanecer Ãºnicamente en archivos locales.
 
 ## Inicio normal
@@ -161,7 +159,7 @@ El contrato completo, normalizaciÃ³n y comandos de prueba estÃ¡n en `BK_HS/d
 
 ## Pruebas conocidas
 
-- Backend: `npm test` â€” 131 pruebas unitarias aprobadas en la Ãºltima ejecuciÃ³n.
+- Backend: `npm test` — 156 pruebas unitarias aprobadas en la última ejecución.
 - Backend: `npm run check` y `npm run lint` â€” aprobados.
 - Frontend: `npm run lint`, `npm run typecheck` y `npm run build` â€” aprobados. `npm test` finaliza con 0 pruebas porque aÃºn no hay suite automatizada frontend.
 - Base de datos: `validate` y `status --verbose` â€” aprobados.
@@ -175,6 +173,7 @@ El contrato completo, normalizaciÃ³n y comandos de prueba estÃ¡n en `BK_HS/d
 - Estado integral transversal: `docs/estado-integral.md`.
 - GuÃ­a para levantar cada proyecto o toda la pila: `docs/guia-ejecucion-local.md`.
 - ValidaciÃ³n de integraciÃ³n y usuarios de prueba: `docs/validacion-integracion.md`.
+- GuÃ­a de dispositivos IoT: `docs/dispositivos-iot.md`.
 
 - Estado operativo del backend: `BK_HS/docs/00-estado-actual.md`.
 - IntegraciÃ³n BD/backend/frontend: `BK_HS/docs/00-integracion-front-back-bd.md`.

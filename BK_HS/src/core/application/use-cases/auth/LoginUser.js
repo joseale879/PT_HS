@@ -27,6 +27,11 @@ class LoginUser {
       error.status = 403;
       throw error;
     }
+    if (account?.account_status === 'Pending') {
+      const error = new Error('Debes verificar tu correo antes de iniciar sesión');
+      error.status = 403;
+      throw error;
+    }
     const valid = account && account.account_status === 'Active'
       ? await this.passwordHasher.compare(password, account.password_hash)
       : false;

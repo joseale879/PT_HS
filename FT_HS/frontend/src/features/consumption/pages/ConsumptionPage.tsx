@@ -6,26 +6,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shar
 import { Button } from '@shared/ui/button';
 import {
   consumptionApi,
+  type ConsumptionSeriesPoint,
   type ConsumptionSummary,
   type HourlyConsumption,
 } from '@shared/http/apiClient';
 import { DailyConsumptionChart } from '@features/consumption/charts/DailyConsumptionChart';
 import { WeeklyConsumptionChart } from '@features/consumption/charts/WeeklyConsumptionChart';
+import { formatCurrency } from '@shared/i18n/locale';
+import { useAuth } from '@app/providers/AuthProvider';
+import { localDate } from '@shared/lib/dates';
 
 type DailyPoint = { day: string; consumption: number };
-
-function localDate(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-    date.getDate()
-  ).padStart(2, '0')}`;
-}
 
 function query(params: Record<string, string>) {
   return new URLSearchParams(params).toString();
 }
 
+function mapHourlySeries(points: ConsumptionSeriesPoint[], homeId: string): HourlyConsumption[] {
+  return points.map((point) => ({
+    homeId,
+    hour: point.bucketHour ?? Number(point.groupKey),
+    averageConsumptionM3: point.consumptionM3,
+    averageConsumptionLiters: point.consumptionLiters,
+    sampleCount: point.readingCount,
+    refreshedAt: null,
+  }));
+}
+
 export function ConsumptionPage({ homeId }: { homeId?: string }) {
   const { t, i18n } = useTranslation();
+  const { session } = useAuth();
   const [selectedDate, setSelectedDate] = useState(localDate(new Date()));
   const [summary, setSummary] = useState<ConsumptionSummary | null>(null);
   const [hourly, setHourly] = useState<HourlyConsumption[]>([]);
@@ -49,19 +59,27 @@ export function ConsumptionPage({ homeId }: { homeId?: string }) {
         date.setDate(date.getDate() - (6 - index));
         return date;
       });
-      const [summaryResponse, hourlyResponse, dailyResponses] = await Promise.all([
+      const [summaryResponse, hourlyResponse, dailyResponse] = await Promise.all([
         consumptionApi.summary(query({ homeId, from: range.from, to: range.to })),
-        consumptionApi.hourly(query({ homeId })),
-        Promise.all(
-          dates.map((date) => consumptionApi.daily(query({ homeId, date: localDate(date) })))
+        consumptionApi.advanced(
+          query({ homeId, from: range.from, to: range.to, groupBy: 'hourly' })
+        ),
+        consumptionApi.advanced(
+          query({ homeId, from: range.from, to: range.to, groupBy: 'daily' })
         ),
       ]);
       setSummary(summaryResponse.data);
-      setHourly(hourlyResponse.data.points || []);
+      setHourly(mapHourlySeries(hourlyResponse.data.points || [], homeId));
+      const dailyByDate = new Map(
+        (dailyResponse.data.points || []).map((point) => [
+          point.bucketDate || point.groupKey,
+          point,
+        ])
+      );
       setWeekly(
-        dailyResponses.map((response, index) => ({
-          day: dates[index].toLocaleDateString(i18n.language, { weekday: 'short' }),
-          consumption: Number(response.data.consumptionLiters || 0) / 1000,
+        dates.map((date) => ({
+          day: date.toLocaleDateString(i18n.language, { weekday: 'short' }),
+          consumption: dailyByDate.get(localDate(date))?.consumptionM3 || 0,
         }))
       );
     } catch (loadError) {
@@ -164,7 +182,11 @@ export function ConsumptionPage({ homeId }: { homeId?: string }) {
         <Card>
           <CardHeader>
             <CardDescription>{t('consumption.cost')}</CardDescription>
-            <CardTitle>{loading || cost == null ? '—' : `$${Number(cost).toFixed(2)}`}</CardTitle>
+            <CardTitle>
+              {loading || cost == null
+                ? '—'
+                : formatCurrency(Number(cost), i18n.language, session?.preferences?.currency)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600">{t('consumption.backendCalculated')}</p>

@@ -20,3 +20,19 @@ Topic: `hidrosmart/devices/{deviceCode}/telemetry`
 ```
 
 `mqttMessageId` debe conservarse al reintentar el mismo evento.
+
+El backend local mantiene compatibilidad temporal con el firmware anterior que
+no enviaba `mqttMessageId` mediante `MQTT_ALLOW_LEGACY_TELEMETRY=true`. Esa
+compatibilidad genera un identificador interno y no ofrece deduplicaciÃ³n ante
+reentregas; el firmware actualizado debe seguir enviando el identificador
+propio mostrado arriba.
+
+Para el caudalímetro YF-S201, el firmware calcula:
+
+```text
+flowRateLpm = (pulsos del intervalo / segundos del intervalo) / 7.5
+consumptionLiters = flowRateLpm * segundos del intervalo / 60
+```
+
+El intervalo predeterminado es de 5 segundos y se puede cambiar mediante
+`HIDROSMART_SAMPLE_INTERVAL_MS` en `provisioning/config.h`.

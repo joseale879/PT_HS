@@ -62,6 +62,9 @@ class NotificationService {
   async sendTicketUpdated({ recipient, name, ticketId, status }) { return this.sendTemplate({ recipient, subject: `Ticket ${ticketId} actualizado - HidroSmart`, title: 'Ticket de soporte actualizado',
     paragraphs: [`Hola ${name}.`, `Tu ticket ${ticketId} fue actualizado.`, `Estado: ${status}`], buttonText: 'Abrir HidroSmart', buttonUrl: this.frontendUrl, footer: 'Puedes revisar el historial completo desde HidroSmart.' }); }
 
+  async sendHomeAccessGranted({ recipient, name, homeName, homeRole }) { return this.sendTemplate({ recipient, subject: 'Te agregaron a un hogar en HidroSmart', title: 'Acceso a un hogar',
+    paragraphs: [`Hola ${name || 'usuario'}.`, 'El propietario te agregó a un hogar en HidroSmart.', `Hogar: ${homeName || 'Hogar de HidroSmart'}`, `Rol asignado: ${homeRole || 'Member'}`], buttonText: 'Abrir HidroSmart', buttonUrl: this.frontendUrl, footer: 'Si no reconoces esta invitación, contacta con el propietario del hogar o con soporte.' }); }
+
   async sendTemplate({ recipient, subject, title, paragraphs, buttonText, buttonUrl, footer }) {
     const text = [title, ...paragraphs, buttonUrl ? `${buttonText}: ${buttonUrl}` : '', footer].filter(Boolean).join('\n\n');
     return this.sender.send({ recipient, subject, text, html: this.buildTemplate({ title, paragraphs, buttonText, buttonUrl, footer }) });

@@ -10,7 +10,7 @@ Este documento registra la verificación del informe P0 recibido y distingue los
 |---|---|---|
 | Migración 021 crea vistas duplicadas | No aplicaba al árbol actual | La nueva `021_iot_sensor_reading_ingest.sql` solo agrega `mqtt_message_id`; las vistas siguen creadas únicamente por `05_materialized_views`. |
 | Rollback de 021 | Corregido | El rollback elimina índice, constraint y columna; no modifica vistas dependientes. |
-| Instalación limpia | Verificado | `validate` correcto, `update` correcto y `status up to date`; el estado vigente tiene 206 changesets. El corte original P0 tenía 188. |
+| Instalación limpia | Verificado | `validate` correcto, `update` correcto y `status up to date`; el estado vigente tiene 217 changesets. El corte original P0 tenía 188. |
 | Variables `.env` | Corregido | Se alinearon `DB_INGEST_*`, CORS, URL de frontend, reset URL, issuer y audience en ejemplos y Compose. |
 | SMTP bloquea registro/reset | Corregido | Registro y reset no dependen del resultado SMTP; los errores se registran sin filtrar información ni cambiar la respuesta pública. |
 | Reenvío de verificación | Implementado | `POST /api/v1/auth/resend-verification` invalida tokens anteriores, crea uno nuevo y responde 202 de forma genérica. También existe `POST /api/v1/auth/verify-email`. |
@@ -25,7 +25,7 @@ Este documento registra la verificación del informe P0 recibido y distingue los
 
 ```text
 BK_HS: npm run check       OK
-BK_HS: npm test             131/131 OK
+BK_HS: npm test             156/156 OK
 Liquibase validate          OK
 Liquibase update            OK
 Liquibase status            up to date

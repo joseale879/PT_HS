@@ -16,6 +16,7 @@ import {
   Wrench,
   Database,
   Activity,
+  Headphones,
   Lightbulb,
   Loader2,
 } from 'lucide-react';
@@ -157,6 +158,7 @@ interface DashboardLayoutProps {
   session: AuthorizationContext & {
     fullName?: string;
     email?: string;
+    avatarDataUrl?: string | null;
   };
   onLogout: () => void | Promise<void>;
 }
@@ -187,7 +189,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
   const activeView = getViewFromPath(pathname);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const profile = { fullName: session.fullName };
+  const profile = { fullName: session.fullName, avatarDataUrl: session.avatarDataUrl };
 
   // La visibilidad se resuelve con permisos funcionales devueltos por BK_HS.
   // La base de datos y sus políticas RLS continúan siendo la barrera final.
@@ -282,6 +284,13 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
         ariaLabel: t('nav.recommendations'),
       },
       {
+        id: 'support',
+        label: t('nav.support'),
+        icon: Headphones,
+        requiredRoles: ['HomeUser', 'Guest'],
+        ariaLabel: t('nav.support'),
+      },
+      {
         id: 'settings',
         label: t('nav.settings'),
         icon: Settings,
@@ -317,7 +326,12 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
         .map((part) => part[0])
         .join('')
         .toUpperCase() || 'HS';
-    return { name, initials, color: roleBadgeClass(primaryRole) };
+    return {
+      name,
+      initials,
+      color: roleBadgeClass(primaryRole),
+      avatarDataUrl: profile.avatarDataUrl,
+    };
   };
 
   const userInfo = getUserInfo();
@@ -334,7 +348,6 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
     goals: 'homes.manage',
     recommendations: 'reports.read',
     notifications: 'alerts.manage',
-    support: 'tickets.manage',
   };
 
   const viewRoles: Record<string, SystemRole[]> = {
@@ -344,7 +357,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
     audit: ['Administrator'],
     'support-panel': ['Support'],
     notifications: [],
-    support: [],
+    support: ['HomeUser', 'Guest'],
     homes: ['HomeUser', 'Guest'],
     devices: ['HomeUser', 'Guest'],
     consumption: ['HomeUser', 'Guest'],
@@ -397,7 +410,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
           <div className="text-center py-12 text-red-600">{t('common.accessDenied')}</div>
         );
       case 'support':
-        return <SupportTickets management />;
+        return <SupportTickets />;
       case 'support-panel':
         return canManageTickets ? (
           <SupportTickets management />
@@ -666,7 +679,15 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
                   className={`size-10 ${userInfo.color} rounded-full flex items-center justify-center text-white transition-opacity`}
                   aria-hidden="true"
                 >
-                  {userInfo.initials}
+                  {userInfo.avatarDataUrl ? (
+                    <img
+                      src={userInfo.avatarDataUrl}
+                      alt=""
+                      className="size-full rounded-full object-cover"
+                    />
+                  ) : (
+                    userInfo.initials
+                  )}
                 </div>
               </button>
             </div>

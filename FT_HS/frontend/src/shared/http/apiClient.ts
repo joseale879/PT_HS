@@ -21,6 +21,11 @@ export type MembershipRequest = {
   fullName?: string;
 };
 
+export type HomeMemberNotification = {
+  sent: boolean;
+  configured: boolean;
+};
+
 export class ApiError extends Error {
   status: number;
   details: unknown;
@@ -102,11 +107,20 @@ async function request<T>(path: string, options: ApiOptions = {}, retry = true):
     requestHeaders.set('Authorization', `Bearer ${sessionTokens.accessToken}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...requestOptions,
-    body,
-    headers: requestHeaders,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...requestOptions,
+      body,
+      headers: requestHeaders,
+    });
+  } catch (error) {
+    const message =
+      error instanceof DOMException && error.name === 'AbortError'
+        ? 'La solicitud fue cancelada.'
+        : 'No se pudo conectar con el backend. Verifica que el servicio esté disponible.';
+    throw new ApiError(message, 0, error);
+  }
 
   if (response.status === 401 && retry && sessionTokens.refreshToken) {
     try {
@@ -180,7 +194,7 @@ export const authApi = {
     termsVersion: string;
   }) =>
     apiClient.post<{
-      data: { userId: string; sessionId: string; accessToken: string; refreshToken: string };
+      data: { message: string; email: string };
     }>('/auth/register', payload, { skipAuth: true }),
   refresh: (refreshToken: string) =>
     apiClient.post<{ data: { sessionId: string; accessToken: string; refreshToken?: string } }>(
@@ -234,12 +248,17 @@ export type AuthSession = {
   userAgent?: string | null;
   refreshExpiresAt?: string | null;
   isCurrent: boolean;
+  avatarDataUrl?: string | null;
 };
 
 export const userApi = {
   me: () => apiClient.get<{ data: unknown }>('/users/me'),
-  updateMe: (payload: { fullName?: string; phone?: string; city?: string }) =>
-    apiClient.put<{ data: unknown }>('/users/me', payload),
+  updateMe: (payload: {
+    fullName?: string;
+    phone?: string;
+    city?: string;
+    avatarDataUrl?: string | null;
+  }) => apiClient.put<{ data: unknown }>('/users/me', payload),
   preferences: () =>
     apiClient.get<{ data: { language: string; currency: string } }>('/users/me/preferences'),
   updatePreferences: (payload: { language: string; currency: string }) =>
@@ -247,6 +266,10 @@ export const userApi = {
       '/users/me/preferences',
       payload
     ),
+  notificationPreferences: () =>
+    apiClient.get<{ data: NotificationSettings }>('/users/me/notifications'),
+  updateNotificationPreferences: (payload: NotificationSettings) =>
+    apiClient.put<{ data: NotificationSettings }>('/users/me/notifications', payload),
   listManagedUsers: (
     params: {
       search?: string;
@@ -273,6 +296,33 @@ export const userApi = {
       reason,
     }),
   deleteUser: (userId: string) => apiClient.delete<void>(`/users/${encodeURIComponent(userId)}`),
+};
+
+export type NotificationPreferenceGroups = {
+  consumption: {
+    dailyReport: boolean;
+    weeklyReport: boolean;
+    monthlyReport: boolean;
+  };
+  alerts: {
+    leakDetection: boolean;
+    abnormalConsumption: boolean;
+    flowThresholdExceeded: boolean;
+  };
+  devices: {
+    deviceDisconnected: boolean;
+    lowBattery: boolean;
+  };
+  channels: {
+    email: boolean;
+    push: boolean;
+  };
+};
+
+export type NotificationSettings = {
+  notificationsEnabled: boolean;
+  preferredChannel: 'Email' | 'SMS' | 'Push' | 'All' | string;
+  notificationPreferences: NotificationPreferenceGroups;
 };
 
 export type ManagedUser = {
@@ -307,6 +357,40 @@ export type DeviceListResponse = {
   pagination: CollectionPagination;
 };
 
+export type DeviceTelemetry = {
+  readingId: string;
+  deviceId: string;
+  homeId: string;
+  recordedAt: string;
+  measuredAt: string;
+  receivedAt: string;
+  consumptionLiters: number;
+  flowRateLpm: number | null;
+  totalLiters: number | null;
+  pulses: number | null;
+  sampleIntervalSeconds: number | null;
+  wifiRssiDbm: number | null;
+  signalQuality: number | null;
+  batteryLevel: number | null;
+  voltage: number | null;
+  temperature: number | null;
+  mqttMessageId: string | null;
+};
+
+export type DeviceTelemetryListOptions = {
+  page?: number;
+  pageSize?: number;
+  from?: string;
+  to?: string;
+  sort?: 'measuredAt' | 'receivedAt' | 'flowRateLpm' | 'consumptionLiters';
+  order?: 'asc' | 'desc';
+};
+
+export type DeviceTelemetryListResponse = {
+  data: DeviceTelemetry[];
+  pagination: CollectionPagination;
+};
+
 export const homesApi = {
   list: () => apiClient.get<{ data: unknown[] }>('/homes'),
   get: (homeId: number | string) => apiClient.get<{ data: unknown }>(`/homes/${homeId}`),
@@ -321,7 +405,11 @@ export const homesApi = {
   addMember: (
     homeId: number | string,
     payload: { email: string; homeRole?: 'Owner' | 'Member' | 'Guest' }
-  ) => apiClient.post<{ data: unknown }>(`/homes/${homeId}/members`, payload),
+  ) =>
+    apiClient.post<{ data: unknown; notification?: HomeMemberNotification }>(
+      `/homes/${homeId}/members`,
+      payload
+    ),
   requestMembership: (homeId: number | string) =>
     apiClient.post<{ data: MembershipRequest }>(`/homes/${homeId}/membership-requests`),
   membershipRequests: (homeId: number | string) =>
@@ -355,7 +443,32 @@ export const devicesApi = {
   get: (deviceId: number | string) => apiClient.get<{ data: unknown }>(`/devices/${deviceId}`),
   status: (deviceId: number | string) =>
     apiClient.get<{ data: unknown }>(`/devices/${deviceId}/status`),
-  register: (payload: unknown) => apiClient.post<{ data: unknown }>('/devices', payload),
+  register: (payload: {
+    homeId: string;
+    code: string;
+    name: string;
+    type: string;
+    location?: string;
+    manufacturer?: string;
+    model?: string;
+    alertThreshold?: number | null;
+  }) => apiClient.post<{ data: unknown }>('/devices', payload),
+  link: (payload: { homeId: string; code: string }) =>
+    apiClient.post<{ data: unknown }>('/devices/link', payload),
+  latestTelemetry: (deviceId: string) =>
+    apiClient.get<{ data: DeviceTelemetry | null }>(
+      `/devices/${encodeURIComponent(deviceId)}/telemetry/latest`
+    ),
+  telemetry: (deviceId: string, options: DeviceTelemetryListOptions = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') query.set(key, String(value));
+    });
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiClient.get<DeviceTelemetryListResponse>(
+      `/devices/${encodeURIComponent(deviceId)}/telemetry${suffix}`
+    );
+  },
   update: (deviceId: number | string, payload: unknown) =>
     apiClient.put<{ data: unknown }>(`/devices/${deviceId}`, payload),
   updateConfig: (deviceId: number | string, payload: unknown) =>
@@ -470,6 +583,18 @@ export type HourlyConsumption = {
   refreshedAt: string | null;
 };
 
+export type ConsumptionSeriesPoint = {
+  groupKey: string;
+  bucketDate: string | null;
+  bucketHour: number | null;
+  location: string | null;
+  consumptionLiters: number;
+  consumptionM3: number;
+  readingCount: number;
+  averageFlowLpm: number | null;
+  peakFlowLpm: number | null;
+};
+
 export const consumptionApi = {
   summary: (query: string) =>
     apiClient.get<{ data: ConsumptionSummary }>(`/consumption/summary?${query}`),
@@ -485,6 +610,16 @@ export const consumptionApi = {
     apiClient.get<{ data: { homeId: string; from: string; to: string; totalCost: number | null } }>(
       `/consumption/cost?${query}`
     ),
+  advanced: (query: string) =>
+    apiClient.get<{
+      data: {
+        homeId: string;
+        from: string;
+        to: string;
+        groupBy: 'daily' | 'hourly' | 'monthly' | 'location';
+        points: ConsumptionSeriesPoint[];
+      };
+    }>(`/consumption/advanced?${query}`),
 };
 
 export const reportsApi = {
@@ -574,6 +709,18 @@ export const recommendationsApi = {
     ),
 };
 
+export type AlertEvent = {
+  alertId: string;
+  ruleId?: string | null;
+  homeId: string;
+  message: string | null;
+  detectedValue: number | null;
+  generatedAt: string;
+  status: 'Pending' | 'Sent' | 'Read' | 'Dismissed' | string;
+  readAt?: string | null;
+  dismissedAt?: string | null;
+};
+
 export const alertsApi = {
   pending: (homeId: number | string) =>
     apiClient.get<{
@@ -589,7 +736,7 @@ export const alertsApi = {
   thresholds: (homeId: number | string) =>
     apiClient.get<{ data: unknown }>(`/alerts/home/${homeId}/thresholds`),
   history: (homeId: number | string, query = '') =>
-    apiClient.get<{ data: unknown[]; pagination: unknown }>(
+    apiClient.get<{ data: AlertEvent[]; pagination: CollectionPagination }>(
       `/alerts/home/${homeId}/history${query ? `?${query}` : ''}`
     ),
   updateStatus: (alertId: number | string, status: string) =>
@@ -646,7 +793,7 @@ export const rolesApi = {
 export const supportApi = {
   categories: () => apiClient.get<{ data: unknown[] }>('/support/catalogs'),
   list: (query = '') =>
-    apiClient.get<{ data: unknown[]; pagination: unknown }>(
+    apiClient.get<{ data: unknown[]; pagination: CollectionPagination }>(
       `/support/tickets${query ? `?${query}` : ''}`
     ),
   get: (ticketId: number | string) =>

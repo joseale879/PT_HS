@@ -8,6 +8,7 @@ import { Progress } from '@shared/ui/progress';
 import { Droplets, Target, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { goalsApi, consumptionApi } from '@shared/http/httpClient';
+import { localDate } from '@shared/lib/dates';
 
 type Goal = {
   goalId: string;
@@ -30,8 +31,8 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
   const load = () => {
     if (!homeId) return;
     const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-    const to = now.toISOString().slice(0, 10);
+    const from = localDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    const to = localDate(now);
     Promise.all([
       goalsApi.list(homeId),
       consumptionApi.summary(new URLSearchParams({ homeId, from, to }).toString()),
@@ -49,7 +50,7 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
         const active = loaded.find((goal) => goal.type === 'monthly') || loaded[0];
         setGoals(loaded);
         setProgressByGoal(nextProgress);
-        setConsumption(Number((summaryResponse.data as any)?.totalM3 || 0));
+        setConsumption(Number(summaryResponse.data.totalM3 || 0));
         setConsumptionLimit(active ? String(active.targetM3) : '');
         setBudgetLimit(active?.targetBudget != null ? String(active.targetBudget) : '');
         setPeriod(active?.type === 'weekly' || active?.type === 'annual' ? active.type : 'monthly');

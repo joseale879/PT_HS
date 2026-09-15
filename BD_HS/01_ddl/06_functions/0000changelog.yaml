@@ -859,3 +859,75 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260914-fn-registration-email-verification
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,user_account,security,email"
+      comment: "Registers new accounts as Pending and activates them when the verification token is consumed."
+      changes:
+        - sqlFile:
+            path: 051_fn_registration_email_verification.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/051_fn_registration_email_verification.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-fn-consumption-precision
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,consumption,iot,precision"
+      comment: "Returns consumption accumulations without truncating small flow-meter readings."
+      changes:
+        - sqlFile:
+            path: 052_fn_consumption_precision.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/052_fn_consumption_precision.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-fn-device-registration-and-linking
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,security,location"
+      comment: "Adds location-aware registration and owner-controlled linking by device code."
+      changes:
+        - sqlFile:
+            path: 053_fn_device_registration_and_linking.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/053_fn_device_registration_and_linking.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-fn-consumption-series
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,consumption,analytics"
+      comment: "Adds authorized daily, hourly, monthly and location consumption series."
+      changes:
+        - sqlFile:
+            path: 054_fn_consumption_series.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/054_fn_consumption_series.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

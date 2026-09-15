@@ -51,18 +51,21 @@ El backend usa un pool y transacciones. No debe usar `hidro_smart_admin` para op
 
 No se deben escribir secretos reales en el repositorio ni en `VITE_*`.
 
-## SMTP
+## SMTP de Gmail
 
-| Variable | Mailpit en Docker | Gmail u otro SMTP |
-|---|---|---|
-| `SMTP_HOST` | `mailpit` | host del proveedor |
-| `SMTP_PORT` | `1025` | puerto del proveedor |
-| `SMTP_SECURE` | `false` | segÃºn TLS del proveedor |
-| `SMTP_USER` | vacÃ­o | usuario local |
-| `SMTP_PASSWORD` | vacÃ­o | secreto local |
-| `SMTP_FROM` | remitente local | remitente permitido |
+El backend utiliza Nodemailer para enviar los eventos de correo mediante Gmail.
+Configura únicamente en el `.env` local:
 
-El backend utiliza Nodemailer. En desarrollo se revisan los mensajes en `http://localhost:8025`; las credenciales SMTP reales solo se configuran en `.env` local.
+| Variable | Valor local |
+|---|---|
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_SECURE` | `false` (STARTTLS) |
+| `SMTP_USER` | tu cuenta Gmail |
+| `SMTP_PASSWORD` | contraseña de aplicación de Gmail |
+| `SMTP_FROM` | remitente permitido por la cuenta |
+
+No se deben guardar credenciales reales en documentación, ejemplos ni código.
 
 ## MQTT
 

@@ -4,20 +4,32 @@ import { Building2, Droplets, Users, Wifi, WifiOff } from 'lucide-react';
 import { homesApi, devicesApi } from '@shared/http/httpClient';
 import { toast } from 'sonner';
 
+type AdminHome = {
+  homeId: string;
+  name: string;
+  city?: string | null;
+  tier?: string | number | null;
+};
+
+type AdminDevice = {
+  deviceId?: string;
+  status?: string | null;
+};
+
 export function AdminPanel() {
-  const [homes, setHomes] = useState<any[]>([]);
-  const [devices, setDevices] = useState<any[]>([]);
+  const [homes, setHomes] = useState<AdminHome[]>([]);
+  const [devices, setDevices] = useState<AdminDevice[]>([]);
 
   useEffect(() => {
     homesApi
       .list()
       .then(async ({ data }) => {
-        const loadedHomes = data as any[];
+        const loadedHomes = data as AdminHome[];
         setHomes(loadedHomes);
         const responses = await Promise.all(
           loadedHomes.map((home) => devicesApi.list(home.homeId))
         );
-        setDevices(responses.flatMap((response) => response.data as any[]));
+        setDevices(responses.flatMap((response) => response.data as AdminDevice[]));
       })
       .catch((error) =>
         toast.error(

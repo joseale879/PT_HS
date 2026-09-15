@@ -799,3 +799,39 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260914-device-registration-and-linking-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,security,location"
+      comment: "Grants the application role the controlled device registration and linking functions."
+      changes:
+        - sqlFile:
+            path: 045_device_registration_and_linking.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-consumption-series-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,consumption,security"
+      comment: "Grants the application role the protected consumption series function."
+      changes:
+        - sqlFile:
+            path: 046_consumption_series.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/046_consumption_series.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/045_device_registration_and_linking.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

@@ -12,7 +12,7 @@ una migracion.
 ## Estado actual
 
 - PostgreSQL 16 y Liquibase 5.0.2 estan definidos en `BD_HS/docker-compose.yml`.
-- El changelog contiene 206 changesets aplicados en el último estado verificado.
+- El changelog contiene 217 changesets aplicados en el último estado verificado.
 - El backend usa el rol tecnico `hidro_smart_app`.
 - La ingesta IoT esta separada en `hidro_smart_ingest`.
 - RLS y RBAC funcional estan implementados para los dominios protegidos.
@@ -23,6 +23,8 @@ una migracion.
 - El dominio de actuadores persiste estados y comandos en `device` con RLS,
   permiso `actuators.manage` y una función SQL controlada para confirmar ACKs
   MQTT.
+- Las cuentas nuevas quedan en `Pending` hasta consumir un token de correo;
+  `user_profile.avatar_data_url` es opcional y `phone` admite hasta 60 caracteres.
 
 ## Schemas funcionales
 
@@ -32,7 +34,7 @@ una migracion.
 | `preference` | idiomas, monedas, temas y preferencias |
 | `home` | hogares, miembros, solicitudes, vacaciones y metas |
 | `device` | dispositivos, asociaciones, estados e historial de telemetria |
-| `consumption` | lecturas, agregados diarios, horarios y mensuales |
+| `consumption` | lecturas, agregados diarios, horarios, mensuales y por ubicación |
 | `alert_rate` | reglas, umbrales, eventos, notificaciones y tarifas |
 | `analytics_support` | reportes, recomendaciones y tickets de soporte |
 | `audit` | eventos de auditoria y errores |
@@ -92,6 +94,10 @@ hogar-dispositivo e idempotencia por `mqtt_message_id`.
 ## Documentos de referencia
 
 - `01_dominios.md`: modelo funcional y reglas de negocio.
+- [`../../docs/dispositivos-iot.md`](../../docs/dispositivos-iot.md): guía
+  transversal para registrar, vincular, editar y verificar dispositivos.
+- `dispositivos-iot.md` en la raíz: guía transversal para registrar, vincular,
+  editar y verificar dispositivos.
 - `03_dcl.md`: roles, grants y RLS.
 - `guia-ejecucion-liquibase.md`: ejecucion y verificacion.
 - `diagnostico-actual.md`: estado comprobado y brechas conocidas.

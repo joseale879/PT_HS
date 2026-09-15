@@ -8,12 +8,11 @@ Fecha de revisiÃ³n: 2026-09-14.
 Navegador -> Frontend/Nginx :5173 -> Backend :3000 -> PostgreSQL :5432
                                       |              (contenedor postgres)
                                       +-> Mosquitto :1883
-                                      +-> Mailpit :1025
 ```
 
-Desde Windows, PostgreSQL se publica como `localhost:5433`, el backend como `localhost:3000`, el frontend como `localhost:5173`, Mailpit como `localhost:8025` y Mosquitto como `localhost:1883`.
+Desde Windows, PostgreSQL se publica como `localhost:5433`, el backend como `localhost:3000`, el frontend como `localhost:5173` y Mosquitto como `localhost:1883`. El correo sale por Gmail SMTP y no expone un puerto local.
 
-Dentro de Docker no se deben usar `localhost` entre servicios: los nombres son `postgres`, `backend`, `frontend`, `mailpit` y `mosquitto`.
+Dentro de Docker no se deben usar `localhost` entre servicios: los nombres son `postgres`, `backend`, `frontend` y `mosquitto`.
 
 ## Variables de entorno
 
@@ -25,8 +24,8 @@ Dentro de Docker no se deben usar `localhost` entre servicios: los nombres son `
 | Backend | `DB_NAME` | `hidro_smart` |
 | Backend | `DB_USER` | `hidro_smart_app` |
 | Backend | `MQTT_BROKER_URL` | `mqtt://mosquitto:1883` |
-| Backend | `SMTP_HOST` | `mailpit` por defecto |
-| Backend | `SMTP_PORT` | `1025` por defecto |
+| Backend | `SMTP_HOST` | `smtp.gmail.com` por defecto |
+| Backend | `SMTP_PORT` | `587` por defecto |
 
 El archivo `.env` de la raÃ­z gobierna el Compose integrado. `BK_HS/.env` sirve para ejecutar el backend fuera de Docker y `FT_HS/frontend/.env*` para el frontend directo. NingÃºn archivo con secretos debe subirse al repositorio.
 
@@ -36,11 +35,13 @@ El frontend no se conecta a PostgreSQL. Todas las llamadas pasan por `FT_HS/fron
 
 Los prefijos montados en Express son:
 
-- `/api/v1/auth`: `register`, `login`, `refresh`, `logout`, cambio y recuperaciÃ³n de contraseÃ±a.
-- `/api/v1/users`: perfil y preferencias.
+- `/api/v1/auth`: `register`, `login`, `refresh`, `logout`, cambio y recuperaciÃ³n de contraseÃ±a; tambiÃ©n `resend-verification` y `verify-email`.
+- `/api/v1/users`: perfil y preferencias; `/users/me` persiste `avatarDataUrl` y `phone` con mÃ¡ximo de 60 caracteres.
 - `/api/v1/homes`: hogares, miembros y solicitudes de membresÃ­a.
-- `/api/v1/devices`: alta, consulta, configuraciÃ³n, estado, desactivaciÃ³n y desvinculaciÃ³n.
-- `/api/v1/consumption`: `summary`, `daily`, `hourly`, `monthly`, `cost`.
+- `/api/v1/devices`: alta con ubicación, consulta, vinculación por código,
+  edición, configuración, estado, desactivación y desvinculación.
+- `/api/v1/consumption`: `summary`, `daily`, `hourly`, `monthly`, `cost` y
+  `advanced` para series agrupadas por día, hora, mes o ubicación.
 - `/api/v1/tariffs`: tarifa del hogar.
 - `/api/v1/alerts`: pendientes, reglas, umbrales, historial y estados.
 - `/api/v1/goals`: CRUD y progreso de metas.
@@ -56,9 +57,19 @@ Los prefijos montados en Express son:
 
 La URL pÃºblica del navegador es `/api/v1/...`; Nginx reenvÃ­a `/api/` al backend dentro de Docker.
 
+## Correo de acceso a hogares
+
+El formulario **Agregar Miembro** de `/app/homes` solo agrega cuentas activas.
+Una vez confirmada la membresÃ­a en PostgreSQL, el backend envÃ­a un aviso de
+acceso mediante Nodemailer y devuelve `notification.sent`. Si SMTP no estÃ¡
+disponible, la membresÃ­a no se revierte; el resultado queda visible para el
+frontend y el correo se entrega mediante Gmail SMTP.
+
 ## Cadena de autenticaciÃ³n
 
-1. Registro y login devuelven la sesiÃ³n que consume el frontend.
+1. El registro crea la cuenta como `Pending`, genera y envÃ­a el enlace de
+   verificaciÃ³n y responde `202`; el login solo crea sesiÃ³n despuÃ©s de activar
+   el correo.
 2. Las rutas protegidas requieren Bearer token.
 3. Ante un `401`, el cliente intenta `POST /api/v1/auth/refresh` una sola vez.
 4. Si el refresh falla, limpia la sesiÃ³n y devuelve al flujo de login.
@@ -68,13 +79,10 @@ El backend valida ademÃ¡s permisos funcionales y el acceso al hogar/dispositiv
 
 ## Correo
 
-El backend usa Nodemailer para recuperaciÃ³n y notificaciones de contraseÃ±a. Mailpit es el transporte local recomendado:
-
-- Docker: `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `SMTP_SECURE=false`.
-- Backend directo: `SMTP_HOST=localhost`, `SMTP_PORT=1025`.
-- Gmail: se configura solo en el `.env` local con `SMTP_HOST=smtp.gmail.com`, puerto y credenciales de aplicaciÃ³n apropiadas.
-
-No se documentan ni se almacenan aquÃ­ credenciales reales. Para probar el correo local se revisa `http://localhost:8025`.
+El backend usa Nodemailer para recuperación y notificaciones de contraseña. Gmail
+se configura solo en el `.env` local con `SMTP_HOST=smtp.gmail.com`,
+`SMTP_PORT=587`, `SMTP_SECURE=false` y una contraseña de aplicación. No se
+documentan ni se almacenan aquí credenciales reales.
 
 ## Cadena MQTT
 

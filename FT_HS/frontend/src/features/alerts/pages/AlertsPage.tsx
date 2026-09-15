@@ -13,9 +13,15 @@ type AlertEvent = {
   generatedAt: string;
   status: string;
 };
+
+type AlertThresholds = {
+  dailyLimit?: number | null;
+  monthlyLimit?: number | null;
+};
+
 export function NotificationsPanel({ homeId }: { homeId?: string }) {
   const [alerts, setAlerts] = useState<AlertEvent[]>([]);
-  const [thresholds, setThresholds] = useState<any>(null);
+  const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const load = () => {
     if (!homeId) return Promise.resolve();
@@ -26,7 +32,7 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
     ])
       .then(([history, threshold, pending]) => {
         setAlerts(history.data as AlertEvent[]);
-        setThresholds(threshold.data);
+        setThresholds(threshold.data as AlertThresholds);
         setPendingCount(pending.data.pendingCount);
       })
       .catch((error) =>

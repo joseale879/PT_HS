@@ -20,12 +20,14 @@ test('registra el dispositivo asociado al hogar', async () => {
     homeId: validHomeId,
     code: 'ESP32-001',
     name: 'Medidor principal',
-    type: 'YF-S201'
+    type: 'YF-S201',
+    location: 'Baño principal'
   });
 
   assert.equal(received.userId, 'user-1');
   assert.equal(received.homeId, validHomeId);
   assert.equal(received.device.code, 'ESP32-001');
+  assert.equal(received.device.location, 'Baño principal');
 });
 
 test('rechaza un hogar inválido al registrar el dispositivo', async () => {

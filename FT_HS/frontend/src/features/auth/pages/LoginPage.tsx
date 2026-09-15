@@ -34,6 +34,8 @@ interface LoginScreenProps {
   onPasswordResetContext: (token: string) => Promise<{ data: { email: string } }>;
   onPasswordResetComplete: (payload: { token: string; password: string }) => Promise<void>;
   onRegisterClick: () => void;
+  initialEmail?: string;
+  registrationPending?: boolean;
 }
 
 export function LoginScreen({
@@ -42,10 +44,12 @@ export function LoginScreen({
   onPasswordResetContext,
   onPasswordResetComplete,
   onRegisterClick,
+  initialEmail = '',
+  registrationPending = false,
 }: LoginScreenProps) {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -68,6 +72,10 @@ export function LoginScreen({
     'idle' | 'loading' | 'valid' | 'invalid'
   >('idle');
   const isResetFromEmail = resetToken.length >= 40;
+
+  useEffect(() => {
+    if (initialEmail) setEmail(initialEmail);
+  }, [initialEmail]);
 
   useEffect(() => {
     if (!isResetFromEmail) return;
@@ -242,6 +250,12 @@ export function LoginScreen({
                   <CardDescription>{t('auth.enterCredentials')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {registrationPending && (
+                    <Alert>
+                      <AlertCircle className="size-4" />
+                      <AlertDescription>{t('auth.registrationPendingNotice')}</AlertDescription>
+                    </Alert>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="email">{t('auth.email')} *</Label>
                     <Input

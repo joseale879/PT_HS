@@ -56,6 +56,13 @@ Ejemplo recomendado para la primera prueba:
 
 `consumptionLiters` representa solo el intervalo publicado, no el acumulado. Si el firmware mide una vez por segundo, `2.40 L/min / 60 = 0.040 L` en ese segundo.
 
+El firmware nuevo debe enviar `mqttMessageId` estable en cada lectura para
+permitir deduplicaciÃ³n cuando MQTT QoS 1 reentrega un mensaje. Mientras se
+actualiza el ESP32 instalado, el backend local acepta el formato antiguo sin
+ese campo cuando `MQTT_ALLOW_LEGACY_TELEMETRY=true` y genera un identificador
+temporal para no perder las mÃ©tricas. Esta compatibilidad debe desactivarse
+despuÃ©s de actualizar el firmware.
+
 `signalQuality: -56` se normaliza como `wifiRssiDbm: -56` y como calidad porcentual para el futuro historial de dispositivo. El firmware puede enviar directamente `wifiRssiDbm` y `signalQualityPercent` si ya calcula ambos.
 
 `totalLiters` es útil para diagnóstico, pero el total confiable del sistema debe calcularse con lecturas persistidas porque el contador del ESP32 puede reiniciarse.
@@ -115,9 +122,9 @@ La ingesta vigente ejecuta este circuito:
 5. guardar las métricas de salud disponibles en el historial correspondiente;
 6. usar permisos mínimos y registrar errores sin perder el mensaje.
 
-La columna actual es `NUMERIC(10,2)`. Para lecturas pequeñas como `0.040 L` se
-requiere una migración de precisión antes de considerar cerrado el contrato del
-firmware; las funciones, vistas y reportes dependientes deben revisarse juntos.
+La columna `consumption_liters` usa `NUMERIC(14,3)` y el m³ generado usa
+`NUMERIC(14,6)`. Las funciones, vistas y reportes dependientes ya fueron
+actualizados; el contrato solo queda pendiente de validación con hardware real.
 
 Como MQTT QoS 1 puede reentregar mensajes, la persistencia usa
 `mqttMessageId` y una clave única parcial por dispositivo.
@@ -129,17 +136,18 @@ Como MQTT QoS 1 puede reentregar mensajes, la persistencia usa
 | `MQTT_BROKER_URL` | `mqtt://mosquitto:1883` | `mqtt://localhost:1883` |
 | `MQTT_CLIENT_ID` | `hidrosmart-backend` | valor local equivalente |
 | `MQTT_QOS` | `1` | `1` |
+| `MQTT_ALLOW_LEGACY_TELEMETRY` | `true` en local | `true` mientras se actualiza el ESP32 |
 | `MQTT_RECONNECT_PERIOD_MS` | `3000` | configurable |
 | `MQTT_CONNECT_TIMEOUT_MS` | `10000` | configurable |
 
-El broker de desarrollo escucha en `localhost:1883` desde Windows. `BK_HS/docker/mosquitto/mosquitto.conf` permite conexiones anónimas, no usa TLS y no tiene persistencia.
+El broker de desarrollo escucha en `localhost:1883` desde Windows. `BK_HS/docker/mosquitto/mosquitto.conf` permite conexiones anónimas y no usa TLS; la persistencia local está habilitada y se conserva en el volumen `hidro_smart_mosquitto_data`. En producción deben activarse autenticación, ACL y TLS.
 
 ## Prueba local
 
 Con Docker levantado:
 
 ```powershell
-docker compose exec mosquitto mosquitto_pub -h localhost -p 1883 -t hidrosmart/devices/ESP32-246F28ABCDEF/telemetry -q 1 -m '{"flowRateLpm":2.4,"consumptionLiters":0.04,"totalLiters":3.407,"pulses":18,"signalQuality":-56,"timestamp":"2026-09-04T15:30:00Z"}'
+docker compose exec mosquitto mosquitto_pub -h localhost -p 1883 -t hidrosmart/devices/ESP32-246F28ABCDEF/telemetry -q 1 -m '{"mqttMessageId":"manual-esp32-001","deviceId":"ESP32-246F28ABCDEF","flowRateLpm":2.4,"consumptionLiters":0.04,"totalLiters":3.407,"pulses":18,"wifiRssiDbm":-56,"timestamp":"2026-09-04T15:30:00Z"}'
 docker compose logs -f backend
 ```
 

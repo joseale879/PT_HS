@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
 import { Button } from '@shared/ui/button';
@@ -12,7 +12,15 @@ import {
   DialogTrigger,
 } from '@shared/ui/dialog';
 import { Badge } from '@shared/ui/badge';
-import { Building2, Loader2, Plus, RefreshCw, UserPlus } from 'lucide-react';
+import {
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Plus,
+  RefreshCw,
+  UserPlus,
+} from 'lucide-react';
 import { homesApi } from '@shared/http/httpClient';
 import { toast } from 'sonner';
 import { MembershipRequestsPanel } from '../ui/MembershipRequestsPanel';
@@ -46,6 +54,14 @@ export function HomeManagement({ permissions = [] }: { permissions?: string[] })
   const [membersError, setMembersError] = useState<string | null>(null);
   const [newHomeOpen, setNewHomeOpen] = useState(false);
   const [memberOpen, setMemberOpen] = useState(false);
+  const homesCarouselRef = useRef<HTMLDivElement>(null);
+
+  const scrollHomes = (direction: 'previous' | 'next') => {
+    homesCarouselRef.current?.scrollBy({
+      left: (direction === 'next' ? 1 : -1) * homesCarouselRef.current.clientWidth * 0.85,
+      behavior: 'smooth',
+    });
+  };
 
   const load = async () => {
     setLoading(true);
@@ -119,11 +135,17 @@ export function HomeManagement({ permissions = [] }: { permissions?: string[] })
     if (!selectedHome) return;
     const form = new FormData(event.currentTarget);
     try {
-      await homesApi.addMember(selectedHome.homeId, {
+      const result = await homesApi.addMember(selectedHome.homeId, {
         email: String(form.get('email')),
         homeRole: String(form.get('role')) as 'Owner' | 'Member' | 'Guest',
       });
-      toast.success(t('homes.memberAdded'));
+      if (result.notification?.sent) {
+        toast.success(t('homes.memberAddedEmailSent'));
+      } else if (result.notification) {
+        toast.warning(t('homes.memberAddedEmailPending'));
+      } else {
+        toast.success(t('homes.memberAdded'));
+      }
       setMemberOpen(false);
       event.currentTarget.reset();
       await loadMembers(selectedHome.homeId);
@@ -187,29 +209,59 @@ export function HomeManagement({ permissions = [] }: { permissions?: string[] })
           </Button>
         </div>
       ) : homes.length ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {homes.map((home) => (
-            <Card
-              key={home.homeId}
-              className={selectedHome?.homeId === home.homeId ? 'border-blue-600' : ''}
+        <div className="space-y-2">
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => scrollHomes('previous')}
+              disabled={homes.length < 2}
+              aria-label={t('homes.previousHome')}
             >
-              <CardHeader>
-                <CardTitle>
-                  <Building2 className="mr-2 inline size-5 text-blue-600" />
-                  {home.name}
-                </CardTitle>
-                <CardDescription>
-                  {home.address} · {home.city}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between">
-                <Badge>{home.status || t('homes.active')}</Badge>
-                <Button variant="outline" size="sm" onClick={() => setSelectedHome(home)}>
-                  {t('homes.viewMembers')}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => scrollHomes('next')}
+              disabled={homes.length < 2}
+              aria-label={t('homes.nextHome')}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+          <div
+            ref={homesCarouselRef}
+            className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3 [scrollbar-width:thin]"
+            aria-label={t('homes.title')}
+          >
+            {homes.map((home) => (
+              <Card
+                key={home.homeId}
+                className={`w-[calc(100%-0.5rem)] shrink-0 snap-start sm:w-[calc(50%-0.75rem)] ${
+                  selectedHome?.homeId === home.homeId ? 'border-blue-600' : ''
+                }`}
+              >
+                <CardHeader>
+                  <CardTitle>
+                    <Building2 className="mr-2 inline size-5 text-blue-600" />
+                    {home.name}
+                  </CardTitle>
+                  <CardDescription>
+                    {home.address} · {home.city}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  <Badge>{home.status || t('homes.active')}</Badge>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedHome(home)}>
+                    {t('homes.viewMembers')}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="rounded-lg border border-dashed p-8 text-center">

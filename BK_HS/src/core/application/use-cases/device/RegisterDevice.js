@@ -5,14 +5,14 @@ class RegisterDevice {
     this.deviceRepository = deviceRepository;
   }
 
-  async execute({ userId, homeId, code, name, type, manufacturer, model, alertThreshold }) {
+  async execute({ userId, homeId, code, name, type, location, manufacturer, model, alertThreshold }) {
     if (!userId) throw new Error('El usuario autenticado es obligatorio');
     if (!this.isUuid(homeId)) {
       const error = new Error('homeId no es válido');
       error.status = 400;
       throw error;
     }
-    const device = Device.create({ code, name, type, manufacturer, model, alertThreshold });
+    const device = Device.create({ code, name, type, location, manufacturer, model, alertThreshold });
     return this.deviceRepository.register(device, userId, homeId);
   }
 

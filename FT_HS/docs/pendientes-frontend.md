@@ -14,6 +14,7 @@ Este archivo contiene Ãºnicamente trabajo del cliente `FT_HS/frontend`. Las ta
 - [x] Perfil conectado a `/users/me` y actualizaciÃ³n de nombre, telÃ©fono y ciudad.
 - [x] Cambio de contraseÃ±a conectado a `/auth/change-password`.
 - [x] Preferencias de idioma y moneda conectadas a `/users/me/preferences`.
+- [x] Preferencias de notificaciones conectadas a `/users/me/notifications` y ubicadas dentro de Configuración; el canal operativo disponible es Gmail.
 - [x] Dashboard, consumo, reportes, metas, alertas, hogares, dispositivos, vacaciones y soporte conectados a sus APIs disponibles; recomendaciones se presenta como contenido visual.
 - [x] Progreso de metas consultado desde `/goals/:goalId/progress`.
 - [x] Alertas pendientes consultadas desde `/alerts/home/:homeId/pending`.
@@ -27,14 +28,19 @@ Este archivo contiene Ãºnicamente trabajo del cliente `FT_HS/frontend`. Las ta
 - [x] Dispositivos consume el contrato paginado del backend con ordenamiento, estados de carga/error/vacÃ­o y reintento.
 - [x] Hogares muestra estados de carga, vacÃ­o y error con reintento; los miembros tienen su propio estado de carga/error.
 - [x] Hogares oculta creaciÃ³n, gestiÃ³n de miembros y solicitudes a roles sin `homes.manage`, manteniendo la consulta visual.
+- [x] Hogares presenta las tarjetas en un carrusel horizontal responsive con controles de navegación.
 - [x] Las vistas protegidas validan el permiso tambiÃ©n al entrar por URL directa.
 - [x] El menÃº separa el panel de `Administrator` y `Support` de las vistas del hogar.
 - [x] `Administrator` queda limitado a Panel Administrador, GestiÃ³n de Usuarios, AuditorÃ­a y ConfiguraciÃ³n; `Support` queda limitado a Panel de Soporte y ConfiguraciÃ³n.
-- [x] `HomeUser` y `Guest` no muestran ni pueden abrir las pantallas de Soporte y Notificaciones.
+- [x] Dispositivos permite registrar `location`, editar nombre/ubicaciÃ³n y vincular un dispositivo existente por su cÃ³digo tÃ©cnico.
+- [x] `HomeUser` y `Guest` gestionan sus preferencias de notificaciones desde Configuración y pueden abrir sus tickets propios en `/app/support`.
 - [x] `Administrator` accede a `/app/admin`, `/app/users` y `/app/audit`; `Support` accede a `/app/support/management`, la bandeja de tickets recibidos.
 - [x] AdministraciÃ³n de roles funcionales desde `/app/users` mediante `rolesApi`, con asignaciÃ³n y retiro de roles.
 - [x] Soporte: abrir detalle, consultar historial, enviar respuestas y actualizar estados desde el panel de `Administrator`/`Support`.
+- [x] Soporte: pantalla de tickets propios para usuarios autenticados, con creación, filtros, detalle, respuestas y estados.
+- [x] Soporte: paginación real del listado, filtro por prioridad y ordenamiento por fecha, título, prioridad o estado; incluye carga y controles accesibles.
 - [x] Vista `/app/consumption` conectada a resumen, lecturas diarias, promedios horarios y costo del backend.
+- [x] Dashboard, Consumo y Reportes usan `/consumption/advanced` para series horarias, diarias, mensuales y por ubicación; no agregan lecturas individuales en el navegador.
 - [x] Privacidad: descarga de exportaciÃ³n JSON propia, creaciÃ³n y consulta de solicitudes ARCO desde configuraciÃ³n.
 - [x] Reportes: descarga PDF y Excel resumida del consumo actual desde endpoints protegidos del backend.
 - [x] Recomendaciones: tarjetas informativas visuales sin datos quemados, estados ni acciones persistidas.
@@ -47,7 +53,7 @@ Este archivo contiene Ãºnicamente trabajo del cliente `FT_HS/frontend`. Las ta
 - [ ] Probar manualmente login, registro, refresh y logout con los cuatro usuarios funcionales.
 - [ ] Probar manualmente navegaciÃ³n y redirecciÃ³n por permisos con `Administrator`, `Support`, `HomeUser` y `Guest`.
 - [ ] AÃ±adir estados visuales consistentes de carga, vacÃ­o y error a todas las pantallas.
-- [ ] Completar paginaciÃ³n, filtros y ordenamiento visual donde el backend ya envÃ­a `pagination`.
+- [ ] Completar paginaciÃ³n, filtros y ordenamiento visual donde el backend ya envÃ­a `pagination` en las pantallas restantes.
 - [ ] Revisar textos restantes que aÃºn estÃ©n escritos directamente en espaÃ±ol en vez de usar i18n.
 - [ ] Ejecutar una prueba visual en mÃ³vil real o emulador de iPhone y Android.
 

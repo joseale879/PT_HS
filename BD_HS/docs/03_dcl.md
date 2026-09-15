@@ -5,7 +5,9 @@ La capa `03_dcl` controla acceso al motor PostgreSQL, objetos y filas.
 ## Roles PostgreSQL
 
 - `hidro_smart_app`: backend y operaciones normales.
-- `hidro_smart_ingest`: ingesta IoT; solo conecta y ejecuta `INSERT` sobre `consumption.sensor_reading`.
+- `hidro_smart_ingest`: ingesta IoT; solo conecta y ejecuta la función protegida
+  `device.fn_ingest_sensor_reading(...)`, sin `INSERT` directo sobre
+  `consumption.sensor_reading`.
 - `hidro_smart_readonly`: consultas y reportes de solo lectura.
 
 Los roles de negocio `Administrator`, `Support`, `HomeUser` y `Guest` viven en `user_account.role`. El backend los interpreta; no se mezclan automáticamente con roles PostgreSQL.
@@ -18,7 +20,9 @@ El backend registra usuarios mediante:
 SELECT user_account.fn_register_user('usuario', 'correo@dominio.com');
 ```
 
-La función devuelve el UUID sin exigir `app.user_id` durante el registro. Para crear el primer propietario:
+La función devuelve el UUID, crea la cuenta como `Pending` y no exige
+`app.user_id` durante el registro. Después de consumir el token de verificación
+de correo la cuenta pasa a `Active`. Para crear el primer propietario:
 
 ```sql
 SELECT home.fn_create_home_with_owner('Casa', 'Dirección', 'Ciudad', 3, '<UUID_USUARIO>');
@@ -61,7 +65,7 @@ Cada función exige el permiso RBAC correspondiente y membresía activa en el ho
 
 ```sql
 SELECT user_account.fn_register_user('usuario', 'correo@dominio.com');
-SELECT device.fn_register_device('DEV-001', 'Medidor principal', 'WaterMeter');
+SELECT device.fn_register_device_with_location('DEV-001', 'Medidor principal', 'WaterMeter', 'Baño principal');
 ```
 
 El primer flujo asigna `HomeUser`. El segundo exige `devices.manage`; despues de obtener el UUID, el backend debe asociar el dispositivo a un hogar mediante `home.home_device`.
@@ -105,8 +109,8 @@ El rollback correspondiente restaura el SELECT directo únicamente como reversi�
 
 El changeset 20260828-ingest-references otorga únicamente REFERENCES sobre home.home_device al rol hidro_smart_ingest. Esto permite que PostgreSQL valide el FK compuesto de sensor_reading durante la ingesta, sin concederle lectura ni escritura general sobre home_device.
 
-El changeset 20260828-homeuser-device-permission asigna devices.manage al rol funcional HomeUser. El usuario normal puede registrar un dispositivo mediante device.fn_register_device, pero la asociación y las actualizaciones continúan limitadas por permisos, membresía activa y RLS.
-## Estado de permisos para MQTT (2026-09-13)
+El changeset 20260828-homeuser-device-permission asigna devices.manage al rol funcional HomeUser. El usuario normal puede registrar un dispositivo mediante device.fn_register_device_with_location o vincularlo mediante device.fn_link_device_to_home; la asociación y las actualizaciones continúan limitadas por permisos, titularidad, membresía activa y RLS.
+## Estado de permisos para MQTT (2026-09-14)
 
 La ingesta MQTT ya está conectada al backend mediante `IngestReading` y `PostgresTelemetryRepository`. Los changesets `20260913-telemetry-ingest-function-grant` y `20260913-revoke-ingest-direct-insert` dejan al rol `hidro_smart_ingest` con ejecución de `device.fn_ingest_sensor_reading(...)`, sin `INSERT` directo sobre `consumption.sensor_reading`. La función `SECURITY DEFINER` mantiene la validación de dispositivo, asociación activa, rangos e idempotencia. No se deben ampliar grants de forma manual.
 
@@ -116,5 +120,6 @@ recibe `INSERT` directo sobre `consumption.sensor_reading`. Se conserva la
 resolución segura de `deviceCode`, la asociación `home_device`, RLS y la
 separación respecto de `hidro_smart_app`.
 
-Lo que permanece pendiente es revisar la precisión de las lecturas y validar el
-flujo con un ESP32 real; no se deben ampliar grants manualmente.
+La precisión de litros y m³ ya quedó ampliada y versionada para el caudalímetro.
+Permanece pendiente validar el flujo con un ESP32 real; no se deben ampliar
+grants manualmente.

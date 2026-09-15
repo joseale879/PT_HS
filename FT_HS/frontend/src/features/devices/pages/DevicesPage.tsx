@@ -13,13 +13,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@shared/ui/dialog';
-import { Droplets, Loader2, Plus, RefreshCw, Trash2, Wifi, WifiOff } from 'lucide-react';
+import {
+  Activity,
+  Droplets,
+  History,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import {
   actuatorsApi,
   devicesApi,
   type ActuatorCommandValue,
   type ActuatorState,
   type CollectionPagination,
+  type DeviceTelemetry,
   type DeviceListOptions,
 } from '@shared/http/httpClient';
 import { toast } from 'sonner';
@@ -30,12 +41,15 @@ type Device = {
   code: string;
   name: string;
   type?: string;
+  location?: string | null;
   status: string;
+  connectivityStatus?: string;
   alertThreshold?: number | null;
   lastConnectionAt?: string | null;
   homeId: string;
+  latestTelemetry?: DeviceTelemetry | null;
 };
-type Home = { homeId: string; name: string };
+type Home = { homeId: string; name: string; homeRole?: 'Owner' | 'Member' | 'Guest' };
 
 function nextActuatorCommand(state: ActuatorState): ActuatorCommandValue {
   if (state.actuator === 'VALVE') return state.status === 'OPEN' ? 'CLOSED' : 'OPEN';
@@ -69,12 +83,30 @@ export function DeviceManagement({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [threshold, setThreshold] = useState('');
+  const [historyDevice, setHistoryDevice] = useState<Device | null>(null);
+  const [history, setHistory] = useState<DeviceTelemetry[]>([]);
+  const [historyPagination, setHistoryPagination] =
+    useState<CollectionPagination>(DEFAULT_PAGINATION);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [actuatorStates, setActuatorStates] = useState<ActuatorState[]>([]);
   const [commandingActuator, setCommandingActuator] = useState<string | null>(null);
-  const canManage = can(permissions, 'devices.manage');
-  const canManageActuators = can(permissions, 'actuators.manage');
+  const selectedHome = homes.find((home) => home.homeId === homeId);
+  const isHomeOwner = selectedHome?.homeRole === 'Owner';
+  const canManageAssignedDevice =
+    ['Owner', 'Member'].includes(selectedHome?.homeRole || '') &&
+    can(permissions, 'devices.manage');
+  const canRegisterDevice = isHomeOwner && can(permissions, 'devices.manage');
+  const canUnlinkDevice = isHomeOwner && can(permissions, 'devices.manage');
+  const canManageActuators =
+    ['Owner', 'Member'].includes(selectedHome?.homeRole || '') &&
+    can(permissions, 'actuators.manage');
 
   const loadDevices = async (id = homeId, requestedPage = page) => {
     if (!id) {
@@ -98,9 +130,21 @@ export function DeviceManagement({
         actuatorsApi.states(id).catch(() => ({ data: [] as ActuatorState[] })),
       ]);
       const nextPagination = response.pagination || DEFAULT_PAGINATION;
-      setDevices(
-        (response.data as Omit<Device, 'homeId'>[]).map((device) => ({ ...device, homeId: id }))
+      const listedDevices = (response.data as Omit<Device, 'homeId'>[]).map((device) => ({
+        ...device,
+        homeId: id,
+      }));
+      const devicesWithTelemetry = await Promise.all(
+        listedDevices.map(async (device) => {
+          try {
+            const telemetry = await devicesApi.latestTelemetry(device.deviceId);
+            return { ...device, latestTelemetry: telemetry.data };
+          } catch {
+            return { ...device, latestTelemetry: null };
+          }
+        })
       );
+      setDevices(devicesWithTelemetry);
       setActuatorStates(actuatorResponse.data);
       setPagination(nextPagination);
       if (nextPagination.totalPages > 0 && requestedPage > nextPagination.totalPages) {
@@ -114,6 +158,32 @@ export function DeviceManagement({
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadHistory = async (deviceId: string, requestedPage = historyPage) => {
+    setHistoryLoading(true);
+    try {
+      const response = await devicesApi.telemetry(deviceId, {
+        page: requestedPage,
+        pageSize: 8,
+        sort: 'measuredAt',
+        order: 'desc',
+      });
+      setHistory(response.data);
+      setHistoryPagination(response.pagination || DEFAULT_PAGINATION);
+      setHistoryPage(requestedPage);
+    } catch (error) {
+      setHistory([]);
+      toast.error(error instanceof Error ? error.message : t('devices.historyError'));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const openHistory = (device: Device) => {
+    setHistoryDevice(device);
+    setHistoryPage(1);
+    void loadHistory(device.deviceId, 1);
   };
 
   useEffect(() => {
@@ -130,9 +200,10 @@ export function DeviceManagement({
     try {
       await devicesApi.register({
         homeId,
-        code: form.get('code'),
-        name: form.get('name'),
-        type: form.get('type'),
+        code: String(form.get('code') || '').trim(),
+        name: String(form.get('name') || '').trim(),
+        type: String(form.get('type') || '').trim(),
+        location: String(form.get('location') || '').trim() || undefined,
         alertThreshold: Number(form.get('threshold')) || null,
       });
       toast.success(t('devices.deviceLinked'));
@@ -142,6 +213,57 @@ export function DeviceManagement({
       await loadDevices(homeId, 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('devices.registerError'));
+    }
+  };
+
+  const linkExisting = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      await devicesApi.link({
+        homeId,
+        code: String(form.get('code') || '').trim(),
+      });
+      toast.success(t('devices.deviceLinked'));
+      setLinkOpen(false);
+      event.currentTarget.reset();
+      setPage(1);
+      await loadDevices(homeId, 1);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('devices.registerError'));
+    }
+  };
+
+  const openEditor = (device: Device) => {
+    setEditingDevice(device);
+    setEditName(device.name);
+    setEditLocation(device.location || '');
+  };
+
+  const updateGeneral = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingDevice) return;
+    try {
+      const response = await devicesApi.update(editingDevice.deviceId, {
+        name: editName.trim(),
+        location: editLocation.trim() || null,
+      });
+      const updated = response.data as Partial<Device>;
+      setDevices((current) =>
+        current.map((device) =>
+          device.deviceId === editingDevice.deviceId
+            ? {
+                ...device,
+                name: updated.name || editName.trim(),
+                location: updated.location ?? null,
+              }
+            : device
+        )
+      );
+      setEditingDevice(null);
+      toast.success(t('devices.deviceUpdated'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('devices.updateError'));
     }
   };
 
@@ -187,9 +309,7 @@ export function DeviceManagement({
     }
   };
 
-  const online = devices.filter((device) =>
-    ['active', 'online'].includes(String(device.status).toLowerCase())
-  ).length;
+  const online = devices.filter((device) => device.connectivityStatus === 'ONLINE').length;
   const currentPage = pagination.page || page;
   const totalPages = pagination.totalPages || 0;
   const isFirstPage = currentPage <= 1;
@@ -217,6 +337,13 @@ export function DeviceManagement({
               </option>
             ))}
           </select>
+          {!isHomeOwner && homeId && (
+            <p className="w-full text-xs text-amber-700 sm:max-w-xs sm:self-center">
+              {selectedHome?.homeRole === 'Member'
+                ? t('devices.memberAccessDesc')
+                : t('devices.adminMustRegisterDevices')}
+            </p>
+          )}
           <select
             className="h-11 w-full rounded-md border px-3 sm:w-auto"
             value={`${sort}:${order}`}
@@ -236,35 +363,63 @@ export function DeviceManagement({
             <option value="status:asc">{t('devices.sortStatusAsc')}</option>
             <option value="createdAt:desc">{t('devices.sortNewest')}</option>
           </select>
-          {canManage && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto" disabled={!homeId || loading}>
-                  <Plus className="mr-2 size-4" />
-                  {t('devices.registerNewDevice')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <form onSubmit={register}>
-                  <DialogHeader>
-                    <DialogTitle>{t('devices.registerNewDevice')}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <Input name="code" placeholder={t('devices.deviceId')} required />
-                    <Input name="name" placeholder={t('devices.deviceName')} required />
-                    <Input name="type" placeholder={t('devices.type')} required />
-                    <Input
-                      name="threshold"
-                      type="number"
-                      placeholder={t('devices.alertThreshold')}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">{t('common.save')}</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+          {canRegisterDevice && (
+            <>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full sm:w-auto" disabled={!homeId || loading}>
+                    <Plus className="mr-2 size-4" />
+                    {t('devices.registerNewDevice')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <form onSubmit={register}>
+                    <DialogHeader>
+                      <DialogTitle>{t('devices.registerNewDevice')}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <Input name="code" placeholder={t('devices.deviceId')} required />
+                      <Input name="name" placeholder={t('devices.deviceName')} required />
+                      <Input name="type" placeholder={t('devices.type')} required />
+                      <Input name="location" placeholder={t('devices.locationPlaceholder')} />
+                      <Input
+                        name="threshold"
+                        type="number"
+                        placeholder={t('devices.alertThreshold')}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit">{t('common.save')}</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    disabled={!homeId || loading}
+                  >
+                    {t('devices.linkDevice')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <form onSubmit={linkExisting}>
+                    <DialogHeader>
+                      <DialogTitle>{t('devices.linkDevice')}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <p className="text-sm text-gray-600">{t('devices.linkNewSensor')}</p>
+                      <Input name="code" placeholder={t('devices.deviceId')} required />
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit">{t('devices.linkDevice')}</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
       </div>
@@ -308,7 +463,9 @@ export function DeviceManagement({
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {devices.length ? (
               devices.map((device) => {
-                const isOnline = ['active', 'online'].includes(String(device.status).toLowerCase());
+                const connectivity = String(device.connectivityStatus || 'UNKNOWN').toUpperCase();
+                const isOnline = connectivity === 'ONLINE';
+                const isOffline = connectivity === 'OFFLINE';
                 const deviceActuators = actuatorStates.filter(
                   (state) => state.deviceId === device.deviceId
                 );
@@ -317,19 +474,24 @@ export function DeviceManagement({
                     <CardHeader>
                       <div className="flex items-start justify-between gap-2">
                         <Droplets className="size-6 text-blue-600" />
-                        <Badge variant={isOnline ? 'default' : 'destructive'}>
+                        <Badge
+                          variant={isOnline ? 'default' : isOffline ? 'destructive' : 'outline'}
+                        >
                           {isOnline ? (
                             <Wifi className="mr-1 size-3" />
                           ) : (
                             <WifiOff className="mr-1 size-3" />
                           )}
-                          {device.status}
+                          {t(`devices.connectivity.${connectivity.toLowerCase()}`)}
                         </Badge>
                       </div>
                       <CardTitle className="text-base">{device.name}</CardTitle>
                       <CardDescription>
                         {device.code} · {device.type || '—'}
                       </CardDescription>
+                      <p className="text-xs text-gray-500">
+                        {t('devices.location')}: {device.location || '—'}
+                      </p>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <p className="text-sm">
@@ -341,6 +503,47 @@ export function DeviceManagement({
                           ? new Date(device.lastConnectionAt).toLocaleString(dateLocale)
                           : '—'}
                       </p>
+                      {device.latestTelemetry ? (
+                        <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                          <div>
+                            <span className="block text-xs text-gray-500">
+                              {t('devices.currentFlow')}
+                            </span>
+                            <strong className="flex items-center gap-1">
+                              <Activity className="size-3 text-blue-600" />
+                              {device.latestTelemetry.flowRateLpm?.toFixed(2) ?? 'â€”'} L/min
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="block text-xs text-gray-500">
+                              {t('devices.totalVolume')}
+                            </span>
+                            <strong>
+                              {device.latestTelemetry.totalLiters?.toFixed(2) ?? 'â€”'} L
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="block text-xs text-gray-500">
+                              {t('devices.lastReading')}
+                            </span>
+                            <strong>
+                              {new Date(device.latestTelemetry.measuredAt).toLocaleString(
+                                dateLocale
+                              )}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="block text-xs text-gray-500">
+                              {t('devices.pulses')}
+                            </span>
+                            <strong>{device.latestTelemetry.pulses ?? 'â€”'}</strong>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="rounded-lg border border-dashed p-3 text-xs text-gray-500">
+                          {t('devices.noTelemetryYet')}
+                        </p>
+                      )}
                       {deviceActuators.length > 0 && (
                         <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
                           <div className="flex items-center justify-between gap-2">
@@ -383,19 +586,28 @@ export function DeviceManagement({
                         </div>
                       )}
                       <div className="flex flex-wrap gap-2">
-                        {canManage && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedDevice(device);
-                              setThreshold(String(device.alertThreshold ?? ''));
-                            }}
-                          >
-                            {t('common.edit')} {t('devices.alertThreshold').toLowerCase()}
-                          </Button>
+                        {canManageAssignedDevice && (
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => openEditor(device)}>
+                              {t('devices.configure')}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedDevice(device);
+                                setThreshold(String(device.alertThreshold ?? ''));
+                              }}
+                            >
+                              {t('common.edit')} {t('devices.alertThreshold').toLowerCase()}
+                            </Button>
+                          </>
                         )}
-                        {canManage && (
+                        <Button variant="outline" size="sm" onClick={() => openHistory(device)}>
+                          <History className="mr-2 size-4" />
+                          {t('devices.viewHistory')}
+                        </Button>
+                        {canUnlinkDevice && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -413,8 +625,12 @@ export function DeviceManagement({
             ) : (
               <div className="col-span-full rounded-lg border border-dashed p-8 text-center">
                 <p className="text-sm text-gray-600">{t('devices.noDevicesRegistered')}</p>
-                {canManage && homeId && (
-                  <p className="mt-2 text-sm text-gray-500">{t('devices.registerFirstSensor')}</p>
+                {homeId && (
+                  <p className="mt-2 text-sm text-gray-500">
+                    {canRegisterDevice
+                      ? t('devices.registerFirstSensor')
+                      : t('devices.adminMustRegisterDevices')}
+                  </p>
                 )}
               </div>
             )}
@@ -462,6 +678,125 @@ export function DeviceManagement({
             <DialogFooter>
               <Button onClick={() => void updateThreshold()}>{t('common.save')}</Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {editingDevice && (
+        <Dialog open onOpenChange={() => setEditingDevice(null)}>
+          <DialogContent>
+            <form onSubmit={updateGeneral}>
+              <DialogHeader>
+                <DialogTitle>{t('devices.deviceConfiguration')}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="device-name">{t('devices.deviceName')}</Label>
+                  <Input
+                    id="device-name"
+                    value={editName}
+                    onChange={(event) => setEditName(event.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="device-location">{t('devices.location')}</Label>
+                  <Input
+                    id="device-location"
+                    value={editLocation}
+                    onChange={(event) => setEditLocation(event.target.value)}
+                    placeholder={t('devices.locationPlaceholder')}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">{t('common.save')}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {historyDevice && (
+        <Dialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setHistoryDevice(null);
+          }}
+        >
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>
+                {t('devices.historyTitle')}: {historyDevice.name}
+              </DialogTitle>
+            </DialogHeader>
+            {historyLoading ? (
+              <div className="flex min-h-32 items-center justify-center text-sm text-gray-600">
+                <Loader2 className="mr-2 size-5 animate-spin" />
+                {t('common.loading')}
+              </div>
+            ) : history.length === 0 ? (
+              <p className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-600">
+                {t('devices.historyEmpty')}
+              </p>
+            ) : (
+              <>
+                <div className="max-h-96 overflow-auto rounded-lg border">
+                  <table className="w-full min-w-[680px] text-left text-sm">
+                    <thead className="sticky top-0 bg-slate-50 text-xs text-gray-600">
+                      <tr>
+                        <th className="px-3 py-2">{t('devices.lastReading')}</th>
+                        <th className="px-3 py-2">{t('devices.currentFlow')}</th>
+                        <th className="px-3 py-2">{t('devices.totalVolume')}</th>
+                        <th className="px-3 py-2">{t('devices.pulses')}</th>
+                        <th className="px-3 py-2">RSSI</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map((reading) => (
+                        <tr key={reading.readingId} className="border-t">
+                          <td className="px-3 py-2">
+                            {new Date(reading.measuredAt).toLocaleString(dateLocale)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {reading.flowRateLpm?.toFixed(2) ?? '—'} L/min
+                          </td>
+                          <td className="px-3 py-2">{reading.totalLiters?.toFixed(2) ?? '—'} L</td>
+                          <td className="px-3 py-2">{reading.pulses ?? '—'}</td>
+                          <td className="px-3 py-2">{reading.wifiRssiDbm ?? '—'} dBm</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {historyPagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between gap-3 pt-2">
+                    <span className="text-sm text-gray-600">
+                      {t('devices.pageOf', {
+                        page: historyPagination.page,
+                        totalPages: historyPagination.totalPages,
+                      })}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        disabled={historyPage <= 1 || historyLoading}
+                        onClick={() => void loadHistory(historyDevice.deviceId, historyPage - 1)}
+                      >
+                        {t('common.previous')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={historyPage >= historyPagination.totalPages || historyLoading}
+                        onClick={() => void loadHistory(historyDevice.deviceId, historyPage + 1)}
+                      >
+                        {t('common.next')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </DialogContent>
         </Dialog>
       )}

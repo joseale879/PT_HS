@@ -18,12 +18,27 @@ firmware/
 └── tests/           pruebas de contrato
 ```
 
+En esta red local, `provisioning/config.example.h` ya deja el broker en
+`192.168.1.10:1883`, que corresponde al PC donde corre Mosquitto. Si la IP
+cambia por DHCP, actualiza `HIDROSMART_MQTT_HOST`; desde el ESP32 no uses
+`localhost`, `127.0.0.1` ni `mosquitto`.
+
 Instala PlatformIO, copia `provisioning/config.example.h` como
-`provisioning/config.h`, completa los secretos localmente y ejecuta `pio run`.
+`provisioning/config.h`, completa los secretos localmente y ejecuta:
+
+```powershell
+pio run
+pio run -t upload
+pio device monitor
+```
+
+Si el puerto no se detecta automáticamente, agrega `--upload-port COMx` al
+comando de carga. En un ESP32 físico, `HIDROSMART_MQTT_HOST` debe ser la IP
+local del equipo donde está publicado Mosquitto; nunca uses `localhost`.
 El include de `provisioning/` está configurado en `platformio.ini` y el archivo
 `config.h` está ignorado por Git.
 
-Cada lectura publica `mqttMessageId`, `timestamp`, `flowRateLpm` y
-`consumptionLiters`. El identificador combina el dispositivo, una sesión de
-arranque aleatoria y la secuencia de la lectura, por lo que se conserva al
-reintentar el mismo evento QoS 1 sin repetir la secuencia entre reinicios.
+Cada lectura publica `mqttMessageId`, `timestamp`, `flowRateLpm`,
+`consumptionLiters`, `totalLiters`, `pulses`, `sampleIntervalSeconds` y
+`wifiRssiDbm`. El identificador combina el dispositivo, una sesión de arranque
+aleatoria y la secuencia de la lectura, por lo que no se repite entre reinicios.

@@ -1,15 +1,20 @@
 class Device {
-  constructor({ id = null, code, name, type, manufacturer = null, model = null, alertThreshold = null, status = 'Active', firmwareVersion = null, lastConnectionAt = null }) {
+  constructor({ id = null, code, name, type, location = null, manufacturer = null, model = null, alertThreshold = null, status = 'Active', connectivityStatus = 'UNKNOWN', firmwareVersion = null, lastConnectionAt = null, wifiRssiDbm = null, signalQuality = null, batteryLevel = null }) {
     this.id = id;
     this.code = Device.validateText(code, 'code', 3, 100);
     this.name = Device.validateText(name, 'name', 1, 100);
     this.type = Device.validateText(type, 'type', 1, 50);
+    this.location = Device.optionalText(location, 'location', 120);
     this.manufacturer = Device.optionalText(manufacturer, 'manufacturer', 100);
     this.model = Device.optionalText(model, 'model', 100);
     this.alertThreshold = Device.validatePositive(alertThreshold, 'alertThreshold');
     this.status = status;
+    this.connectivityStatus = connectivityStatus;
     this.firmwareVersion = firmwareVersion;
     this.lastConnectionAt = lastConnectionAt;
+    this.wifiRssiDbm = wifiRssiDbm;
+    this.signalQuality = signalQuality;
+    this.batteryLevel = batteryLevel;
   }
 
   static create(attributes) {

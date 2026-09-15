@@ -45,13 +45,6 @@ services:
         psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_ingest LOGIN PASSWORD '$${INGEST_PASSWORD}';"
     restart: "no"
 
-  mailpit:
-    image: axllent/mailpit:v1.21
-    ports:
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "${MAILPIT_UI_PORT:-8025}:8025"
-    restart: unless-stopped
-
   mosquitto:
     image: eclipse-mosquitto:2.0.21
     ports:
@@ -94,19 +87,20 @@ services:
       AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173}
-      SMTP_HOST: ${SMTP_HOST:-mailpit}
-      SMTP_PORT: ${SMTP_PORT:-1025}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173/login}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-HidroSmart <no-reply@localhost>}
+      SMTP_FROM: ${SMTP_FROM:-HidroSmart <no-reply@gmail.com>}
       REPORT_STORAGE_DIR: /app/storage/reports
       MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://mosquitto:1883}
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-hidrosmart-backend}
       MQTT_USERNAME: ${MQTT_USERNAME:-}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
       MQTT_QOS: ${MQTT_QOS:-1}
+      MQTT_ALLOW_LEGACY_TELEMETRY: ${MQTT_ALLOW_LEGACY_TELEMETRY:-true}
       MQTT_RECONNECT_PERIOD_MS: ${MQTT_RECONNECT_PERIOD_MS:-3000}
       MQTT_CONNECT_TIMEOUT_MS: ${MQTT_CONNECT_TIMEOUT_MS:-10000}
       MQTT_MAX_PAYLOAD_BYTES: ${MQTT_MAX_PAYLOAD_BYTES:-16384}

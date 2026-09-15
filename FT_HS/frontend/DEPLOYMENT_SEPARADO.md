@@ -18,7 +18,7 @@ DB_USER=hidro_smart_app
 DB_PASSWORD=valor_secreto
 CORS_ORIGIN=https://app.tu-dominio.com
 FRONTEND_URL=https://app.tu-dominio.com
-PASSWORD_RESET_URL=https://app.tu-dominio.com
+PASSWORD_RESET_URL=https://app.tu-dominio.com/login
 ```
 
 Inicia con `docker compose --env-file .env up -d --build`. La API queda publicada, por ejemplo, como `https://api.tu-dominio.com/api/v1`.

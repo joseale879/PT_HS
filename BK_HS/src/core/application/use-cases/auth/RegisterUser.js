@@ -1,9 +1,12 @@
 const { PasswordPolicy } = require('../../services/auth/PasswordPolicy');
 
 class RegisterUser {
-  constructor({ authRepository, passwordHasher }) {
+  constructor({ authRepository, passwordHasher, tokenService, notificationService, logger = console }) {
     this.authRepository = authRepository;
     this.passwordHasher = passwordHasher;
+    this.tokenService = tokenService;
+    this.notificationService = notificationService;
+    this.logger = logger;
   }
 
   async execute({ username, email, password, fullName, documentType, documentNumber, privacyPolicyAccepted, termsAccepted, privacyPolicyVersion, termsVersion, sourceIp, userAgent }) {
@@ -28,7 +31,26 @@ class RegisterUser {
     const normalizedDocumentType = this.documentType(documentType);
     const normalizedDocumentNumber = this.documentNumber(documentNumber);
     const passwordHash = await this.passwordHasher.hash(normalizedPassword);
-    return this.authRepository.register({ username: normalizedUsername, email: normalizedEmail, fullName: normalizedFullName, documentType: normalizedDocumentType, documentNumber: normalizedDocumentNumber, passwordHash, privacyPolicyVersion, termsVersion, sourceIp, userAgent });
+    const userId = await this.authRepository.register({ username: normalizedUsername, email: normalizedEmail, fullName: normalizedFullName, documentType: normalizedDocumentType, documentNumber: normalizedDocumentNumber, passwordHash, privacyPolicyVersion, termsVersion, sourceIp, userAgent });
+
+    if (this.tokenService && this.authRepository.createEmailVerificationToken) {
+      const token = this.tokenService.generate();
+      const verificationId = await this.authRepository.createEmailVerificationToken({
+        login: normalizedEmail,
+        tokenHash: this.tokenService.hash(token),
+        expiresAt: this.tokenService.expiresAt(24)
+      });
+
+      if (verificationId && this.notificationService?.isConfigured?.()) {
+        try {
+          await this.notificationService.sendEmailVerification({ recipient: normalizedEmail, token });
+        } catch (error) {
+          this.logger.error('[AUTH] No se pudo enviar el correo de verificación:', error.message);
+        }
+      }
+    }
+
+    return userId;
   }
 
   documentType(value) {

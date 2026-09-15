@@ -364,3 +364,93 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260914-email-verification-pending
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account,security,email"
+      comment: "Allows Pending accounts and preserves the suspension invariant while email verification is pending."
+      changes:
+        - sqlFile:
+            path: 024_email_verification_pending.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/024_email_verification_pending.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-profile-avatar
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account,user-profile"
+      comment: "Adds the optional profile avatar data URL."
+      changes:
+        - sqlFile:
+            path: 025_profile_avatar.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/025_profile_avatar.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-profile-phone-max-60
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account,user-profile,validation"
+      comment: "Allows phone values up to 60 characters for international formats."
+      changes:
+        - sqlFile:
+            path: 026_profile_phone_max_60.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/026_profile_phone_max_60.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-consumption-precision
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,consumption,iot,precision"
+      comment: "Preserves sub-liter caudalimetro readings and rebuilds dependent materialized views."
+      changes:
+        - sqlFile:
+            path: 027_consumption_precision.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/027_consumption_precision.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-device-location
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,location"
+      comment: "Adds the visible physical location of an IoT device."
+      changes:
+        - sqlFile:
+            path: 028_device_location.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/028_device_location.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

@@ -49,6 +49,7 @@ Variables del backend:
 | `MQTT_USERNAME` | usuario del broker | vacío en Mosquitto local |
 | `MQTT_PASSWORD` | contraseña del broker | vacía en Mosquitto local |
 | `MQTT_CLIENT_ID` | identidad del backend | `hidrosmart-backend` |
+| `MQTT_ALLOW_LEGACY_TELEMETRY` | acepta temporalmente lecturas sin `mqttMessageId` | `true` en local |
 | `MQTT_QOS` | calidad de servicio | `1` |
 | `MQTT_RECONNECT_PERIOD_MS` | reconexión | `3000` |
 | `MQTT_CONNECT_TIMEOUT_MS` | timeout de conexión | `10000` |
@@ -115,13 +116,22 @@ QoS 1 puede entregar duplicados. El payload debe incluir `mqttMessageId` estable
 Con la pila levantada, publica contra `localhost:1883`:
 
 ```powershell
-docker compose exec mosquitto mosquitto_pub -h localhost -p 1883 -t hidrosmart/devices/ESP32-246F28ABCDEF/telemetry -q 1 -m '{"flowRateLpm":2.4,"consumptionLiters":0.04,"totalLiters":3.407,"pulses":18,"signalQuality":-56,"timestamp":"2026-09-04T15:30:00Z"}'
+docker compose exec mosquitto mosquitto_pub -h localhost -p 1883 -t hidrosmart/devices/ESP32-246F28ABCDEF/telemetry -q 1 -m '{"mqttMessageId":"manual-esp32-001","deviceId":"ESP32-246F28ABCDEF","flowRateLpm":2.4,"consumptionLiters":0.04,"totalLiters":3.407,"pulses":18,"wifiRssiDbm":-56,"timestamp":"2026-09-04T15:30:00Z"}'
 docker compose logs -f backend
 ```
 
 El resultado esperado es un mensaje procesado y una fila nueva en PostgreSQL,
 salvo que el mismo `mqttMessageId` ya exista, en cuyo caso se descarta el
 duplicado.
+
+## Compatibilidad temporal con el ESP32 instalado
+
+`MQTT_ALLOW_LEGACY_TELEMETRY=true` permite recibir lecturas del firmware
+anterior que no incluÃ­a `mqttMessageId`. El backend genera un identificador
+`legacy-{deviceCode}-{uuid}` para conservar las mÃ©tricas y persistirlas. Este
+modo no puede deduplicar reentregas del firmware antiguo; cuando todos los
+ESP32 publiquen su identificador propio, cambia la variable a `false` y vuelve
+a desplegar el backend.
 
 ## Seguridad
 

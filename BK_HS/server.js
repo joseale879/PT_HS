@@ -43,6 +43,7 @@ const mqttSubscriber = new MqttSubscriber({
   mqttClient,
   qos: mqttConfig.qos,
   maxPayloadBytes: mqttConfig.maxPayloadBytes,
+  allowLegacyTelemetry: mqttConfig.allowLegacyTelemetry,
   ingestReading: new IngestReading({ telemetryRepository }),
   deviceRepository: new PostgresDeviceRepository()
 });

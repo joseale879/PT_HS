@@ -36,7 +36,7 @@ independiente del frontend web.
 
 Estado: corregido en los documentos operativos.
 
-- La referencia vigente de Liquibase es **206 changesets** aplicados.
+- La referencia vigente de Liquibase es **217 changesets** aplicados.
 - MQTT ya persiste lecturas vÃ¡lidas en PostgreSQL mediante funciÃ³n SQL
   protegida, mÃ©tricas, timestamps separados e idempotencia por
   `mqttMessageId`.
@@ -44,8 +44,10 @@ Estado: corregido en los documentos operativos.
   lÃ­mites estÃ¡n documentados en `FT_HS/docs/`.
 - La autorizaciÃ³n efectiva sigue siendo backend + PostgreSQL/RLS; el frontend
   solo oculta o muestra opciones segÃºn permisos recibidos.
-- El avatar/foto de perfil no se declara conectado: si la ruta de persistencia
-  no existe, la interfaz no debe simular que se guardÃ³.
+- El avatar/foto de perfil ya está conectado: `user_profile.avatar_data_url` se
+  persiste mediante `/api/v1/users/me`, se valida por tipo y tamaño, y se devuelve
+  en `/api/v1/users/me` y en la sesión del frontend. El teléfono también quedó
+  ampliado a 60 caracteres en BD y backend.
 
 ## 56. ValidaciÃ³n completa
 

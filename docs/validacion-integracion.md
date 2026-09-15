@@ -13,7 +13,7 @@ produccion.
 Desde `PT_HS`:
 
 ```powershell
-docker compose --env-file .env up -d postgres db-bootstrap mosquitto mailpit
+docker compose --env-file .env up -d postgres db-bootstrap mosquitto
 docker compose --env-file .env --profile tooling run --rm liquibase validate
 docker compose --env-file .env --profile tooling run --rm liquibase update
 docker compose --env-file .env up -d --build backend frontend

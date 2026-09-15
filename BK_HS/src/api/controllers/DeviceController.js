@@ -7,10 +7,13 @@ const { DeactivateDeviceRequest } = require('../../core/application/dtos/request
 const { paginate } = require('../../shared/http');
 
 class DeviceController {
-  constructor({ registerDevice, listUserDevices, getDevice, updateDevice, updateDeviceConfig, updateDeviceStatus, deactivateDevice, unlinkDeviceFromHome }) {
+  constructor({ registerDevice, linkDeviceToHome, listUserDevices, getDevice, getLatestDeviceTelemetry, listDeviceTelemetry, updateDevice, updateDeviceConfig, updateDeviceStatus, deactivateDevice, unlinkDeviceFromHome }) {
     this.registerDevice = registerDevice;
+    this.linkDeviceToHome = linkDeviceToHome;
     this.listUserDevices = listUserDevices;
     this.getDevice = getDevice;
+    this.getLatestDeviceTelemetry = getLatestDeviceTelemetry;
+    this.listDeviceTelemetry = listDeviceTelemetry;
     this.updateDevice = updateDevice;
     this.updateDeviceConfig = updateDeviceConfig;
     this.updateDeviceStatus = updateDeviceStatus;
@@ -26,6 +29,15 @@ class DeviceController {
     });
 
     res.status(201).json({ data: DeviceResponse.fromEntity(device) });
+  }
+
+  async link(req, res) {
+    const device = await this.linkDeviceToHome.execute({
+      userId: req.user.id,
+      homeId: req.body?.homeId,
+      code: req.body?.code
+    });
+    res.status(200).json({ data: DeviceResponse.fromEntity(device) });
   }
 
   async list(req, res) {
@@ -48,10 +60,36 @@ class DeviceController {
       data: {
         deviceId: device.id,
         status: device.status,
+        connectivityStatus: device.connectivityStatus,
         firmwareVersion: device.firmwareVersion,
-        lastConnectionAt: device.lastConnectionAt
+        lastConnectionAt: device.lastConnectionAt,
+        wifiRssiDbm: device.wifiRssiDbm,
+        signalQuality: device.signalQuality,
+        batteryLevel: device.batteryLevel
       }
     });
+  }
+
+  async latestTelemetry(req, res) {
+    const telemetry = await this.getLatestDeviceTelemetry.execute({
+      userId: req.user.id,
+      deviceId: req.params.deviceId
+    });
+    res.json({ data: telemetry });
+  }
+
+  async telemetry(req, res) {
+    const result = await this.listDeviceTelemetry.execute({
+      userId: req.user.id,
+      deviceId: req.params.deviceId,
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+      from: req.query.from,
+      to: req.query.to,
+      sort: req.query.sort || 'measuredAt',
+      order: req.query.order || 'desc'
+    });
+    res.json({ data: result.items, pagination: result.pagination });
   }
 
   async update(req, res) {

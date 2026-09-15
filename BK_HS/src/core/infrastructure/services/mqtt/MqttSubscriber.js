@@ -5,10 +5,11 @@ const { handleActuatorStatus } = require('../../../../mqtt/handlers/actuator-sta
 const { setMqttState } = require('../../../../shared/runtimeState');
 
 class MqttSubscriber {
-  constructor({ mqttClient, qos = 1, maxPayloadBytes = 16 * 1024, logger = console, handlers = {}, readingRepository = null, ingestReading = null, deviceRepository = null }) {
+  constructor({ mqttClient, qos = 1, maxPayloadBytes = 16 * 1024, allowLegacyTelemetry = true, logger = console, handlers = {}, readingRepository = null, ingestReading = null, deviceRepository = null }) {
     this.mqttClient = mqttClient;
     this.qos = qos;
     this.maxPayloadBytes = maxPayloadBytes;
+    this.allowLegacyTelemetry = allowLegacyTelemetry;
     this.logger = logger;
     this.readingRepository = readingRepository;
     this.ingestReading = ingestReading;
@@ -65,7 +66,7 @@ class MqttSubscriber {
     }
 
     try {
-      await handler({ topic, message, context, logger: this.logger, readingRepository: this.readingRepository, ingestReading: this.ingestReading, deviceRepository: this.deviceRepository, maxPayloadBytes: this.maxPayloadBytes });
+      await handler({ topic, message, context, logger: this.logger, readingRepository: this.readingRepository, ingestReading: this.ingestReading, deviceRepository: this.deviceRepository, maxPayloadBytes: this.maxPayloadBytes, allowLegacyTelemetry: this.allowLegacyTelemetry });
     } catch (error) {
       this.logger.error(`[MQTT] Mensaje rechazado en ${topic}:`, error.message);
     }

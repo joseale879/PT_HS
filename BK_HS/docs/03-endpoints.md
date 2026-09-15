@@ -28,6 +28,8 @@ Este documento refleja las rutas montadas actualmente en `BK_HS/src/app.js`. La 
 | POST | `/api/v1/auth/request-password-reset` | público |
 | GET | `/api/v1/auth/password-reset-context?resetToken=...` | público con token vigente; devuelve solo el correo asociado |
 | POST | `/api/v1/auth/reset-password` | público con token de un solo uso |
+| POST | `/api/v1/auth/resend-verification` | público; reenvía un enlace de verificación con respuesta neutra |
+| POST | `/api/v1/auth/verify-email` | público con token de verificación de un solo uso |
 
 `GET /auth/sessions` nunca devuelve hashes ni tokens. `DELETE /auth/sessions/:sessionId` responde `204` al cerrar una sesion propia; una sesion inexistente, ajena o ya cerrada responde `404`. Las operaciones masivas devuelven `{ data: { revokedCount } }`.
 
@@ -40,10 +42,12 @@ Este documento refleja las rutas montadas actualmente en `BK_HS/src/app.js`. La 
 | PUT | `/api/v1/users/me` | autenticado |
 | GET | `/api/v1/users/me/preferences` | autenticado |
 | PUT | `/api/v1/users/me/preferences` | autenticado |
+| GET | `/api/v1/users/me/notifications` | autenticado; preferencias propias de avisos por correo |
+| PUT | `/api/v1/users/me/notifications` | autenticado; guarda avisos de consumo, alertas, dispositivos y canal Gmail |
 | PATCH | `/api/v1/users/:userId/status` | `users.manage` |
 | DELETE | `/api/v1/users/:userId` | `users.manage`; eliminación lógica |
 
-El correo y el documento se mantienen inmutables en la actualización de perfil según el caso de uso actual.
+El correo y el documento se mantienen inmutables en la actualización de perfil según el caso de uso actual. El perfil permite actualizar `fullName`, `city`, `phone` (máximo 60 caracteres) y `avatarDataUrl` (JPG, PNG o WebP en base64, máximo 2 MB).
 
 ## Homes — `/homes`
 
@@ -54,21 +58,32 @@ El correo y el documento se mantienen inmutables en la actualización de perfil 
 | GET | `/api/v1/homes/:homeId` | autenticado y con acceso al hogar |
 | PUT | `/api/v1/homes/:homeId` | `homes.manage` |
 | GET | `/api/v1/homes/:homeId/members` | autenticado y con acceso al hogar |
-| POST | `/api/v1/homes/:homeId/members` | `homes.manage` |
+| POST | `/api/v1/homes/:homeId/members` | `homes.manage`; agrega una cuenta activa y envía el aviso de acceso por SMTP |
 | PATCH | `/api/v1/homes/:homeId/members/:memberUserId/role` | `homes.manage` |
 | DELETE | `/api/v1/homes/:homeId/members/:memberUserId` | `homes.manage` |
 | POST | `/api/v1/homes/:homeId/membership-requests` | autenticado |
 | GET | `/api/v1/homes/:homeId/membership-requests` | autenticado y con acceso al hogar |
 | PATCH | `/api/v1/homes/membership-requests/:requestId` | `homes.manage` |
 
+`POST /api/v1/homes/:homeId/members` recibe `{ "email": "persona@correo.com", "homeRole": "Member" | "Guest" }`.
+El correo debe corresponder a una cuenta activa. PostgreSQL mantiene la
+validación de propietario, permiso y duplicados; después de confirmar el alta,
+el backend envía el aviso de acceso mediante el SMTP configurado y responde
+con `notification.sent` y `notification.configured`. Si SMTP no está
+disponible, el miembro permanece agregado y `notification.sent` queda en
+`false`.
+
 ## Devices — `/devices`
 
 | Método | Ruta completa | Acceso |
 |---|---|---|
 | POST | `/api/v1/devices` | `devices.manage` |
+| POST | `/api/v1/devices/link` | `devices.manage`; vinculación por código técnico y titularidad del hogar |
 | GET | `/api/v1/devices` | autenticado; lista dispositivos autorizados con `homeId`, `page`, `pageSize`, `sort` y `order` |
 | GET | `/api/v1/devices/:deviceId` | autenticado y con acceso al dispositivo |
 | GET | `/api/v1/devices/:deviceId/status` | autenticado y con acceso al dispositivo |
+| GET | `/api/v1/devices/:deviceId/telemetry` | autenticado y con acceso al dispositivo; historial paginado con filtros `from`, `to`, `sort` y `order` |
+| GET | `/api/v1/devices/:deviceId/telemetry/latest` | autenticado y con acceso al dispositivo; devuelve la ultima lectura o `null` |
 | PUT | `/api/v1/devices/:deviceId` | `devices.manage` |
 | PUT | `/api/v1/devices/:deviceId/config` | `devices.manage` |
 | PATCH | `/api/v1/devices/:deviceId/status` | `devices.manage` |
@@ -76,6 +91,7 @@ El correo y el documento se mantienen inmutables en la actualización de perfil 
 | DELETE | `/api/v1/devices/:deviceId/home/:homeId` | `devices.manage` |
 
 El `device.code` de este módulo es el identificador que debe aparecer en el topic MQTT como `{deviceCode}`. Registrar el dispositivo por REST no genera por sí solo una lectura MQTT.
+El registro acepta `location` (máximo 120 caracteres) para el lugar visible del sensor. La vinculación de un dispositivo ya existente usa `{ homeId, code }` en `POST /api/v1/devices/link`; el `code` debe coincidir exactamente con el código que publica el ESP32, por ejemplo `ESP32-001`.
 
 ## Actuators — `/actuators`
 
@@ -106,8 +122,11 @@ El estado reportado por el dispositivo actualiza `device.actuator_state`. Si el 
 | GET | `/api/v1/consumption/monthly` | `consumption.read` |
 | GET | `/api/v1/consumption/hourly` | `consumption.read` |
 | GET | `/api/v1/consumption/cost` | `consumption.read` |
+| GET | `/api/v1/consumption/advanced` | `consumption.read`; series agrupadas por `daily`, `hourly`, `monthly` o `location` |
 
 Estas rutas consultan agregados de PostgreSQL. No son un endpoint de entrada MQTT ni representan por sí mismas caudal instantáneo. Para proteger consultas grandes, `summary` y `cost` aceptan periodos de máximo 366 días; los reportes PDF/Excel aplican el mismo límite.
+
+`GET /api/v1/consumption/advanced` recibe `homeId`, `from`, `to` y `groupBy`. Devuelve puntos con fecha/hora o ubicación, litros, m³, cantidad de lecturas, flujo promedio y flujo máximo. La autorización del hogar se comprueba en el caso de uso y nuevamente en `consumption.fn_get_consumption_series(...)`.
 
 ## Tariffs — `/tariffs`
 

@@ -8,7 +8,7 @@ npm.cmd ci --prefix BK_HS
 npm.cmd ci --prefix FT_HS/frontend
 
 Write-Host '== Levantando servicios ==' -ForegroundColor Cyan
-docker compose --env-file .env up -d postgres db-bootstrap mosquitto mailpit
+docker compose --env-file .env up -d postgres db-bootstrap mosquitto
 
 Write-Host '== Validando base de datos ==' -ForegroundColor Cyan
 docker compose --env-file .env --profile tooling run --rm liquibase validate

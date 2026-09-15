@@ -22,15 +22,13 @@ class AuthController {
 
   async register(req, res) {
     const input = RegisterUserRequest.fromRequest(req.body);
-    const userId = await this.registerUser.execute({ ...input, sourceIp: req.ip, userAgent: req.get('user-agent') || null });
-    const session = await this.sessionService.create(userId, this.meta(req));
-    void this.resendEmailVerification.execute({ email: input.email }).catch((error) => {
-      console.error('[AUTH] No se pudo preparar el correo de verificación:', error.message);
+    await this.registerUser.execute({ ...input, sourceIp: req.ip, userAgent: req.get('user-agent') || null });
+    res.status(202).json({
+      data: {
+        message: 'Revisa tu correo para activar la cuenta.',
+        email: input.email
+      }
     });
-    void this.notifyWelcome({ recipient: input.email, name: input.fullName || input.username }).catch((error) => {
-      this.logger.error('[AUTH] No se pudo enviar el correo de bienvenida:', error.message);
-    });
-    res.status(201).json({ data: AuthResponse.fromSession(session) });
   }
 
   async login(req, res) {
@@ -98,11 +96,6 @@ class AuthController {
   async passwordResetContext(req, res) {
     const data = await this.getPasswordResetContext.execute({ resetToken: req.query?.resetToken });
     res.json({ data });
-  }
-
-  async notifyWelcome(profile) {
-    if (!this.notificationService?.isConfigured?.()) return;
-    await this.notificationService.sendWelcome(profile);
   }
 
   meta(req) {

@@ -9,6 +9,8 @@ La documentación se mantiene alineada con el código que realmente está montad
 - `00-estado-actual.md`: estado comprobado del backend.
 - `00-integracion-front-back-bd.md`: conexiones, variables y flujo entre capas.
 - `03-endpoints.md`: inventario de rutas REST reales.
+- `../../docs/dispositivos-iot.md`: guía operativa de registro, vinculación,
+  edición y comprobación de dispositivos.
 - `14-mqtt-protocol.md`: contrato MQTT vigente para el backend y el ESP32.
 - `13-flujo-datos-iot.md`: flujo IoT y límites actuales.
 - `pendientes-proyecto.md`: checklist de trabajo pendiente.
@@ -26,7 +28,7 @@ Los documentos `01` a `12` conservan decisiones de arquitectura, dominio, seguri
 
 La persistencia de telemetría MQTT está conectada mediante `device.fn_ingest_sensor_reading`, con métricas validadas e idempotencia por `mqttMessageId`. El dominio de recomendaciones está expuesto en `/api/v1/recommendations` y protegido por `reports.read` más RLS. El dominio de actuadores está expuesto en `/api/v1/actuators`, con comandos publicados por MQTT, estados persistidos y ACK por `correlationId`.
 
-El último corte comprobado tiene 131 pruebas unitarias backend aprobadas. Las
+El último corte comprobado tiene 157 pruebas unitarias backend aprobadas. Las
 pruebas autenticadas/RLS de integración se omiten cuando no se configuran
 usuarios funcionales de prueba.
 
@@ -48,8 +50,10 @@ directamente desde Windows.
 ## Estado de integraciones
 
 - PostgreSQL: conectado mediante repositorios y funciones versionadas.
+- Consumo avanzado: `GET /api/v1/consumption/advanced` usa la función SQL
+  autorizada para series diarias, horarias, mensuales y por ubicación.
 - JWT: access token, refresh token, logout, cambio y recuperación de contraseña.
-- SMTP: Nodemailer integrado para Gmail y Mailpit; envía eventos de autenticación, perfil y ciclo de cuenta; requiere configurar las variables
+- SMTP: Nodemailer integrado para Gmail; envía eventos de autenticación, perfil, ciclo de cuenta y acceso a hogares; requiere configurar las variables
   `SMTP_*` y una clave de aplicación.
 - MQTT: conexión, suscripción, parseo, publicación y persistencia de lecturas
   mediante función SQL protegida.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
 import { Button } from '@shared/ui/button';
@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@shared/ui/dialog';
-import { supportApi } from '@shared/http/httpClient';
+import { CollectionPagination, supportApi } from '@shared/http/httpClient';
 import { toast } from 'sonner';
 
 type Ticket = {
@@ -32,6 +32,15 @@ type TicketResponse = {
   message: string;
   createdAt: string;
 };
+type TicketSort = 'createdAt' | 'title' | 'status' | 'priority';
+const DEFAULT_PAGE_SIZE = 10;
+const EMPTY_PAGINATION: CollectionPagination = {
+  page: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  total: 0,
+  totalPages: 1,
+};
+
 export function SupportTickets({ management = false }: { management?: boolean }) {
   const { t } = useTranslation();
   const statusLabel: Record<string, string> = {
@@ -44,6 +53,13 @@ export function SupportTickets({ management = false }: { management?: boolean })
   const [categories, setCategories] = useState<Array<{ categoryId: string; name: string }>>([]);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [sort, setSort] = useState<TicketSort>('createdAt');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  const [pagination, setPagination] = useState<CollectionPagination>(EMPTY_PAGINATION);
+  const [loading, setLoading] = useState(false);
   const [updatingTicketId, setUpdatingTicketId] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [responses, setResponses] = useState<TicketResponse[]>([]);
@@ -51,23 +67,39 @@ export function SupportTickets({ management = false }: { management?: boolean })
   const [responseMessage, setResponseMessage] = useState('');
   const [sendingResponse, setSendingResponse] = useState(false);
 
-  const load = () =>
-    supportApi
-      .list()
-      .then(({ data }) => setTickets(data as Ticket[]))
-      .catch((error) =>
-        toast.error(error instanceof Error ? error.message : t('support.ticketsLoadError'))
-      );
+  const load = useCallback(async () => {
+    setLoading(true);
+    const query = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+      sort,
+      order,
+    });
+    if (filter !== 'all') query.set('status', filter);
+    if (priorityFilter !== 'all') query.set('priority', priorityFilter);
+    try {
+      const response = await supportApi.list(query.toString());
+      setTickets(response.data as Ticket[]);
+      setPagination(response.pagination || { ...EMPTY_PAGINATION, page, pageSize });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('support.ticketsLoadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, order, page, pageSize, priorityFilter, sort, t]);
+
   useEffect(() => {
-    const ticketRequest = supportApi.list();
-    const request = management ? Promise.resolve(null) : supportApi.categories();
-    Promise.all([request, ticketRequest])
-      .then(([categoryResponse, ticketResponse]) => {
-        if (categoryResponse) {
-          setCategories(categoryResponse.data as Array<{ categoryId: string; name: string }>);
-        }
-        setTickets(ticketResponse.data as Ticket[]);
-      })
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (management) {
+      setCategories([]);
+      return;
+    }
+    supportApi
+      .categories()
+      .then(({ data }) => setCategories(data as Array<{ categoryId: string; name: string }>))
       .catch((error) =>
         toast.error(error instanceof Error ? error.message : t('support.supportLoadError'))
       );
@@ -86,7 +118,7 @@ export function SupportTickets({ management = false }: { management?: boolean })
       toast.success(t('support.ticketCreatedShort'));
       setOpen(false);
       event.currentTarget.reset();
-      load();
+      await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('support.ticketCreateError'));
     }
@@ -144,7 +176,8 @@ export function SupportTickets({ management = false }: { management?: boolean })
     }
   };
 
-  const visible = tickets.filter((ticket) => filter === 'all' || ticket.status === filter);
+  const visible = tickets;
+  const totalPages = Math.max(1, pagination.totalPages || 1);
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -202,19 +235,58 @@ export function SupportTickets({ management = false }: { management?: boolean })
           </Dialog>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {['all', 'Abierto', 'En Proceso', 'Resuelto', 'Cerrado'].map((value) => (
           <Button
             key={value}
             variant={filter === value ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setFilter(value)}
+            onClick={() => {
+              setFilter(value);
+              setPage(1);
+            }}
           >
             {value === 'all'
               ? t('support.all', { count: tickets.length })
               : statusLabel[value] || value}
           </Button>
         ))}
+        <select
+          aria-label={t('support.priorityFilter')}
+          className="h-9 rounded-md border bg-background px-3 text-sm"
+          value={priorityFilter}
+          onChange={(event) => {
+            setPriorityFilter(event.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="all">{t('support.allPriorities')}</option>
+          <option value="Alta">{t('support.high')}</option>
+          <option value="Media">{t('support.medium')}</option>
+          <option value="Baja">{t('support.low')}</option>
+        </select>
+        <select
+          aria-label={t('support.sortBy')}
+          className="h-9 rounded-md border bg-background px-3 text-sm"
+          value={sort}
+          onChange={(event) => {
+            setSort(event.target.value as TicketSort);
+            setPage(1);
+          }}
+        >
+          <option value="createdAt">{t('support.sortCreatedAt')}</option>
+          <option value="title">{t('support.sortTitle')}</option>
+          <option value="priority">{t('support.sortPriority')}</option>
+          <option value="status">{t('support.sortStatus')}</option>
+        </select>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setOrder((current) => (current === 'asc' ? 'desc' : 'asc'))}
+        >
+          {order === 'asc' ? t('support.ascending') : t('support.descending')}
+        </Button>
       </div>
       <Card>
         <CardHeader>
@@ -222,10 +294,14 @@ export function SupportTickets({ management = false }: { management?: boolean })
             <Headphones className="mr-2 inline size-5" />
             {management ? t('support.ticketsReceived') : t('support.myTickets')}
           </CardTitle>
-          <CardDescription>{t('support.ticketCount', { count: visible.length })}</CardDescription>
+          <CardDescription>{t('support.ticketCount', { count: pagination.total })}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {visible.length ? (
+          {loading ? (
+            <div className="flex items-center gap-2 py-8 text-sm text-gray-600">
+              <Loader2 className="size-4 animate-spin" /> {t('support.loadingTickets')}
+            </div>
+          ) : visible.length ? (
             visible.map((ticket) => (
               <div key={ticket.ticketId} className="rounded-lg border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -274,6 +350,47 @@ export function SupportTickets({ management = false }: { management?: boolean })
           ) : (
             <p className="text-sm text-gray-500">{t('support.noTicketsToShow')}</p>
           )}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>{t('support.pageSize')}</span>
+              <select
+                aria-label={t('support.pageSize')}
+                className="h-8 rounded-md border bg-background px-2"
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+              <span>{t('support.pageSummary', { page, totalPages, total: pagination.total })}</span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={loading || page <= 1}
+                aria-label={t('support.previousPage')}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+              >
+                ←
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={loading || page >= totalPages}
+                aria-label={t('support.nextPage')}
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              >
+                →
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

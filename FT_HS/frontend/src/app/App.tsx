@@ -24,6 +24,8 @@ type RegistrationDraft = {
 type RegistrationLocationState = {
   draft?: RegistrationDraft;
   legalAccepted?: boolean;
+  registrationPending?: boolean;
+  registeredEmail?: string;
 };
 
 function LoadingScreen() {
@@ -61,9 +63,13 @@ function PublicOnlyRoute() {
 
 function LoginRoute() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, requestPasswordReset, passwordResetContext, resetPassword } = useAuth();
+  const state = (location.state || {}) as RegistrationLocationState;
   return (
     <LoginScreen
+      initialEmail={state.registeredEmail || ''}
+      registrationPending={Boolean(state.registrationPending)}
       onLogin={async (credentials) => {
         await login(credentials);
         navigate('/app', { replace: true });
@@ -84,8 +90,11 @@ function RegisterRoute() {
   return (
     <RegisterScreen
       onRegister={async (payload) => {
-        await register(payload);
-        navigate('/app', { replace: true });
+        const result = await register(payload);
+        navigate('/login', {
+          replace: true,
+          state: { registrationPending: true, registeredEmail: result.email },
+        });
       }}
       onBack={() => navigate('/login')}
       initialFormData={state.draft || null}

@@ -10,27 +10,27 @@ comprobado en el entorno local y de lo que todavÃ­a requiere trabajo.
 
 | Capa | Estado comprobado | Alcance actual |
 |---|---|---|
-| Base de datos | Operativa | PostgreSQL 16, Liquibase al día con 206 changesets, funciones, grants, RLS y datos de desarrollo |
+| Base de datos | Operativa | PostgreSQL 16, Liquibase al día con 217 changesets, funciones, grants, RLS y datos de desarrollo |
 | Backend | Operativo | API Express bajo `/api/v1`, autenticaciÃ³n, sesiones, dominios principales, SMTP, MQTT y persistencia IoT |
 | Frontend web | Compila y se integra | React + TypeScript + Vite, rutas protegidas, cliente HTTP centralizado, roles e i18n |
 | Frontend mÃ³vil | Bundle verificado | Expo + React Native + WebView, agrupado con Web bajo `FT_HS/frontend` |
-| Docker | Operativo local | PostgreSQL, bootstrap, backend, frontend, Mailpit y Mosquitto |
+| Docker | Operativo local | PostgreSQL, bootstrap, backend, frontend y Mosquitto |
 | MQTT | Persistencia y control conectados | Telemetría, estados y comandos de actuadores pasan por broker; los ACK se correlacionan y persisten |
-| SMTP | Mailpit local disponible | Gmail estÃ¡ soportado por Nodemailer, pero el envÃ­o real con una cuenta Gmail debe verificarse con credenciales locales |
+| SMTP | Gmail SMTP configurable | Nodemailer envÃ­a eventos mediante las variables `SMTP_*` del `.env`; la entrega real requiere credenciales locales válidas |
 | Firmware | Estructura presente | Existe `firmware/`; la compilaciÃ³n con hardware real y su seguimiento en Git todavÃ­a deben confirmarse |
 
 ## Evidencia ejecutada
 
 - Liquibase `validate`: aprobado.
-- Liquibase `status --verbose`: `up to date`, 206 changesets aplicados.
+- Liquibase `status --verbose`: `up to date`, 217 changesets aplicados.
 - Backend `npm.cmd run check`: aprobado.
-- Backend `npm.cmd test`: 131/131 pruebas unitarias aprobadas.
+- Backend `npm.cmd test`: 156/156 pruebas unitarias aprobadas.
 - Frontend `npm.cmd run typecheck`, `npm.cmd run lint` y `npm.cmd run build`: aprobados.
 - Frontend mÃ³vil `npm.cmd run mobile:prepare`: aprobado; genera el bundle web para WebView.
-- Frontend `npm.cmd audit --omit=dev`: 0 vulnerabilidades de producciÃ³n.
+- Frontend `npm.cmd audit --omit=dev`: 19 vulnerabilidades de dependencias reportadas por Expo/Metro/Vite; resolverlas requiere una actualización mayor y no se aplicó `npm audit fix --force` automáticamente.
 - `FT_HS/frontend` no tiene pruebas automatizadas descubiertas actualmente; `npm test`
   finaliza con 0 pruebas, por lo que no equivale a cobertura funcional.
-- Docker: `backend` saludable, `postgres` saludable, `frontend`, `mailpit` y
+- Docker: `backend` saludable, `postgres` saludable, `frontend` y
   `mosquitto` levantados en la Ãºltima verificaciÃ³n.
 - Health backend: `http://localhost:3000/health/ready` respondiÃ³ HTTP 200.
 - Health frontend: `http://localhost:5173/health` respondiÃ³ HTTP 200.
@@ -59,6 +59,16 @@ comprobado en el entorno local y de lo que todavÃ­a requiere trabajo.
 - Idempotencia por `mqttMessageId`, validaciÃ³n de dispositivo activo, separaciÃ³n
   entre `measured_at` y `received_at` y control de timestamps.
 - Las funciones y vistas de consumo alimentan los endpoints agregados del backend.
+- `consumption.fn_get_consumption_series(...)` entrega series diarias, horarias,
+  mensuales y por ubicación con autorización de hogar, métricas de flujo y
+  conteo de lecturas.
+- El registro crea cuentas en estado `Pending`; el consumo de un token válido de
+  verificación marca `email_verified_at` y activa la cuenta.
+- `user_profile.avatar_data_url` permite una foto opcional validada por backend
+  (JPG, PNG o WebP, máximo 2 MB) y `phone` admite hasta 60 caracteres.
+- `consumption.sensor_reading` conserva litros con `NUMERIC(14,3)` y m³ con
+  `NUMERIC(14,6)`, incluida la precisión de muestras de `0.040 L` del
+  caudalímetro.
 
 ### Datos de desarrollo observados
 
@@ -66,20 +76,19 @@ Los conteos funcionales de roles en la base local durante la verificaciÃ³n fue
 
 | Rol funcional | Usuarios observados |
 |---|---:|
-| `Administrator` | 0 |
-| `Support` | 0 |
-| `HomeUser` | 5 |
-| `Guest` | 0 |
+| `Administrator` | 2 |
+| `Support` | 2 |
+| `HomeUser` | 6 |
+| `Guest` | 1 |
 
-Esto significa que la estructura RBAC existe, pero la prueba funcional de paneles
-administrativo y de soporte requiere crear o configurar usuarios de prueba.
+La base local ya contiene cuentas para probar los paneles administrativo y de
+soporte. Estas cuentas son de desarrollo y no deben usarse como credenciales de
+producción.
 
 ### Pendientes de BD
 
-- Migrar la precisiÃ³n de `consumption.sensor_reading.consumption_liters`, hoy
-  `NUMERIC(10,2)`, si el firmware conservarÃ¡ muestras como `0.040 L`.
-- Revisar la columna generada `consumption_m3`, funciones, vistas, reportes e
-  Ã­ndices dependientes de esa precisiÃ³n.
+- La precisiÃ³n de `consumption.sensor_reading` ya estÃ¡ versionada: litros en
+  `NUMERIC(14,3)` y m3 generado en `NUMERIC(14,6)`.
 - La auditorÃ­a se consulta por funciÃ³n SQL y endpoint administrativo protegido;
   no se concede acceso directo a la tabla al rol de aplicaciÃ³n. La matriz de
   roles ya verifica `200` para administraciÃ³n y `403` para los demÃ¡s roles.
@@ -97,6 +106,8 @@ administrativo y de soporte requiere crear o configurar usuarios de prueba.
 - API Express bajo `/api/v1` y health pÃºblico/operativo.
 - Registro, login, access token, refresh token rotativo, logout, revocaciÃ³n de
   sesiones, cambio de contraseÃ±a, recuperaciÃ³n y restablecimiento.
+- La verificación de correo se envía al registrarse, el reenvío invalida tokens
+  anteriores y una cuenta `Pending` no puede iniciar sesión.
 - VerificaciÃ³n y reenvÃ­o de correo, con Nodemailer y transporte configurable.
 - Perfil, preferencias de idioma/moneda, hogares, miembros, solicitudes,
   dispositivos, consumo, tarifas, alertas, metas, vacaciones, recomendaciones,
@@ -105,6 +116,8 @@ administrativo y de soporte requiere crear o configurar usuarios de prueba.
   utilidad; el acceso queda respaldado por `reports.read` y RLS.
 - ValidaciÃ³n compartida de rangos de consumo con mÃ¡ximo de 366 dÃ­as para resumen,
   costo y reportes PDF/Excel.
+- `GET /api/v1/consumption/advanced` expone la serie agrupada para las pantallas
+  de Dashboard, Consumo y Reportes.
 - AutorizaciÃ³n por permiso y acceso al hogar/dispositivo; la visibilidad del
   frontend no reemplaza las guardas del backend ni RLS.
 - MQTT con subscriber, parser, handlers, lÃ­mites de payload, persistencia SQL e
@@ -126,6 +139,16 @@ administrativo y de soporte requiere crear o configurar usuarios de prueba.
 `/api/v1/actuators`.
 La lista completa de mÃ©todos y permisos estÃ¡ en
 [`BK_HS/docs/03-endpoints.md`](../BK_HS/docs/03-endpoints.md).
+
+El alta IoT esta conectada mediante `POST /api/v1/devices`: crea el dispositivo y
+la asignacion al hogar en una transaccion. La solicitud admite `location` para
+identificar el lugar visible del sensor. Un equipo ya registrado se vincula con
+`POST /api/v1/devices/link` usando su codigo MQTT exacto. La ultima muestra se
+consulta con `GET /api/v1/devices/:deviceId/telemetry/latest`, protegido por
+membresia.
+
+La guia operativa completa para registrar, vincular, editar y comprobar equipos
+esta en [`docs/dispositivos-iot.md`](dispositivos-iot.md).
 
 ### Pendientes de backend
 
@@ -151,9 +174,16 @@ La lista completa de mÃ©todos y permisos estÃ¡ en
 - Login, registro, recuperaciÃ³n/restablecimiento, logout y cambio de contraseÃ±a.
 - Consumo del perfil `/users/me`, preferencias de idioma/moneda y permisos del
   backend.
+- Perfil con avatar opcional persistido y teléfono de hasta 60 caracteres,
+  sincronizado con el encabezado y la sesión actual.
 - Dashboard, hogares, dispositivos, consumo, reportes PDF/Excel, alertas, metas,
   vacaciones, soporte, privacidad y administraciÃ³n consumen las APIs disponibles;
   recomendaciones se presenta como contenido visual informativo.
+- Dashboard, Consumo y Reportes consultan series avanzadas del backend para no
+  calcular agregados con cifras quemadas en el navegador.
+- Dashboard consulta el historial real de alertas pendientes y ya no fabrica una
+  alerta sintética a partir del contador.
+- Hogares presenta sus tarjetas en un carrusel horizontal responsive.
 - NavegaciÃ³n por roles `Administrator`, `Support`, `HomeUser` y `Guest`; guardas
   tambiÃ©n al entrar directamente por URL.
 - Panel administrativo y panel de soporte separados. `HomeUser` y `Guest` no
@@ -161,6 +191,9 @@ La lista completa de mÃ©todos y permisos estÃ¡ en
 - Soporte con detalle, historial, respuestas y actualizaciÃ³n de estado.
 - Sidebar colapsable/hamburguesa, responsive base e internacionalizaciÃ³n en
   espaÃ±ol, inglÃ©s, portuguÃ©s e italiano.
+
+La pantalla de dispositivos muestra la conectividad MQTT real y las metricas de
+la ultima lectura persistida; un equipo sin muestras queda en estado vacio.
 
 ### Limitaciones y pendientes de frontend
 
@@ -177,8 +210,8 @@ La lista completa de mÃ©todos y permisos estÃ¡ en
   minificar aunque el build termina correctamente.
 - Verificar visualmente en iPhone/Android real o emulador.
 - Conectar tiempo real MQTT cuando exista el contrato definitivo del producto.
-- Implementar eliminaciÃ³n/seguimiento completo de solicitudes ARCO, foto de
-  perfil y pruebas de comandos de actuadores cuando el contrato lo cierre.
+- Implementar eliminación/seguimiento completo de solicitudes ARCO y pruebas de
+  comandos de actuadores cuando el contrato lo cierre.
 - El indicador â€œflujo actualâ€ del dashboard representa el Ãºltimo punto agregado
   horario disponible; no debe documentarse como caudal MQTT en tiempo real.
 
@@ -208,7 +241,7 @@ telemetrÃ­a con la escala de consumo elegida.
 
 ### Correo
 
-Mailpit sirve para pruebas locales en `http://localhost:8025`. Gmail se configura
+Gmail se configura
 por SMTP con una clave de aplicaciÃ³n en el `.env` local; las credenciales reales
 no pertenecen a ningÃºn documento ni commit. Falta verificar el envÃ­o real de cada
 evento en una cuenta Gmail y revisar plantillas, enlaces y expiraciÃ³n en un
@@ -228,7 +261,6 @@ docker compose --env-file .env ps
 - Backend readiness: `http://localhost:3000/health/ready`
 - Frontend health: `http://localhost:5173/health`
 - PostgreSQL externo: `localhost:5433`
-- Mailpit: `http://localhost:8025`
 - MQTT: `localhost:1883`
 
 Para validar la base:
@@ -246,7 +278,7 @@ docker compose --env-file .env --profile tooling run --rm liquibase status --ver
    confirma la necesidad de muestras menores a `0.01 L`.
 3. Completar actuadores, estados reales del dispositivo y seguridad del broker.
 4. Completar estados, pruebas y responsive del frontend.
-5. Verificar Gmail real y dejar Mailpit como transporte local reproducible.
+5. Verificar la entrega real de Gmail con una cuenta de prueba controlada.
 6. Extender la validaciÃ³n continua ya existente con una suite frontend
    automatizada y pruebas E2E.
 - Bitácora de cambios verificados del 2026-09-14: `cambios-2026-09-14.md`.

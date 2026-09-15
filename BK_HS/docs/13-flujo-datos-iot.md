@@ -74,6 +74,10 @@ SQL protegida. La resolución `deviceCode -> device_id -> home_id`, la
 validación del estado/asignación, la idempotencia y el historial de telemetría
 se ejecutan dentro del circuito de ingesta.
 
+El frontend consulta la ultima lectura por `GET /api/v1/devices/:deviceId/telemetry/latest`.
+La ruta comprueba la membresia del usuario al hogar del dispositivo y devuelve
+`data: null` cuando el equipo todavia no ha enviado ninguna muestra.
+
 El circuito implementado cubre:
 
 1. Resolución segura del dispositivo por código.
@@ -83,7 +87,8 @@ El circuito implementado cubre:
 5. Métricas MQTT, timestamps separados y deduplicación por `mqttMessageId`.
 6. Idempotencia y manejo de duplicados por QoS 1.
 7. Política para timestamp atrasado, futuro o fuera de rango.
-8. Pendiente de producto: ajustar la precisión de `consumption_liters`, que hoy es `NUMERIC(10,2)`, si se confirma la ingesta de lecturas como `0.040 L` por segundo.
+8. La precisión ya quedó ajustada a `NUMERIC(14,3)` para litros y `NUMERIC(14,6)`
+   para m³; queda validar la calibración con el caudalímetro real.
 
 ## Estado de dispositivo y actuadores
 

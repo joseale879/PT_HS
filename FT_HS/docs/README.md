@@ -14,6 +14,7 @@ pendientes globales consulta
 - [Acceso local y paneles por rol](./acceso-local-y-roles.md)
 - [Rutas de pantalla e integración API](./rutas-y-api-frontend.md)
 - [Pendientes exclusivos del frontend](./pendientes-frontend.md)
+- [Guía de dispositivos IoT](../../docs/dispositivos-iot.md)
 
 ## Proyecto unificado
 

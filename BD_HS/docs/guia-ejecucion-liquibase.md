@@ -9,7 +9,7 @@ Esta guía usa el `docker-compose.yml` de la raíz del repositorio. La base de d
 - PostgreSQL 16 está saludable.
 - Puerto externo: `5433`; puerto interno Docker: `5432`.
 - Liquibase 5.0.2 está configurado en el servicio `tooling`; la última ejecución de `validate`, `update` y `status` fue exitosa.
-- Hay 206 changesets aplicados y `status --verbose` reporta `up to date` en el último estado verificado.
+- Hay 217 changesets aplicados y `status --verbose` reporta `up to date` en el último estado verificado.
 - Existen los roles `hidro_smart_admin`, `hidro_smart_liquibase`, `hidro_smart_app`, `hidro_smart_ingest` y `hidro_smart_readonly`.
 - El backend utiliza `hidro_smart_app`; el servicio Liquibase utiliza el administrador de PostgreSQL definido por `POSTGRES_USER` y `POSTGRES_PASSWORD`.
 
@@ -78,14 +78,14 @@ Las tablas `device.device`, `device.home_device`, `consumption.sensor_reading` y
 
 La persistencia ya está activa. Las siguientes comprobaciones sirven para mantenerla:
 
-1. revisar la precisión de `consumption.sensor_reading.consumption_liters`, hoy `NUMERIC(10,2)`;
-2. ajustar la columna generada `consumption_m3` y las funciones/vistas dependientes;
+1. verificar los grants mínimos de ingestión;
+2. mantener pruebas de inserción, RLS e idempotencia;
+3. validar la calibración y la precisión con el ESP32 y el caudalímetro reales.
 
 ### Verificación de entorno
 
-En la revisión del 2026-09-13 los archivos Compose pasaron `config --quiet`. PostgreSQL quedó saludable, Liquibase pasó `validate`, reportó 206 changesets y el healthcheck del backend respondió HTTP 200.
-
-3. verificar los grants mínimos de ingestión;
-4. mantener pruebas de inserción, RLS e idempotencia.
+En la revisión del 2026-09-14 los archivos Compose pasaron `config --quiet`.
+PostgreSQL quedó saludable, Liquibase pasó `validate`, reportó 217 changesets y
+el healthcheck del backend respondió HTTP 200.
 
 El diagnóstico de la base está en `diagnostico-actual.md` y el flujo MQTT en `../../BK_HS/docs/14-mqtt-protocol.md`.

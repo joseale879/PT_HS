@@ -1,0 +1,2 @@
+DROP FUNCTION IF EXISTS device.fn_link_device_to_home(VARCHAR, UUID);
+DROP FUNCTION IF EXISTS device.fn_register_device_with_location(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, DECIMAL);

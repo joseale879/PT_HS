@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription } from '@shared/ui/alert';
 import { Badge } from '@shared/ui/badge';
 import { Button } from '@shared/ui/button';
@@ -7,7 +7,19 @@ import { Input } from '@shared/ui/input';
 import { Label } from '@shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui/tabs';
-import { Download, Eye, EyeOff, FileText, Loader2, LogOut, Monitor, Shield } from 'lucide-react';
+import {
+  Camera,
+  BellRing,
+  Download,
+  Eye,
+  EyeOff,
+  FileText,
+  Loader2,
+  LogOut,
+  Mail,
+  Monitor,
+  Shield,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@features/auth/api/auth.api';
 import { VacationMode } from '@features/vacation/pages/VacationPage';
@@ -17,6 +29,7 @@ import {
   homesApi,
   privacyApi,
   type ArcoRequest,
+  type NotificationSettings,
   userApi,
   type AuthSession as SessionRecord,
 } from '@shared/http/apiClient';
@@ -28,6 +41,7 @@ import {
   roleTranslationKey,
   type SystemRole,
 } from '@shared/config/authorization';
+import { Switch } from '@shared/ui/switch';
 
 interface AccountSettingsProps {
   roles: SystemRole[];
@@ -41,6 +55,7 @@ type ProfileForm = {
   documentNumber: string;
   phone: string;
   city: string;
+  avatarDataUrl: string | null;
 };
 
 type AccountSummary = {
@@ -49,6 +64,77 @@ type AccountSummary = {
   devices: number | null;
 };
 
+const defaultNotificationSettings: NotificationSettings = {
+  notificationsEnabled: true,
+  preferredChannel: 'Email',
+  notificationPreferences: {
+    consumption: { dailyReport: true, weeklyReport: true, monthlyReport: true },
+    alerts: { leakDetection: true, abnormalConsumption: true, flowThresholdExceeded: true },
+    devices: { deviceDisconnected: true, lowBattery: true },
+    channels: { email: true, push: false },
+  },
+};
+
+function normalizeNotificationSettings(value: Partial<NotificationSettings>): NotificationSettings {
+  const groups = (value.notificationPreferences || {}) as Partial<
+    NotificationSettings['notificationPreferences']
+  >;
+  return {
+    notificationsEnabled: value.notificationsEnabled !== false,
+    preferredChannel: value.preferredChannel || 'Email',
+    notificationPreferences: {
+      consumption: {
+        ...defaultNotificationSettings.notificationPreferences.consumption,
+        ...(groups.consumption || {}),
+      },
+      alerts: {
+        ...defaultNotificationSettings.notificationPreferences.alerts,
+        ...(groups.alerts || {}),
+      },
+      devices: {
+        ...defaultNotificationSettings.notificationPreferences.devices,
+        ...(groups.devices || {}),
+      },
+      channels: {
+        ...defaultNotificationSettings.notificationPreferences.channels,
+        ...(groups.channels || {}),
+      },
+    },
+  };
+}
+
+function NotificationToggle({
+  id,
+  label,
+  description,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b py-3 last:border-b-0">
+      <label htmlFor={id} className="min-w-0 cursor-pointer">
+        <span className="block font-medium">{label}</span>
+        <span className="block text-sm text-gray-600">{description}</span>
+      </label>
+      <Switch
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onCheckedChange}
+        aria-label={label}
+      />
+    </div>
+  );
+}
+
 const emptyProfile: ProfileForm = {
   fullName: '',
   email: '',
@@ -56,6 +142,7 @@ const emptyProfile: ProfileForm = {
   documentNumber: '',
   phone: '',
   city: '',
+  avatarDataUrl: null,
 };
 
 export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
@@ -85,6 +172,12 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
   const [privacyRequestType, setPrivacyRequestType] = useState('access');
   const [privacyRequestDescription, setPrivacyRequestDescription] = useState('');
   const [privacyActionLoading, setPrivacyActionLoading] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
+    defaultNotificationSettings
+  );
+  const [notificationSettingsLoading, setNotificationSettingsLoading] = useState(true);
+  const [notificationSettingsSaving, setNotificationSettingsSaving] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -99,6 +192,7 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
           documentNumber: user.documentNumber || '',
           phone: user.phone || '',
           city: user.city || '',
+          avatarDataUrl: user.avatarDataUrl || null,
         };
         const homes = (homesResponse.data as Array<{ homeId: string }>) || [];
         const deviceResponses = await Promise.all(
@@ -123,6 +217,26 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
       })
       .finally(() => {
         if (active) setProfileLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [t]);
+
+  useEffect(() => {
+    let active = true;
+    userApi
+      .notificationPreferences()
+      .then(({ data }) => {
+        if (active) setNotificationSettings(normalizeNotificationSettings(data));
+      })
+      .catch((error) => {
+        if (active) {
+          toast.error(error instanceof Error ? error.message : t('settings.profileLoadError'));
+        }
+      })
+      .finally(() => {
+        if (active) setNotificationSettingsLoading(false);
       });
     return () => {
       active = false;
@@ -174,6 +288,7 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
         fullName: profile.fullName,
         phone: profile.phone,
         city: profile.city,
+        avatarDataUrl: profile.avatarDataUrl,
       });
       await refreshSession();
       setSavedProfile(profile);
@@ -181,6 +296,25 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('settings.profileSaveError'));
     }
+  };
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error(t('settings.photoInvalidType'));
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(t('settings.photoTooLarge'));
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () =>
+      setProfile((current) => ({ ...current, avatarDataUrl: String(reader.result) }));
+    reader.readAsDataURL(file);
   };
 
   const handleChangePassword = async () => {
@@ -286,6 +420,36 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
     }
   };
 
+  const updateNotificationGroup = (
+    group: keyof NotificationSettings['notificationPreferences'],
+    key: string,
+    checked: boolean
+  ) => {
+    setNotificationSettings((current) => ({
+      ...current,
+      notificationPreferences: {
+        ...current.notificationPreferences,
+        [group]: {
+          ...current.notificationPreferences[group],
+          [key]: checked,
+        },
+      },
+    }));
+  };
+
+  const handleSaveNotificationSettings = async () => {
+    setNotificationSettingsSaving(true);
+    try {
+      const response = await userApi.updateNotificationPreferences(notificationSettings);
+      setNotificationSettings(normalizeNotificationSettings(response.data));
+      toast.success(t('settings.changesSaved'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('settings.profileSaveError'));
+    } finally {
+      setNotificationSettingsSaving(false);
+    }
+  };
+
   const formatDate = (value: string | null) => {
     if (!value) return '—';
     return new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(value));
@@ -308,11 +472,12 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
       </Card>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="!grid !w-full grid-cols-2 mobile-equal-tabs sm:!grid sm:grid-cols-3 lg:grid-cols-5">
+        <TabsList className="!grid !w-full grid-cols-2 mobile-equal-tabs sm:!grid sm:grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="profile">{t('settings.profile')}</TabsTrigger>
           <TabsTrigger value="security">{t('settings.security')}</TabsTrigger>
           <TabsTrigger value="privacy">{t('settings.privacy')}</TabsTrigger>
           <TabsTrigger value="preferences">{t('settings.preferences')}</TabsTrigger>
+          <TabsTrigger value="notifications">{t('notifications.title')}</TabsTrigger>
           <TabsTrigger value="account">{t('settings.accountTab')}</TabsTrigger>
         </TabsList>
 
@@ -324,16 +489,43 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
-                <div className="flex size-20 items-center justify-center rounded-full bg-blue-600 text-2xl text-white">
-                  {profile.fullName
-                    .split(/\s+/)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join('')
-                    .toUpperCase() || 'HS'}
+                <div className="flex size-20 items-center justify-center overflow-hidden rounded-full bg-blue-600 text-2xl text-white">
+                  {profile.avatarDataUrl ? (
+                    <img
+                      src={profile.avatarDataUrl}
+                      alt={t('settings.profilePhotoAlt')}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    profile.fullName
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join('')
+                      .toUpperCase() || 'HS'
+                  )}
                 </div>
-                <p className="text-xs text-gray-600">{t('settings.photoUploadUnavailable')}</p>
+                <div className="space-y-2">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={profileLoading}
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    <Camera className="size-4" />
+                    {t('settings.changePhoto')}
+                  </Button>
+                  <p className="text-xs text-gray-600">{t('settings.photoFormats')}</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -375,6 +567,7 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
                   <Input
                     id="phone"
                     value={profile.phone}
+                    maxLength={60}
                     disabled={profileLoading}
                     onChange={(event) => setProfile({ ...profile, phone: event.target.value })}
                   />
@@ -689,6 +882,222 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
             <LanguageSelector />
             <VacationMode homeId={homeId} />
           </div>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <BellRing className="mr-2 inline size-5" />
+                {t('notifications.settings')}
+              </CardTitle>
+              <CardDescription>{t('notifications.settingsDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between gap-4 rounded-lg border bg-blue-50 p-4">
+                <div>
+                  <p className="font-medium">{t('notifications.title')}</p>
+                  <p className="text-sm text-gray-600">{t('notifications.settingsDesc')}</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.notificationsEnabled}
+                  disabled={notificationSettingsLoading || notificationSettingsSaving}
+                  onCheckedChange={(checked) =>
+                    setNotificationSettings((current) => ({
+                      ...current,
+                      notificationsEnabled: checked,
+                    }))
+                  }
+                  aria-label={t('notifications.title')}
+                />
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center gap-2 font-medium">
+                  <BellRing className="size-4" />
+                  {t('notifications.consumptionNotifications')}
+                </div>
+                <div className="rounded-lg border px-4">
+                  <NotificationToggle
+                    id="notification-daily-report"
+                    label={t('notifications.dailyConsumptionReport')}
+                    description={t('notifications.dailyConsumptionReportDesc')}
+                    checked={notificationSettings.notificationPreferences.consumption.dailyReport}
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('consumption', 'dailyReport', checked)
+                    }
+                  />
+                  <NotificationToggle
+                    id="notification-weekly-report"
+                    label={t('notifications.weeklyReport')}
+                    description={t('notifications.weeklyReportDesc')}
+                    checked={notificationSettings.notificationPreferences.consumption.weeklyReport}
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('consumption', 'weeklyReport', checked)
+                    }
+                  />
+                  <NotificationToggle
+                    id="notification-monthly-report"
+                    label={t('notifications.monthlyReport')}
+                    description={t('notifications.monthlyReportDesc')}
+                    checked={notificationSettings.notificationPreferences.consumption.monthlyReport}
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('consumption', 'monthlyReport', checked)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center gap-2 font-medium">
+                  <BellRing className="size-4" />
+                  {t('notifications.criticalAlerts')}
+                </div>
+                <div className="rounded-lg border px-4">
+                  <NotificationToggle
+                    id="notification-leak-detection"
+                    label={t('notifications.leakDetection')}
+                    description={t('notifications.leakDetectionDesc')}
+                    checked={notificationSettings.notificationPreferences.alerts.leakDetection}
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('alerts', 'leakDetection', checked)
+                    }
+                  />
+                  <NotificationToggle
+                    id="notification-abnormal-consumption"
+                    label={t('notifications.abnormalConsumption')}
+                    description={t('notifications.abnormalConsumptionDesc')}
+                    checked={
+                      notificationSettings.notificationPreferences.alerts.abnormalConsumption
+                    }
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('alerts', 'abnormalConsumption', checked)
+                    }
+                  />
+                  <NotificationToggle
+                    id="notification-flow-threshold"
+                    label={t('notifications.flowThresholdExceeded')}
+                    description={t('notifications.flowThresholdExceededDesc')}
+                    checked={
+                      notificationSettings.notificationPreferences.alerts.flowThresholdExceeded
+                    }
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('alerts', 'flowThresholdExceeded', checked)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center gap-2 font-medium">
+                  <BellRing className="size-4" />
+                  {t('notifications.deviceStatus')}
+                </div>
+                <div className="rounded-lg border px-4">
+                  <NotificationToggle
+                    id="notification-device-disconnected"
+                    label={t('notifications.deviceDisconnected')}
+                    description={t('notifications.deviceDisconnectedDesc')}
+                    checked={
+                      notificationSettings.notificationPreferences.devices.deviceDisconnected
+                    }
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('devices', 'deviceDisconnected', checked)
+                    }
+                  />
+                  <NotificationToggle
+                    id="notification-low-battery"
+                    label={t('notifications.lowBattery')}
+                    description={t('notifications.lowBatteryDesc')}
+                    checked={notificationSettings.notificationPreferences.devices.lowBattery}
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('devices', 'lowBattery', checked)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center gap-2 font-medium">
+                  <Mail className="size-4" />
+                  {t('notifications.notificationChannels')}
+                </div>
+                <div className="rounded-lg border px-4">
+                  <NotificationToggle
+                    id="notification-email"
+                    label={`${t('notifications.email')} (Gmail)`}
+                    description={t('notifications.emailDesc')}
+                    checked={notificationSettings.notificationPreferences.channels.email}
+                    disabled={
+                      notificationSettingsLoading ||
+                      notificationSettingsSaving ||
+                      !notificationSettings.notificationsEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateNotificationGroup('channels', 'email', checked)
+                    }
+                  />
+                  <div className="flex items-center justify-between gap-4 border-b py-3 last:border-b-0">
+                    <div>
+                      <p className="font-medium">{t('notifications.pushNotifications')}</p>
+                      <p className="text-sm text-gray-600">
+                        {t('notifications.pushNotificationsDesc')}
+                      </p>
+                    </div>
+                    <Badge variant="outline">{t('common.inDevelopment')}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSaveNotificationSettings}
+                disabled={notificationSettingsLoading || notificationSettingsSaving}
+              >
+                {notificationSettingsSaving && <Loader2 className="size-4 animate-spin" />}
+                {t('settings.saveChanges')}
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="account">
