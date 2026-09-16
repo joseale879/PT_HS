@@ -15,7 +15,11 @@ const vacationRoutes = require('./api/vacation.routes');
 const roleRoutes = require('./api/role.routes');
 const supportRoutes = require('./api/support.routes');
 const auditRoutes = require('./api/audit.routes');
-const { notFound, errorHandler } = require('./shared/http');
+const privacyRoutes = require('./api/privacy.routes');
+const reportRoutes = require('./api/report.routes');
+const recommendationRoutes = require('./api/recommendation.routes');
+const actuatorRoutes = require('./api/actuator.routes');
+const { notFound, errorHandler, requestContext } = require('./shared/http');
 const { getEnv } = require('./config/env');
 
 const app = express();
@@ -24,8 +28,11 @@ app.disable('x-powered-by');
 // El backend recibe las peticiones del navegador a través de Nginx.
 app.set('trust proxy', 1);
 app.use(helmet());
+app.use(requestContext);
 app.use(cors({ origin: getEnv().corsOrigin.split(',').map((origin) => origin.trim()) }));
-app.use(express.json({ limit: '1mb' }));
+// Permite transportar un avatar de hasta 2 MB en base64; el caso de uso
+// comprueba el tamaño binario real antes de persistirlo.
+app.use(express.json({ limit: '4mb' }));
 
 app.get('/', (_req, res) => {
   res.json({ name: 'Hidro Smart API', version: 'v1', status: 'ok' });
@@ -44,6 +51,10 @@ app.use('/api/v1/vacation', vacationRoutes);
 app.use('/api/v1/roles', roleRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/audit', auditRoutes);
+app.use('/api/v1/privacy', privacyRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/recommendations', recommendationRoutes);
+app.use('/api/v1/actuators', actuatorRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

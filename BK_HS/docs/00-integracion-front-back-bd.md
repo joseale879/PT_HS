@@ -1,19 +1,18 @@
-# Integración vigente: base de datos, backend y frontend
+﻿# IntegraciÃ³n vigente: base de datos, backend y frontend
 
-Fecha de revisión: 2026-09-07.
+Fecha de revisiÃ³n: 2026-09-14.
 
-## Topología local
+## TopologÃ­a local
 
 ```text
 Navegador -> Frontend/Nginx :5173 -> Backend :3000 -> PostgreSQL :5432
                                       |              (contenedor postgres)
                                       +-> Mosquitto :1883
-                                      +-> Mailpit :1025
 ```
 
-Desde Windows, PostgreSQL se publica como `localhost:5433`, el backend como `localhost:3000`, el frontend como `localhost:5173`, Mailpit como `localhost:8025` y Mosquitto como `localhost:1883`.
+Desde Windows, PostgreSQL se publica como `localhost:5433`, el backend como `localhost:3000`, el frontend como `localhost:5173` y Mosquitto como `localhost:1883`. El correo sale por Gmail SMTP y no expone un puerto local.
 
-Dentro de Docker no se deben usar `localhost` entre servicios: los nombres son `postgres`, `backend`, `frontend`, `mailpit` y `mosquitto`.
+Dentro de Docker no se deben usar `localhost` entre servicios: los nombres son `postgres`, `backend`, `frontend` y `mosquitto`.
 
 ## Variables de entorno
 
@@ -25,51 +24,74 @@ Dentro de Docker no se deben usar `localhost` entre servicios: los nombres son `
 | Backend | `DB_NAME` | `hidro_smart` |
 | Backend | `DB_USER` | `hidro_smart_app` |
 | Backend | `MQTT_BROKER_URL` | `mqtt://mosquitto:1883` |
-| Backend | `SMTP_HOST` | `mailpit` por defecto |
-| Backend | `SMTP_PORT` | `1025` por defecto |
+| Backend | `SMTP_HOST` | `smtp.gmail.com` por defecto |
+| Backend | `SMTP_PORT` | `587` por defecto |
 
-El archivo `.env` de la raíz gobierna el Compose integrado. `BK_HS/.env` sirve para ejecutar el backend fuera de Docker y `FT_HS/Web/.env*` para el frontend directo. Ningún archivo con secretos debe subirse al repositorio.
+El archivo `.env` de la raÃ­z gobierna el Compose integrado. `BK_HS/.env` sirve para ejecutar el backend fuera de Docker y `FT_HS/frontend/.env*` para el frontend directo. NingÃºn archivo con secretos debe subirse al repositorio.
 
 ## Cadena REST
 
-El frontend no se conecta a PostgreSQL. Todas las llamadas pasan por `FT_HS/Web/src/shared/http/apiClient.ts`, que usa el cliente HTTP común, agrega el access token y maneja la renovación de sesión.
+El frontend no se conecta a PostgreSQL. Todas las llamadas pasan por `FT_HS/frontend/src/shared/http/apiClient.ts`, que usa el cliente HTTP comÃºn, agrega el access token y maneja la renovaciÃ³n de sesiÃ³n.
 
 Los prefijos montados en Express son:
 
-- `/api/v1/auth`: `register`, `login`, `refresh`, `logout`, cambio y recuperación de contraseña.
-- `/api/v1/users`: perfil y preferencias.
-- `/api/v1/homes`: hogares, miembros y solicitudes de membresía.
-- `/api/v1/devices`: alta, consulta, configuración, estado, desactivación y desvinculación.
-- `/api/v1/consumption`: `summary`, `daily`, `hourly`, `monthly`, `cost`.
+- `/api/v1/auth`: `register`, `login`, `refresh`, `logout`, cambio y recuperaciÃ³n de contraseÃ±a; tambiÃ©n `resend-verification` y `verify-email`.
+- `/api/v1/users`: perfil y preferencias; `/users/me` persiste `avatarDataUrl` y `phone` con mÃ¡ximo de 60 caracteres.
+- `/api/v1/homes`: hogares, miembros y solicitudes de membresÃ­a.
+- `/api/v1/devices`: alta con ubicación, consulta, vinculación por código,
+  edición, configuración, estado, desactivación y desvinculación. Las
+  respuestas incluyen `wifiSsid`, `lastIp` y `wifiRssiDbm` cuando el ESP32 ya
+  reportó su red; la contraseña se envía solamente por BLE.
+- `/api/v1/consumption`: `summary`, `daily`, `hourly`, `monthly`, `cost` y
+  `advanced` para series agrupadas por día, hora, mes o ubicación.
 - `/api/v1/tariffs`: tarifa del hogar.
 - `/api/v1/alerts`: pendientes, reglas, umbrales, historial y estados.
 - `/api/v1/goals`: CRUD y progreso de metas.
-- `/api/v1/vacation`: consulta, actualización y eliminación de vacaciones.
-- `/api/v1/roles`: administración protegida por `roles.manage`.
-- `/api/v1/support`: catálogos, tickets y respuestas.
+- `/api/v1/vacation`: consulta, actualizaciÃ³n y eliminaciÃ³n de vacaciones.
+- `/api/v1/roles`: administraciÃ³n protegida por `roles.manage`.
+- `/api/v1/support`: catÃ¡logos, tickets y respuestas.
 - `/api/v1/audit`: logs protegidos por `audit.read`.
+- `/api/v1/privacy`: consentimientos, solicitudes ARCO y exportaciÃ³n propia.
+- `/api/v1/reports`: descarga de consumo en PDF y Excel, registro persistente,
+  historial paginado y descarga posterior.
+- `/api/v1/recommendations`: listado propio, resumen por hogar y actualizaciÃ³n
+  de estado/utilidad con `reports.read` y RLS.
 
-La URL pública del navegador es `/api/v1/...`; Nginx reenvía `/api/` al backend dentro de Docker.
+La URL pÃºblica del navegador es `/api/v1/...`; Nginx reenvÃ­a `/api/` al backend dentro de Docker.
 
-## Cadena de autenticación
+## Configuración centralizada de dispositivos
 
-1. Registro y login devuelven la sesión que consume el frontend.
+En la pantalla **Dispositivos IoT**, **Configurar** concentra los datos del
+equipo, la red, el estado BLE y el historial. La opción de conectar por
+Bluetooth se retira automáticamente cuando el estado inicial o MQTT confirma
+que Wi-Fi ya está conectado.
+
+## Correo de acceso a hogares
+
+El formulario **Agregar Miembro** de `/app/homes` solo agrega cuentas activas.
+Una vez confirmada la membresÃ­a en PostgreSQL, el backend envÃ­a un aviso de
+acceso mediante Nodemailer y devuelve `notification.sent`. Si SMTP no estÃ¡
+disponible, la membresÃ­a no se revierte; el resultado queda visible para el
+frontend y el correo se entrega mediante Gmail SMTP.
+
+## Cadena de autenticaciÃ³n
+
+1. El registro crea la cuenta como `Pending`, genera y envÃ­a el enlace de
+   verificaciÃ³n y responde `202`; el login solo crea sesiÃ³n despuÃ©s de activar
+   el correo.
 2. Las rutas protegidas requieren Bearer token.
 3. Ante un `401`, el cliente intenta `POST /api/v1/auth/refresh` una sola vez.
-4. Si el refresh falla, limpia la sesión y devuelve al flujo de login.
-5. Logout revoca la sesión en backend y limpia el almacenamiento local.
+4. Si el refresh falla, limpia la sesiÃ³n y devuelve al flujo de login.
+5. Logout revoca la sesiÃ³n en backend y limpia el almacenamiento local.
 
-El backend valida además permisos funcionales y el acceso al hogar/dispositivo mediante la base de datos y RLS cuando corresponde.
+El backend valida ademÃ¡s permisos funcionales y el acceso al hogar/dispositivo mediante la base de datos y RLS cuando corresponde.
 
 ## Correo
 
-El backend usa Nodemailer para recuperación y notificaciones de contraseña. Mailpit es el transporte local recomendado:
-
-- Docker: `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `SMTP_SECURE=false`.
-- Backend directo: `SMTP_HOST=localhost`, `SMTP_PORT=1025`.
-- Gmail: se configura solo en el `.env` local con `SMTP_HOST=smtp.gmail.com`, puerto y credenciales de aplicación apropiadas.
-
-No se documentan ni se almacenan aquí credenciales reales. Para probar el correo local se revisa `http://localhost:8025`.
+El backend usa Nodemailer para recuperación y notificaciones de contraseña. Gmail
+se configura solo en el `.env` local con `SMTP_HOST=smtp.gmail.com`,
+`SMTP_PORT=587`, `SMTP_SECURE=false` y una contraseña de aplicación. No se
+documentan ni se almacenan aquí credenciales reales.
 
 ## Cadena MQTT
 
@@ -77,7 +99,7 @@ No se documentan ni se almacenan aquí credenciales reales. Para probar el corre
 ESP32 -> Mosquitto -> MqttSubscriber -> message-parser -> handler
                                                    |
                                                    +-> logs actuales
-                                                   +-> persistencia PostgreSQL (pendiente)
+                                                   +-> persistencia PostgreSQL (funciÃ³n protegida e idempotente)
 ```
 
 Topics actuales:
@@ -86,16 +108,25 @@ Topics actuales:
 - `hidrosmart/devices/{deviceCode}/status`
 - `hidrosmart/devices/{deviceCode}/actuators/{actuator}/status`
 
-La telemetría no entra por un endpoint HTTP. El backend ya recibe, valida y normaliza el mensaje, pero falta conectar el handler con el caso de uso y repositorio de ingestión.
+La telemetrÃ­a no entra por un endpoint HTTP. El backend recibe, valida,
+normaliza y persiste el mensaje mediante `IngestReading`,
+`PostgresTelemetryRepository` y la funciÃ³n SQL protegida.
 
 ## Estado de pantallas web
 
-- Autenticación, perfil y varias consultas de dashboard ya tienen cliente API centralizado.
-- Las pantallas de hogares, dispositivos, consumo, reportes, alertas, metas, vacaciones, soporte y auditoría deben verificarse por pantalla con sus estados de carga, vacío y error; tener un método en `apiClient` no significa que la vista ya lo consuma.
-- El frontend fija el rol de navegación como `user` en varios puntos; la lectura de roles reales debe cerrarse antes del panel administrativo.
-- El dashboard todavía muestra algunos indicadores de presentación, entre ellos tarjetas porcentuales y un valor de consumo que no equivale a caudal MQTT en tiempo real.
+- AutenticaciÃ³n, perfil, dashboard, hogares, dispositivos, consumo, reportes,
+  alertas, metas, vacaciones, soporte, privacidad y administraciÃ³n tienen
+  consumo de API en las pantallas principales. Recomendaciones se presenta
+  actualmente como contenido visual informativo.
+- El menÃº y las rutas directas usan los roles y permisos recibidos del backend;
+  `Administrator` y `Support` tienen paneles separados y `HomeUser`/`Guest` no
+  acceden a soporte ni notificaciones.
+- TodavÃ­a deben uniformarse estados de carga, vacÃ­o, error y reintento, y deben
+  ejecutarse pruebas manuales con los cuatro roles.
+- El dashboard obtiene sus tarjetas de agregados del backend; el indicador de
+  flujo actual es el Ãºltimo punto horario disponible, no caudal MQTT en tiempo real.
 
-## Validación de extremo a extremo
+## ValidaciÃ³n de extremo a extremo
 
 ```powershell
 docker compose --env-file .env up -d --build
@@ -104,4 +135,4 @@ Invoke-WebRequest http://localhost:5173/health
 docker compose --env-file .env --profile tooling run --rm liquibase validate
 ```
 
-Para la prueba MQTT, usa un cliente contra `localhost:1883` y publica el payload descrito en `14-mqtt-protocol.md`. La confirmación actual se observa en los logs del backend; la confirmación de inserción en PostgreSQL todavía no aplica porque la persistencia no está conectada.
+Para la prueba MQTT, usa un cliente contra `localhost:1883` y publica el payload descrito en `14-mqtt-protocol.md`. El backend persiste la lectura mediante `device.fn_ingest_sensor_reading`; `mqtt_message_id` evita insertar dos veces el mismo evento.

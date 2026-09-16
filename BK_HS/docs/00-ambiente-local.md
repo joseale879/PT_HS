@@ -1,6 +1,6 @@
 # Ambiente local
 
-Fecha de revisión: 2026-09-07.
+Fecha de revisión: 2026-09-14.
 
 La pila oficial de desarrollo se ejecuta desde el `docker-compose.yml` de la raíz. Los Compose individuales de BD y backend se conservan solo por compatibilidad.
 
@@ -11,8 +11,6 @@ La pila oficial de desarrollo se ejecuta desde el `docker-compose.yml` de la ra�
 | PostgreSQL | `localhost:5433` | `postgres:5432` |
 | Backend | `localhost:3000` | `backend:3000` |
 | Frontend | `localhost:5173` | `frontend:80` |
-| Mailpit SMTP | `localhost:1025` | `mailpit:1025` |
-| Mailpit UI | `localhost:8025` | `mailpit:8025` |
 | Mosquitto | `localhost:1883` | `mosquitto:1883` |
 
 ## Preparación
@@ -25,7 +23,7 @@ docker compose --env-file .env config --quiet
 docker compose --env-file .env up -d --build
 ```
 
-El backend usa `DB_HOST=postgres`, `DB_PORT=5432`, `DB_USER=hidro_smart_app`, `MQTT_BROKER_URL=mqtt://mosquitto:1883` y Mailpit por defecto. Si se ejecuta el backend fuera de Docker, usa los valores de `BK_HS/.env.example`: PostgreSQL en `localhost:5433` y MQTT en `localhost:1883`.
+El backend usa `DB_HOST=postgres`, `DB_PORT=5432`, `DB_USER=hidro_smart_app` y `MQTT_BROKER_URL=mqtt://mosquitto:1883` dentro de Docker. El correo usa Gmail SMTP mediante las variables `SMTP_*`. Si se ejecuta el backend fuera de Docker, usa los valores de `BK_HS/.env.example`: PostgreSQL en `localhost:5433` y MQTT en `localhost:1883`.
 
 ## Verificación
 
@@ -39,8 +37,31 @@ Liquibase se ejecuta bajo el perfil `tooling`; consulta `BD_HS/docs/guia-ejecuci
 
 ## Correo
 
-Mailpit es el proveedor local recomendado. Gmail se configura solo en el `.env` local mediante SMTP y sus credenciales no deben aparecer en la documentación, ejemplos ni código.
+Gmail es el proveedor SMTP configurado. Sus credenciales solo deben existir en el `.env` local y nunca en la documentación, ejemplos ni código.
 
 ## MQTT
 
 Mosquitto está configurado sin autenticación, sin TLS y sin persistencia para pruebas locales. El contrato vigente está en `BK_HS/docs/14-mqtt-protocol.md`.
+
+## Prueba funcional de roles
+
+La matriz de `Administrator`, `Support`, `HomeUser` y `Guest` está en
+`tests/integration/roles-permissions.test.js`. El sembrador prepara cuentas
+exclusivas de integración y no usa usuarios reales de la aplicación.
+Configura `INTEGRATION_*_EMAIL`, `INTEGRATION_*_PASSWORD` e
+`INTEGRATION_ADMIN_DATABASE_URL`, y ejecuta antes de la prueba:
+
+```powershell
+npm.cmd run seed:integration
+```
+
+Después define `RUN_INTEGRATION=1`, `INTEGRATION_DATABASE_URL` y
+`INTEGRATION_USER_EMAIL`/`INTEGRATION_USER_PASSWORD`, y ejecuta:
+
+```powershell
+npm.cmd run test:integration
+```
+
+La prueba RLS crea un hogar temporal, verifica el aislamiento y lo elimina al
+terminar. Si faltan credenciales, las pruebas autenticadas se omiten; eso no
+equivale a aprobar la autorización real.

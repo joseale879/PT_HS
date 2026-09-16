@@ -44,6 +44,28 @@ class AuthSessionService {
     await this.authRepository.revokeRefreshSession({ refreshTokenHash: this.hash(refreshToken), userId, sessionId });
   }
 
+  async list({ userId, currentSessionId }) {
+    this.requireIdentity(userId, currentSessionId);
+    return this.authRepository.listSessions({ userId, currentSessionId });
+  }
+
+  async revokeSession({ userId, sessionId }) {
+    this.requireUserId(userId);
+    this.requireUuid(sessionId, 'sessionId');
+    const revoked = await this.authRepository.revokeSession({ userId, sessionId });
+    if (!revoked) this.notFound('La sesión no existe o ya fue cerrada');
+  }
+
+  async revokeOtherSessions({ userId, currentSessionId }) {
+    this.requireIdentity(userId, currentSessionId);
+    return this.authRepository.revokeOtherSessions({ userId, currentSessionId });
+  }
+
+  async revokeAllSessions({ userId }) {
+    this.requireUserId(userId);
+    return this.authRepository.revokeAllSessions({ userId });
+  }
+
   tokens(userId, sessionId, refreshToken, refreshExpiresAt) {
     return {
       userId,
@@ -76,6 +98,39 @@ class AuthSessionService {
       error.status = 401;
       throw error;
     }
+  }
+
+  requireIdentity(userId, sessionId) {
+    this.requireUserId(userId);
+    if (typeof sessionId !== 'string' || !this.isUuid(sessionId)) this.unauthorized('La sesión autenticada es obligatoria');
+  }
+
+  requireUserId(userId) {
+    if (typeof userId !== 'string' || !this.isUuid(userId)) this.unauthorized('La sesión autenticada es obligatoria');
+  }
+
+  requireUuid(value, field) {
+    if (typeof value !== 'string' || !this.isUuid(value)) {
+      const error = new Error(`${field} no es válido`);
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  }
+
+  unauthorized(message) {
+    const error = new Error(message);
+    error.status = 401;
+    throw error;
+  }
+
+  notFound(message) {
+    const error = new Error(message);
+    error.status = 404;
+    throw error;
   }
 }
 

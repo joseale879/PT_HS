@@ -13,10 +13,13 @@ test('genera notificaciones de cuenta y escapa datos en HTML', async () => {
   await service.sendWelcome({ recipient: 'user@example.com', name: '<Usuario>' });
   await service.sendPasswordChanged({ recipient: 'user@example.com', name: 'Usuario' });
   await service.sendGoalThreshold90({ recipient: 'user@example.com', name: 'Usuario' });
+  await service.sendHomeAccessGranted({ recipient: 'user@example.com', name: 'Usuario', homeName: 'Casa Principal', homeRole: 'Member' });
 
-  assert.equal(sent.length, 3);
+  assert.equal(sent.length, 4);
   assert.match(sent[0].html, /&lt;Usuario&gt;/);
   assert.doesNotMatch(sent[0].html, /<Usuario>/);
   assert.match(sent[1].subject, /contraseña/);
   assert.match(sent[2].text, /90%/);
+  assert.match(sent[3].subject, /hogar/);
+  assert.match(sent[3].text, /Casa Principal/);
 });

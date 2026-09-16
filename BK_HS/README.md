@@ -7,17 +7,36 @@ Backend Node.js/Express con arquitectura modular y PostgreSQL.
 - API REST montada bajo `/api/v1`.
 - Autenticación, sesiones, hogares, dispositivos, consumo, alertas, metas, vacaciones, soporte, roles y auditoría implementados.
 - Cliente MQTT, subscriber, parser y handlers implementados.
-- Persistencia de lecturas MQTT y comandos de actuadores todavía pendientes.
+- Persistencia de lecturas MQTT implementada con métricas, timestamps e idempotencia; los comandos de actuadores siguen pendientes.
 
-## Ejecución
+## Ejecución integrada
 
-Para la integración completa usa el Compose de la raíz:
+Desde `PT_HS`, usa el flujo documentado en el README raíz. Para una base nueva:
 
 ```powershell
-docker compose --env-file .env up -d --build
+docker compose --env-file .env up -d postgres db-bootstrap mosquitto
+docker compose --env-file .env --profile tooling run --rm liquibase validate
+docker compose --env-file .env --profile tooling run --rm liquibase update
+docker compose --env-file .env up -d --build backend frontend
 ```
 
-El backend usa `postgres:5432`, `mosquitto:1883` y `mailpit:1025` dentro de Docker. Ejecutado directamente desde Windows usa las variables de `BK_HS/.env.example`.
+El backend usa `postgres:5432` y `mosquitto:1883` dentro de
+Docker. El frontend se consume por `/api/v1` a través de Nginx.
+
+## Ejecución independiente del backend
+
+Con PostgreSQL disponible en `localhost:5433` y `BK_HS/.env` configurado:
+
+```powershell
+docker compose --env-file BK_HS/.env -f BK_HS/docker-compose.yml up -d mosquitto
+Set-Location BK_HS
+npm.cmd run check
+npm.cmd test
+npm.cmd start
+```
+
+En esta modalidad el backend usa `MQTT_BROKER_URL=mqtt://localhost:1883` y
+`DB_HOST=localhost`, `DB_PORT=5433`.
 
 ## Documentación
 

@@ -46,7 +46,7 @@ test('mantiene una respuesta neutra para cuentas inexistentes y no intenta envia
 test('construye un enlace de recuperación seguro para el frontend', async () => {
   const sent = [];
   const sender = new SmtpEmailSender({
-    smtp: { host: 'localhost', port: 1025, secure: false, user: '', password: '', from: 'HidroSmart <no-reply@localhost>' },
+    smtp: { host: 'smtp.gmail.com', port: 587, secure: false, user: '', password: '', from: 'HidroSmart <no-reply@gmail.com>' },
     passwordResetUrl: 'http://localhost:5173/?from=email',
     transportFactory: () => ({ sendMail: async (message) => sent.push(message), verify: async () => true })
   });
