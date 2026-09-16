@@ -1,6 +1,6 @@
 ﻿# Estado integral de HidroSmart
 
-Fecha de corte: 2026-09-14.
+Fecha de corte: 2026-09-15.
 
 Este es el resumen transversal de la base de datos, backend, frontend, MQTT,
 correo, Docker y firmware. Distingue lo que estÃ¡ implementado de lo que fue
@@ -10,21 +10,21 @@ comprobado en el entorno local y de lo que todavÃ­a requiere trabajo.
 
 | Capa | Estado comprobado | Alcance actual |
 |---|---|---|
-| Base de datos | Operativa | PostgreSQL 16, Liquibase al día con 217 changesets, funciones, grants, RLS y datos de desarrollo |
+| Base de datos | Operativa | PostgreSQL 16, Liquibase al día con 223 changesets, funciones, grants, RLS y datos de desarrollo |
 | Backend | Operativo | API Express bajo `/api/v1`, autenticaciÃ³n, sesiones, dominios principales, SMTP, MQTT y persistencia IoT |
 | Frontend web | Compila y se integra | React + TypeScript + Vite, rutas protegidas, cliente HTTP centralizado, roles e i18n |
 | Frontend mÃ³vil | Bundle verificado | Expo + React Native + WebView, agrupado con Web bajo `FT_HS/frontend` |
 | Docker | Operativo local | PostgreSQL, bootstrap, backend, frontend y Mosquitto |
 | MQTT | Persistencia y control conectados | Telemetría, estados y comandos de actuadores pasan por broker; los ACK se correlacionan y persisten |
 | SMTP | Gmail SMTP configurable | Nodemailer envÃ­a eventos mediante las variables `SMTP_*` del `.env`; la entrega real requiere credenciales locales válidas |
-| Firmware | Estructura presente | Existe `firmware/`; la compilaciÃ³n con hardware real y su seguimiento en Git todavÃ­a deben confirmarse |
+| Firmware | Estructura presente | Existe `firmware/` con ID eFuse, YF-S201, NVS, BLE y MQTT; falta compilar/cargar y validar la placa física |
 
 ## Evidencia ejecutada
 
 - Liquibase `validate`: aprobado.
-- Liquibase `status --verbose`: `up to date`, 217 changesets aplicados.
+- Liquibase `status --verbose`: `up to date`, 223 changesets aplicados.
 - Backend `npm.cmd run check`: aprobado.
-- Backend `npm.cmd test`: 156/156 pruebas unitarias aprobadas.
+- Backend `npm.cmd test`: 163/163 pruebas unitarias aprobadas.
 - Frontend `npm.cmd run typecheck`, `npm.cmd run lint` y `npm.cmd run build`: aprobados.
 - Frontend mÃ³vil `npm.cmd run mobile:prepare`: aprobado; genera el bundle web para WebView.
 - Frontend `npm.cmd audit --omit=dev`: 19 vulnerabilidades de dependencias reportadas por Expo/Metro/Vite; resolverlas requiere una actualización mayor y no se aplicó `npm audit fix --force` automáticamente.
@@ -56,6 +56,9 @@ comprobado en el entorno local y de lo que todavÃ­a requiere trabajo.
 - RLS y controles de membresÃ­a para limitar el acceso por hogar.
 - Ingesta MQTT mediante `device.fn_ingest_sensor_reading(...)`, sin `INSERT`
   directo del rol de ingesta sobre `consumption.sensor_reading`.
+- La identidad `hardware_id` y el estado de aprovisionamiento del ESP32 se
+  guardan en `device.device`; los estados MQTT y la telemetría nueva actualizan
+  esos campos mediante funciones protegidas.
 - Idempotencia por `mqttMessageId`, validaciÃ³n de dispositivo activo, separaciÃ³n
   entre `measured_at` y `received_at` y control de timestamps.
 - Las funciones y vistas de consumo alimentan los endpoints agregados del backend.
@@ -194,6 +197,10 @@ esta en [`docs/dispositivos-iot.md`](dispositivos-iot.md).
 
 La pantalla de dispositivos muestra la conectividad MQTT real y las metricas de
 la ultima lectura persistida; un equipo sin muestras queda en estado vacio.
+El boton **Configurar** abre un apartado unico para editar nombre, ubicacion y
+umbral, consultar `wifiSsid`, `lastIp`, RSSI, hardware e historial, y
+provisionar por BLE mientras Wi-Fi no este conectado. La contrasena solo se
+envia por BLE y no se almacena ni se devuelve.
 
 ### Limitaciones y pendientes de frontend
 
@@ -219,6 +226,16 @@ la ultima lectura persistida; un equipo sin muestras queda en estado vacio.
 
 ### MQTT actual
 
+Actualización 2026-09-15: el contrato nuevo de ESP32 ya incluye `hardwareId`,
+`ssid`, `lastIp` y estado de aprovisionamiento. La prueba local publicó estado y telemetría por
+Mosquitto; el backend los normalizó y PostgreSQL los persistió sin perder la
+idempotencia por `mqttMessageId`. El detalle reproducible está en
+[`integracion-esp32-bd-backend-front.md`](./integracion-esp32-bd-backend-front.md).
+
+La asociación física ahora se hace con `GET /api/v1/devices/hardware/:hardwareId`
+y `POST /api/v1/devices/:deviceId/claim-hardware`; el flujo BLE del front envía
+`deviceCode` al ESP32 después de confirmar ese vínculo.
+
 ```text
 ESP32 -> Mosquitto -> MqttSubscriber -> parser -> handler -> IngestReading -> PostgreSQL
 ```
@@ -229,15 +246,16 @@ Topics de entrada:
 - `hidrosmart/devices/{deviceCode}/status`
 - `hidrosmart/devices/{deviceCode}/actuators/{valve|pump}/status`
 
-El broker local es anÃ³nimo y sin TLS. La persistencia estÃ¡ conectada, pero no se
-ha validado con un ESP32 fÃ­sico ni se ha cerrado la precisiÃ³n final del sensor.
+El broker local es anÃ³nimo y sin TLS. La persistencia se validÃ³ con el payload
+del ESP32 y el siguiente paso es probar el equipo fÃ­sico completo.
 
 ### Firmware
 
 Existe la carpeta `firmware/` con estructura para provisioning, Wi-Fi, MQTT,
-sensores, actuadores, OTA, almacenamiento y pruebas. Falta confirmar compilaciÃ³n
-con el hardware real, versionar formalmente los cambios y alinear el contrato de
-telemetrÃ­a con la escala de consumo elegida.
+sensores, actuadores, OTA, almacenamiento y pruebas. El código actual genera el
+ID `HS-141F47470968` según el eFuse, anuncia `HidroSmart-470968`, guarda hasta
+cinco perfiles Wi-Fi/MQTT y expone el contrato BLE de configuración/estado.
+Falta compilarlo y probarlo sobre la placa y el caudalímetro reales.
 
 ### Correo
 

@@ -1,12 +1,12 @@
 # Estado actual del sistema
 
-Fecha de revisión: 2026-09-14.
+Fecha de revisión: 2026-09-15.
 
 Este documento es el resumen operativo del backend y debe leerse junto con la documentación de BD y frontend. Distingue las funciones comprobadas de las que todavía requieren integración.
 
 ## Resumen
 
-- PostgreSQL y Liquibase fueron verificados en Docker con 217 changesets aplicados. Si Docker Desktop está detenido, la verificación debe repetirse.
+- PostgreSQL y Liquibase fueron verificados en Docker con 223 changesets aplicados. Si Docker Desktop está detenido, la verificación debe repetirse.
 - El backend Node.js/Express está disponible en `http://localhost:3000` y usa el rol de aplicación `hidro_smart_app`.
 - La API REST se monta bajo `/api/v1`; el health público está en `GET /health`.
 - La operación expone `GET /health/live` para liveness y `GET /health/ready` para readiness de PostgreSQL y MQTT.
@@ -16,11 +16,12 @@ Este documento es el resumen operativo del backend y debe leerse junto con la do
 - La gestión de sesiones permite listar sesiones propias, cerrar una, cerrar las demás o cerrar todas sin exponer tokens.
 - Hogares, membresías, dispositivos, consumo, tarifas, alertas, metas, vacaciones, recomendaciones, soporte, roles y auditoría tienen rutas implementadas.
 - El flujo de dispositivos incluye registro con `location`, vinculación por
-  `device.code`, edición de nombre/ubicación, configuración y telemetría
+  `device.code`, edición centralizada de nombre/ubicación/umbral,
+  aprovisionamiento BLE, persistencia de `wifi_ssid`/`last_ip` y telemetría
   persistida; los detalles operativos están en `../../docs/dispositivos-iot.md`.
 - MQTT ya tiene configuración, cliente, publicación, suscripción, parser y handlers básicos.
 - El job de limpieza de auditoría usa el procedimiento SQL protegido y bloqueo advisory.
-- MQTT persiste lecturas en PostgreSQL mediante una función protegida, con métricas, timestamps separados e idempotencia por mensaje.
+- MQTT persiste lecturas en PostgreSQL mediante una función protegida, con métricas, timestamps separados e idempotencia por mensaje. El contrato nuevo del ESP32 también incluye `hardwareId` y estados de aprovisionamiento.
 
 ## Rutas REST montadas
 
@@ -89,13 +90,16 @@ La configuración Docker usa `mqtt://mosquitto:1883`. Mosquitto está en modo an
 
 ## Persistencia IoT
 
+El firmware nuevo también envía `hardwareId` y estado de aprovisionamiento;
+el backend los normaliza y PostgreSQL los persiste en `device.device`.
+
 El handler delega en `IngestReading` y `PostgresTelemetryRepository`. El circuito:
 
 1. Resuelve `deviceCode` del topic contra `device.device.code`.
 2. Verifica que el dispositivo esté activo y pertenezca a un hogar autorizado.
 3. Inserta en `consumption.sensor_reading` mediante la función SQL protegida.
 4. Aplica idempotencia, validación de timestamp y estrategia ante mensajes duplicados.
-5. El handler de estado persiste el historial de telemetría disponible mediante su función SQL protegida; falta validar el contrato final de `online/offline` y `last_seen` con el firmware.
+5. El handler de estado persiste el historial de telemetría disponible mediante su función SQL protegida y normaliza `ONLINE/OFFLINE/ERROR`, `lastIp`, firmware y aprovisionamiento.
 
 La precisión del consumo ya está corregida: `consumption_liters` usa
 `NUMERIC(14,3)` y el m³ generado usa `NUMERIC(14,6)`. Una muestra de `0.040 L`
@@ -104,12 +108,13 @@ reales.
 
 ## Verificaciones realizadas
 
-- `npm test`: 156 pruebas unitarias aprobadas en la última ejecución.
+- `npm test`: 163 pruebas unitarias aprobadas en la última ejecución.
 - `npm run check`: aprobado.
 - Frontend: formato y build aprobados.
-- Liquibase: `validate` y `status --verbose` aprobados.
+- Liquibase: `validate`, `update` y `status --verbose` aprobados; 223 changesets aplicados.
 - Docker: la pila integrada quedó validada en la última ejecución; requiere Docker Desktop activo para repetirla.
-- MQTT: una telemetría de prueba fue recibida, normalizada y persistida por el backend.
+- MQTT: una telemetría con el formato del ESP32 fue recibida, normalizada y persistida; la repetición del mismo `mqttMessageId` no duplicó la fila.
+- BLE: el contrato de dos características y el puente móvil quedaron implementados; falta probar el development build con la placa física.
 - Pruebas de integración externas: quedan omitidas cuando no están configuradas sus credenciales.
 
 ## No confundir con pendiente

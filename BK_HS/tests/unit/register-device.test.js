@@ -38,3 +38,27 @@ test('rechaza un hogar inválido al registrar el dispositivo', async () => {
     (error) => error.status === 400 && error.message === 'homeId no es válido'
   );
 });
+
+test('genera el código lógico cuando el alta no lo recibe', async () => {
+  let registeredDevice;
+  const useCase = new RegisterDevice({
+    deviceRepository: {
+      register: async (device) => {
+        registeredDevice = device;
+        return device;
+      }
+    }
+  });
+
+  await useCase.execute({
+    userId: 'user-1',
+    homeId: validHomeId,
+    name: 'Medidor principal',
+    type: 'YF-S201',
+    hardwareId: 'HS-141F47470968',
+    alertThreshold: 10
+  });
+
+  assert.match(registeredDevice.code, /^ESP32-[A-F0-9]{12}$/);
+  assert.equal(registeredDevice.hardwareId, null);
+});

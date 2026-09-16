@@ -6,11 +6,16 @@ conservan el detalle técnico de cada proyecto.
 
 ## Fuente de verdad
 
+- [Plan de integracion IoT y claim de hardware](./iot/PLAN_INTEGRACION_IOT_BACKEND_FRONT_BD_HIDROSMART.md)
+
+- [Integración ESP32, BD, backend y frontend](./integracion-esp32-bd-backend-front.md)
+
 - [Estado integral, evidencias y pendientes](./estado-integral.md)
 - [Cambios verificados del 2026-09-14](./cambios-2026-09-14.md)
 - [Bitácora anterior del 2026-09-13](./cambios-2026-09-13.md)
 - [README de ejecución en Docker](../README.md)
 - [Guía para levantar BD, backend, frontend o toda la pila](./guia-ejecucion-local.md)
+- [Dependencias e instalación de BD, backend y frontend](./dependencias-bd-bk-ft.md)
 - [Documentación de la base de datos](../BD_HS/docs/README.md)
 - [Documentación del backend](../BK_HS/docs/README.md)
 - [Documentación del frontend](../FT_HS/docs/README.md)

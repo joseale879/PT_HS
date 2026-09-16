@@ -1,6 +1,6 @@
 # Documentacion de la base de datos - Hidro Smart
 
-Fecha de revision: 2026-09-14.
+Fecha de revision: 2026-09-15.
 
 El resumen transversal del sistema esta en [`../../docs/estado-integral.md`](../../docs/estado-integral.md).
 
@@ -12,7 +12,7 @@ una migracion.
 ## Estado actual
 
 - PostgreSQL 16 y Liquibase 5.0.2 estan definidos en `BD_HS/docker-compose.yml`.
-- El changelog contiene 217 changesets aplicados en el último estado verificado.
+- El changelog contiene 223 changesets aplicados en el último estado verificado.
 - El backend usa el rol tecnico `hidro_smart_app`.
 - La ingesta IoT esta separada en `hidro_smart_ingest`.
 - RLS y RBAC funcional estan implementados para los dominios protegidos.
@@ -23,6 +23,8 @@ una migracion.
 - El dominio de actuadores persiste estados y comandos en `device` con RLS,
   permiso `actuators.manage` y una función SQL controlada para confirmar ACKs
   MQTT.
+- `device.device` conserva el SSID activo (`wifi_ssid`) y la última IP (`last_ip`)
+  reportados por MQTT. La contraseña Wi-Fi no se almacena en PostgreSQL.
 - Las cuentas nuevas quedan en `Pending` hasta consumir un token de correo;
   `user_profile.avatar_data_url` es opcional y `phone` admite hasta 60 caracteres.
 

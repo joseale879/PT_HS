@@ -1,6 +1,6 @@
 # Endpoints reales de la API — HidroSmart
 
-Fecha de revisión: 2026-09-14.
+Fecha de revisión: 2026-09-15.
 
 Este documento refleja las rutas montadas actualmente en `BK_HS/src/app.js`. La URL base pública es `http://localhost:3000/api/v1` en desarrollo directo y `/api/v1` desde el frontend servido por Nginx.
 
@@ -87,11 +87,12 @@ disponible, el miembro permanece agregado y `notification.sent` queda en
 | PUT | `/api/v1/devices/:deviceId` | `devices.manage` |
 | PUT | `/api/v1/devices/:deviceId/config` | `devices.manage` |
 | PATCH | `/api/v1/devices/:deviceId/status` | `devices.manage` |
+| PATCH | `/api/v1/devices/:deviceId/provisioning` | `devices.manage`; actualiza identidad y estado de aprovisionamiento |
 | POST | `/api/v1/devices/:deviceId/deactivate` | `devices.manage` |
 | DELETE | `/api/v1/devices/:deviceId/home/:homeId` | `devices.manage` |
 
-El `device.code` de este módulo es el identificador que debe aparecer en el topic MQTT como `{deviceCode}`. Registrar el dispositivo por REST no genera por sí solo una lectura MQTT.
-El registro acepta `location` (máximo 120 caracteres) para el lugar visible del sensor. La vinculación de un dispositivo ya existente usa `{ homeId, code }` en `POST /api/v1/devices/link`; el `code` debe coincidir exactamente con el código que publica el ESP32, por ejemplo `ESP32-001`.
+El `device.code` de este módulo es el identificador que debe aparecer en el topic MQTT como `{deviceCode}`. Si el alta no recibe `code`, el backend genera uno con el formato `ESP32-XXXXXXXXXXXX`; así el usuario no tiene que escribir identificadores técnicos. Registrar el dispositivo por REST no genera por sí solo una lectura MQTT.
+El `hardwareId` se completa después, al descubrir la placa por BLE y ejecutar `POST /api/v1/devices/{deviceId}/claim-hardware`. La contraseña Wi-Fi solo viaja por BLE y nunca se guarda en PostgreSQL. La vinculación de un dispositivo ya existente usa `{ homeId, code }` en `POST /api/v1/devices/link`.
 
 ## Actuators — `/actuators`
 
@@ -250,3 +251,22 @@ Invoke-WebRequest http://localhost:3000/health
 # Con token obtenido en login:
 curl.exe -H "Authorization: Bearer <access_token>" http://localhost:3000/api/v1/users/me
 ```
+
+## AsociaciÃ³n de hardware IoT (2026-09-15)
+
+| MÃ©todo | Ruta | Acceso |
+|---|---|---|
+| GET | `/api/v1/devices/hardware/:hardwareId` | autenticado; solo devuelve un dispositivo accesible |
+| POST | `/api/v1/devices/:deviceId/claim-hardware` | `devices.manage`; asocia un `hardwareId` Ãºnico |
+
+El cuerpo del `POST` es `{ "hardwareId": "HS-141F47470968" }`. La asociaciÃ³n
+se valida tambiÃ©n en `device.fn_claim_provisioned_device(...)`; un hardware ya
+asociado a otro dispositivo devuelve `409`. La contraseÃ±a Wi-Fi no forma parte
+de estas rutas.
+
+Las respuestas de `GET /api/v1/devices`, `GET /api/v1/devices/:deviceId` y
+`GET /api/v1/devices/:deviceId/status` pueden incluir `wifiSsid`, `lastIp` y
+`wifiRssiDbm`, recibidos del estado MQTT del ESP32. `wifiSsid` se limita a 32
+caracteres y `lastIp` a 45; ninguno contiene credenciales. El frontend usa
+estos campos para el apartado **Configuración** y mantiene la contraseña como
+un campo de reemplazo local enviado únicamente por BLE.

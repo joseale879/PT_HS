@@ -454,3 +454,39 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260915-device-provisioning
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,iot,provisioning,ble,wifi,mqtt"
+      comment: "Persists ESP32 hardware identity and provisioning state without storing Wi-Fi credentials."
+      changes:
+        - sqlFile:
+            path: 029_device_provisioning.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/029_device_provisioning.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260915-device-wifi-metadata
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,iot,wifi,security"
+      comment: "Stores the active Wi-Fi SSID and exposes no Wi-Fi password to the application."
+      changes:
+        - sqlFile:
+            path: 030_device_wifi_metadata.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/030_device_wifi_metadata.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

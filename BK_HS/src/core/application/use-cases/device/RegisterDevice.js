@@ -1,4 +1,5 @@
 const { Device } = require('../../../domain/entities/Device');
+const crypto = require('node:crypto');
 
 class RegisterDevice {
   constructor({ deviceRepository }) {
@@ -12,8 +13,22 @@ class RegisterDevice {
       error.status = 400;
       throw error;
     }
-    const device = Device.create({ code, name, type, location, manufacturer, model, alertThreshold });
+    const device = Device.create({
+      code: this.resolveCode(code),
+      name,
+      type,
+      hardwareId: null,
+      location,
+      manufacturer,
+      model,
+      alertThreshold
+    });
     return this.deviceRepository.register(device, userId, homeId);
+  }
+
+  resolveCode(code) {
+    if (typeof code === 'string' && code.trim()) return code.trim();
+    return `ESP32-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
   }
 
   isUuid(value) {

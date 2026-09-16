@@ -1,6 +1,6 @@
 # Flujo de datos IoT actual
 
-Fecha de revisión: 2026-09-14.
+Fecha de revisión: 2026-09-15.
 
 Este documento describe el flujo MQTT implementado en el backend y separa la persistencia de lecturas y estados de los comandos de actuadores ya expuestos por REST.
 
@@ -36,6 +36,9 @@ Para la primera integración con el ESP32 se aceptan estas métricas:
 | Campo | Tipo | Significado |
 |---|---|---|
 | `pulses` | entero no negativo | Pulsos del YF-S201 durante el intervalo |
+| `mqttMessageId` | texto recomendado | Identificador estable para deduplicar reintentos QoS 1 |
+| `deviceId` | texto opcional | Debe coincidir con el código del topic si llega |
+| `hardwareId` | texto opcional | Identidad estable del eFuse del ESP32 |
 | `flowRateLpm` | número no negativo | Caudal instantáneo en litros por minuto |
 | `consumptionLiters` | número no negativo | Litros consumidos en el intervalo |
 | `totalLiters` | número no negativo, opcional | Acumulado del dispositivo |
@@ -49,12 +52,15 @@ Ejemplo compatible:
 
 ```json
 {
-  "flowRateLpm": 2.4,
-  "consumptionLiters": 0.04,
-  "totalLiters": 3.407,
-  "pulses": 18,
-  "signalQuality": -56,
-  "timestamp": "2026-09-04T15:30:00Z"
+  "mqttMessageId": "HS-141F47470968-boot-1",
+  "deviceId": "HS-141F47470968",
+  "hardwareId": "HS-141F47470968",
+  "flowRateLpm": 1.387,
+  "consumptionLiters": 0.11556,
+  "totalLiters": 7.68889,
+  "pulses": 52,
+  "sampleIntervalSeconds": 5.0,
+  "signalQuality": -38
 }
 ```
 
@@ -63,7 +69,7 @@ Ejemplo compatible:
 - Telemetría: `hidrosmart/devices/{deviceCode}/telemetry`, QoS 1, no retained.
 - Estado: `hidrosmart/devices/{deviceCode}/status`, QoS 1, retained.
 - Actuador: `hidrosmart/devices/{deviceCode}/actuators/{valve|pump}/status`, QoS 1, retained.
-- Comandos: el publisher y la convención están preparados, pero todavía no existe el flujo completo desde una ruta REST o caso de uso.
+- Comandos: el publisher, la ruta REST, la persistencia del comando, el ACK y el timeout ya están implementados; falta probarlos con un actuador físico.
 
 El `deviceCode` debe coincidir con `device.device.code`. No se debe enviar un UUID inventado en el topic ni aceptar que el cuerpo cambie el dispositivo indicado por el topic.
 
@@ -93,9 +99,10 @@ El circuito implementado cubre:
 ## Estado de dispositivo y actuadores
 
 Los handlers de estado ya separan mensajes de dispositivo y actuador. El estado
-del dispositivo y su historial se persisten; el control de electroválvula y
-hidrobomba todavía requiere conectar el caso de uso, validar permisos y
-completar el publisher desde una operación de negocio.
+del dispositivo, el SSID de la red activa, la última IP y su historial se
+persisten. El control de electroválvula e
+hidrobomba sale desde una operación REST protegida, se publica con QoS 1 y
+espera ACK o timeout; falta probar la respuesta del actuador físico.
 
 ## Seguridad del broker
 
@@ -110,4 +117,5 @@ Para una red real se debe habilitar autenticación, ACL por dispositivo, TLS, id
 
 ## Documento canónico
 
-El contrato exacto de topics, payloads, normalización y comandos de prueba está en `14-mqtt-protocol.md`. Cuando se entregue el código del ESP32 se debe comparar contra ese contrato y actualizar ambos documentos si existe una decisión nueva.
+El contrato exacto de topics, payloads, normalización, aprovisionamiento BLE y
+comandos de prueba está en `14-mqtt-protocol.md` y `../../firmware/mqtt/contract.md`.

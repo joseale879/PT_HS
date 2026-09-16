@@ -1,6 +1,6 @@
 # Guía de ejecución de HidroSmart
 
-Fecha de revisión: 2026-09-14.
+Fecha de revisión: 2026-09-15.
 
 Esta guía usa el `docker-compose.yml` de la raíz del repositorio. La base de datos se ejecuta en PostgreSQL y los cambios se administran con Liquibase mediante el servicio `tooling`.
 
@@ -9,7 +9,7 @@ Esta guía usa el `docker-compose.yml` de la raíz del repositorio. La base de d
 - PostgreSQL 16 está saludable.
 - Puerto externo: `5433`; puerto interno Docker: `5432`.
 - Liquibase 5.0.2 está configurado en el servicio `tooling`; la última ejecución de `validate`, `update` y `status` fue exitosa.
-- Hay 217 changesets aplicados y `status --verbose` reporta `up to date` en el último estado verificado.
+- Hay 223 changesets aplicados y `status --verbose` reporta `up to date` en el último estado verificado.
 - Existen los roles `hidro_smart_admin`, `hidro_smart_liquibase`, `hidro_smart_app`, `hidro_smart_ingest` y `hidro_smart_readonly`.
 - El backend utiliza `hidro_smart_app`; el servicio Liquibase utiliza el administrador de PostgreSQL definido por `POSTGRES_USER` y `POSTGRES_PASSWORD`.
 
@@ -85,7 +85,7 @@ La persistencia ya está activa. Las siguientes comprobaciones sirven para mante
 ### Verificación de entorno
 
 En la revisión del 2026-09-14 los archivos Compose pasaron `config --quiet`.
-PostgreSQL quedó saludable, Liquibase pasó `validate`, reportó 217 changesets y
+PostgreSQL quedó saludable, Liquibase pasó `validate`, reportó 223 changesets y
 el healthcheck del backend respondió HTTP 200.
 
 El diagnóstico de la base está en `diagnostico-actual.md` y el flujo MQTT en `../../BK_HS/docs/14-mqtt-protocol.md`.

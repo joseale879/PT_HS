@@ -811,6 +811,12 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/045_device_registration_and_linking.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
 
   - changeSet:
       id: 20260914-consumption-series-grant
@@ -829,9 +835,57 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260915-device-provisioning-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,iot,provisioning,security"
+      comment: "Grants controlled registration, provisioning updates, MQTT status and telemetry identity persistence."
+      changes:
+        - sqlFile:
+            path: 047_device_provisioning.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
       rollback:
         - sqlFile:
-            path: ../../05_rollbacks/03_dcl/01_grants/045_device_registration_and_linking.rollback.sql
+            path: ../../05_rollbacks/03_dcl/01_grants/047_device_provisioning.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260915-device-hardware-claim-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,iot,provisioning,security"
+      comment: "Allows the application role to claim a unique physical hardware identity."
+      changes:
+        - sqlFile:
+            path: 048_device_hardware_claim.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/048_device_hardware_claim.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260915-device-wifi-status-grant
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,grants,device,iot,wifi,security"
+      comment: "Allows the backend to persist the active Wi-Fi SSID without exposing credentials."
+      changes:
+        - sqlFile:
+            path: 049_device_wifi_status.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/01_grants/049_device_wifi_status.rollback.sql
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false

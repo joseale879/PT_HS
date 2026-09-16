@@ -30,6 +30,7 @@ async function handleReading({ topic, message, context, logger = console, readin
 
   const reading = {
     deviceId: topicContext.deviceId,
+    hardwareId: telemetry.hardwareId,
     flowRateLpm: telemetry.flowRateLpm,
     consumptionLiters: telemetry.consumptionLiters,
     totalLiters: telemetry.totalLiters,
@@ -58,7 +59,8 @@ async function handleReading({ topic, message, context, logger = console, readin
       signalQuality: reading.signalQuality,
       batteryLevel: reading.batteryLevel,
       voltage: reading.voltage,
-      temperature: reading.temperature
+      temperature: reading.temperature,
+      ...(reading.hardwareId ? { hardwareId: reading.hardwareId } : {})
     };
   const persistence = ingestReading
     ? await ingestReading.execute(persistenceInput)

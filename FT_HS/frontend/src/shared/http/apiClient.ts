@@ -441,13 +441,16 @@ export const devicesApi = {
     return apiClient.get<DeviceListResponse>(`/devices${suffix}`);
   },
   get: (deviceId: number | string) => apiClient.get<{ data: unknown }>(`/devices/${deviceId}`),
+  getByHardware: (hardwareId: string) =>
+    apiClient.get<{ data: unknown }>(`/devices/hardware/${encodeURIComponent(hardwareId)}`),
   status: (deviceId: number | string) =>
     apiClient.get<{ data: unknown }>(`/devices/${deviceId}/status`),
   register: (payload: {
     homeId: string;
-    code: string;
+    code?: string;
     name: string;
     type: string;
+    hardwareId?: string;
     location?: string;
     manufacturer?: string;
     model?: string;
@@ -475,6 +478,16 @@ export const devicesApi = {
     apiClient.put<{ data: unknown }>(`/devices/${deviceId}/config`, payload),
   updateStatus: (deviceId: number | string, payload: unknown) =>
     apiClient.patch<{ data: unknown }>(`/devices/${deviceId}/status`, payload),
+  updateProvisioning: (
+    deviceId: number | string,
+    payload: {
+      hardwareId?: string | null;
+      provisioningStatus: string;
+      provisioningError?: string | null;
+    }
+  ) => apiClient.patch<{ data: unknown }>(`/devices/${deviceId}/provisioning`, payload),
+  claimHardware: (deviceId: number | string, hardwareId: string) =>
+    apiClient.post<{ data: unknown }>(`/devices/${deviceId}/claim-hardware`, { hardwareId }),
   deactivate: (deviceId: number | string) =>
     apiClient.post<void>(`/devices/${deviceId}/deactivate`),
   unlink: (deviceId: number | string, homeId: number | string) =>

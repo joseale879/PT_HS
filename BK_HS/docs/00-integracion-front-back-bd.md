@@ -39,7 +39,9 @@ Los prefijos montados en Express son:
 - `/api/v1/users`: perfil y preferencias; `/users/me` persiste `avatarDataUrl` y `phone` con mÃ¡ximo de 60 caracteres.
 - `/api/v1/homes`: hogares, miembros y solicitudes de membresÃ­a.
 - `/api/v1/devices`: alta con ubicación, consulta, vinculación por código,
-  edición, configuración, estado, desactivación y desvinculación.
+  edición, configuración, estado, desactivación y desvinculación. Las
+  respuestas incluyen `wifiSsid`, `lastIp` y `wifiRssiDbm` cuando el ESP32 ya
+  reportó su red; la contraseña se envía solamente por BLE.
 - `/api/v1/consumption`: `summary`, `daily`, `hourly`, `monthly`, `cost` y
   `advanced` para series agrupadas por día, hora, mes o ubicación.
 - `/api/v1/tariffs`: tarifa del hogar.
@@ -56,6 +58,13 @@ Los prefijos montados en Express son:
   de estado/utilidad con `reports.read` y RLS.
 
 La URL pÃºblica del navegador es `/api/v1/...`; Nginx reenvÃ­a `/api/` al backend dentro de Docker.
+
+## Configuración centralizada de dispositivos
+
+En la pantalla **Dispositivos IoT**, **Configurar** concentra los datos del
+equipo, la red, el estado BLE y el historial. La opción de conectar por
+Bluetooth se retira automáticamente cuando el estado inicial o MQTT confirma
+que Wi-Fi ya está conectado.
 
 ## Correo de acceso a hogares
 

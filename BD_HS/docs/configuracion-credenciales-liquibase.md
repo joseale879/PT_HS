@@ -87,7 +87,7 @@ docker compose --env-file .env -p hidro_smart --profile tooling run --rm liquiba
 Estado verificado el 2026-09-14: `validate`, `update` y `status --verbose`
 fueron exitosos y no hay changesets pendientes.
 
-El estado vigente conserva 217 changesets aplicados. La evidencia transversal
+El estado vigente conserva 223 changesets aplicados. La evidencia transversal
 está en `../../docs/estado-integral.md`.
 
 ## Nota histórica — actualización 2026-09-03

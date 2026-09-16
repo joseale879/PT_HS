@@ -3,20 +3,24 @@ const { RegisterDeviceRequest } = require('../../core/application/dtos/requests/
 const { UpdateDeviceRequest } = require('../../core/application/dtos/requests/UpdateDeviceRequest');
 const { UpdateDeviceConfigRequest } = require('../../core/application/dtos/requests/UpdateDeviceConfigRequest');
 const { UpdateDeviceStatusRequest } = require('../../core/application/dtos/requests/UpdateDeviceStatusRequest');
+const { UpdateDeviceProvisioningRequest } = require('../../core/application/dtos/requests/UpdateDeviceProvisioningRequest');
 const { DeactivateDeviceRequest } = require('../../core/application/dtos/requests/DeactivateDeviceRequest');
 const { paginate } = require('../../shared/http');
 
 class DeviceController {
-  constructor({ registerDevice, linkDeviceToHome, listUserDevices, getDevice, getLatestDeviceTelemetry, listDeviceTelemetry, updateDevice, updateDeviceConfig, updateDeviceStatus, deactivateDevice, unlinkDeviceFromHome }) {
+  constructor({ registerDevice, linkDeviceToHome, listUserDevices, getDevice, getDeviceByHardware, claimDeviceHardware, getLatestDeviceTelemetry, listDeviceTelemetry, updateDevice, updateDeviceConfig, updateDeviceStatus, updateDeviceProvisioning, deactivateDevice, unlinkDeviceFromHome }) {
     this.registerDevice = registerDevice;
     this.linkDeviceToHome = linkDeviceToHome;
     this.listUserDevices = listUserDevices;
     this.getDevice = getDevice;
+    this.getDeviceByHardware = getDeviceByHardware;
+    this.claimDeviceHardware = claimDeviceHardware;
     this.getLatestDeviceTelemetry = getLatestDeviceTelemetry;
     this.listDeviceTelemetry = listDeviceTelemetry;
     this.updateDevice = updateDevice;
     this.updateDeviceConfig = updateDeviceConfig;
     this.updateDeviceStatus = updateDeviceStatus;
+    this.updateDeviceProvisioning = updateDeviceProvisioning;
     this.deactivateDevice = deactivateDevice;
     this.unlinkDeviceFromHome = unlinkDeviceFromHome;
   }
@@ -54,6 +58,23 @@ class DeviceController {
     res.json({ data: DeviceResponse.fromEntity(device) });
   }
 
+  async getByHardware(req, res) {
+    const device = await this.getDeviceByHardware.execute({
+      userId: req.user.id,
+      hardwareId: req.params.hardwareId
+    });
+    res.json({ data: DeviceResponse.fromEntity(device) });
+  }
+
+  async claimHardware(req, res) {
+    const device = await this.claimDeviceHardware.execute({
+      userId: req.user.id,
+      deviceId: req.params.deviceId,
+      hardwareId: req.body?.hardwareId
+    });
+    res.json({ data: DeviceResponse.fromEntity(device) });
+  }
+
   async status(req, res) {
     const device = await this.getDevice.execute({ userId: req.user.id, deviceId: req.params.deviceId });
     res.json({
@@ -63,9 +84,16 @@ class DeviceController {
         connectivityStatus: device.connectivityStatus,
         firmwareVersion: device.firmwareVersion,
         lastConnectionAt: device.lastConnectionAt,
+        lastIp: device.lastIp,
+        wifiSsid: device.wifiSsid,
         wifiRssiDbm: device.wifiRssiDbm,
         signalQuality: device.signalQuality,
-        batteryLevel: device.batteryLevel
+        batteryLevel: device.batteryLevel,
+        hardwareId: device.hardwareId,
+        provisioningStatus: device.provisioningStatus,
+        provisioningError: device.provisioningError,
+        provisioningUpdatedAt: device.provisioningUpdatedAt,
+        provisionedAt: device.provisionedAt
       }
     });
   }
@@ -107,6 +135,16 @@ class DeviceController {
   async updateStatus(req, res) {
     const input = UpdateDeviceStatusRequest.fromRequest(req.body);
     const device = await this.updateDeviceStatus.execute({ userId: req.user.id, deviceId: req.params.deviceId, ...input });
+    res.json({ data: DeviceResponse.fromEntity(device) });
+  }
+
+  async updateProvisioning(req, res) {
+    const input = UpdateDeviceProvisioningRequest.fromRequest(req.body);
+    const device = await this.updateDeviceProvisioning.execute({
+      userId: req.user.id,
+      deviceId: req.params.deviceId,
+      ...input
+    });
     res.json({ data: DeviceResponse.fromEntity(device) });
   }
 

@@ -1,12 +1,12 @@
 # Protocolo MQTT implementado
 
-Fecha de revisión: 2026-09-14.
+Fecha de revisión: 2026-09-15.
 
-Este es el contrato vigente entre el backend y el futuro firmware ESP32. Sustituye los ejemplos antiguos basados en `hidro-smart/device/...`.
+Este es el contrato vigente entre el backend y el firmware ESP32 versionado. Sustituye los ejemplos antiguos basados en `hidro-smart/device/...`.
 
 ## Identidad del dispositivo
 
-`{deviceCode}` debe ser el valor de `device.device.code` registrado en HidroSmart. Se permiten letras, números, guiones y guiones bajos. Ejemplo: `ESP32-246F28ABCDEF`.
+`{deviceCode}` debe ser el valor de `device.device.code` registrado en HidroSmart. Se permiten letras, números, guiones y guiones bajos. En el ESP32 actual, si no se configura manualmente, coincide con el `hardwareId`, por ejemplo `HS-141F47470968`.
 
 El código del topic es la fuente de identidad del mensaje. El backend lo resuelve contra PostgreSQL y rechaza dispositivos desconocidos, inactivos o sin asociación autorizada.
 
@@ -32,6 +32,9 @@ El parser requiere `flowRateLpm` y `consumptionLiters`.
 | `consumptionLiters` | Sí | número | mayor o igual a cero, consumo del intervalo |
 | `totalLiters` | No | número | mayor o igual a cero, acumulado del dispositivo |
 | `pulses` | No | entero | mayor o igual a cero |
+| `mqttMessageId` | Sí en firmware nuevo | texto | estable entre reintentos del mismo evento, hasta 100 caracteres |
+| `deviceId` | No | texto | si llega, debe coincidir con el código del topic |
+| `hardwareId` | No | texto | identidad física estable del eFuse, hasta 32 caracteres |
 | `sampleIntervalSeconds` | No | número | mayor que cero si no se publica cada segundo |
 | `timestamp` | No | texto ISO-8601 con zona (`Z` u offset) | hora de medición; el backend la normaliza a UTC y, si falta, usa recepción |
 | `signalQuality` | No | número | RSSI en dBm si es negativo; también acepta porcentaje |
@@ -63,7 +66,7 @@ ese campo cuando `MQTT_ALLOW_LEGACY_TELEMETRY=true` y genera un identificador
 temporal para no perder las mÃ©tricas. Esta compatibilidad debe desactivarse
 despuÃ©s de actualizar el firmware.
 
-`signalQuality: -56` se normaliza como `wifiRssiDbm: -56` y como calidad porcentual para el futuro historial de dispositivo. El firmware puede enviar directamente `wifiRssiDbm` y `signalQualityPercent` si ya calcula ambos.
+`signalQuality: -56` se normaliza como `wifiRssiDbm: -56` y como calidad porcentual para el historial de dispositivo. El firmware actual publica el RSSI con el valor negativo, por ejemplo `-38`; el firmware también puede enviar directamente `wifiRssiDbm` y `signalQualityPercent` si ya calcula ambos.
 
 `totalLiters` es útil para diagnóstico, pero el total confiable del sistema debe calcularse con lecturas persistidas porque el contador del ESP32 puede reiniciarse.
 
@@ -78,6 +81,12 @@ Topic: `hidrosmart/devices/{deviceCode}/status`
 ```
 
 Estados admitidos: `ONLINE`, `OFFLINE` y `ERROR`.
+
+El estado puede incluir `hardwareId`, `provisioningState`, `firmwareVersion`,
+`lastIp`, `ssid`, `wifiRssiDbm` y `timestamp`. El backend normaliza
+`provisioningState` a `provisioning_status`, guarda el SSID en
+`device.device.wifi_ssid` y actualiza `last_ip`. La contraseña Wi-Fi no forma
+parte del protocolo MQTT.
 
 ## Estado de actuadores
 
@@ -123,8 +132,8 @@ La ingesta vigente ejecuta este circuito:
 6. usar permisos mínimos y registrar errores sin perder el mensaje.
 
 La columna `consumption_liters` usa `NUMERIC(14,3)` y el m³ generado usa
-`NUMERIC(14,6)`. Las funciones, vistas y reportes dependientes ya fueron
-actualizados; el contrato solo queda pendiente de validación con hardware real.
+`NUMERIC(14,6)`. El contrato fue validado con un payload equivalente al ESP32;
+queda probar la placa física completa.
 
 Como MQTT QoS 1 puede reentregar mensajes, la persistencia usa
 `mqttMessageId` y una clave única parcial por dispositivo.

@@ -10,6 +10,7 @@ const {
 } = require('../../src/mqtt/topics');
 const { parseTelemetryMessage, rssiToSignalQuality } = require('../../src/mqtt/message-parser');
 const { handleReading } = require('../../src/mqtt/handlers/reading.handler');
+const { handleDeviceStatus } = require('../../src/mqtt/handlers/device-status.handler');
 const { handleActuatorStatus } = require('../../src/mqtt/handlers/actuator-status.handler');
 const { MqttSubscriber } = require('../../src/core/infrastructure/services/mqtt/MqttSubscriber');
 const { MqttPublisher } = require('../../src/core/infrastructure/services/mqtt/MqttPublisher');
@@ -131,6 +132,37 @@ test('persiste el payload legado del ESP32 generando un identificador de transic
   assert.equal(persistenceInput.sampleIntervalSeconds, 5.001);
   assert.equal(persistenceInput.wifiRssiDbm, -33);
   assert.equal(persistenceInput.signalQuality, 100);
+});
+
+test('persiste el SSID y la IP reportados por el ESP32 sin recibir la clave Wi-Fi', async () => {
+  let persistenceInput;
+  const result = await handleDeviceStatus({
+    topic: 'hidrosmart/devices/ESP32-001/status',
+    message: JSON.stringify({
+      deviceId: 'ESP32-001',
+      hardwareId: 'HS-141F47470968',
+      status: 'ONLINE',
+      provisioningState: 'complete',
+      ssid: 'APRENDICES',
+      lastIp: '10.3.234.205',
+      wifiRssiDbm: -38,
+      firmwareVersion: '1.1.0'
+    }),
+    logger: silentLogger,
+    deviceRepository: {
+      recordMqttStatus: async (input) => {
+        persistenceInput = input;
+        return { deviceId: 'device-1' };
+      }
+    }
+  });
+
+  assert.equal(result.wifiSsid, 'APRENDICES');
+  assert.equal(result.lastIp, '10.3.234.205');
+  assert.equal(result.provisioningStatus, 'COMPLETE');
+  assert.equal(persistenceInput.wifiSsid, 'APRENDICES');
+  assert.equal(persistenceInput.lastIp, '10.3.234.205');
+  assert.equal(Object.hasOwn(persistenceInput, 'password'), false);
 });
 
 test('permite desactivar la compatibilidad con payloads MQTT legados', async () => {

@@ -14,13 +14,16 @@ async function handleDeviceStatus({ topic, message, context, logger = console, m
 
   const status = {
     deviceId: topicContext.deviceId,
+    hardwareId: deviceStatus.hardwareId,
     status: deviceStatus.status,
     timestamp: deviceStatus.timestamp,
     firmwareVersion: deviceStatus.firmwareVersion,
     wifiRssiDbm: deviceStatus.wifiRssiDbm,
     signalQuality: deviceStatus.signalQuality,
     batteryLevel: deviceStatus.batteryLevel,
-    lastIp: deviceStatus.lastIp
+    lastIp: deviceStatus.lastIp,
+    wifiSsid: deviceStatus.wifiSsid,
+    provisioningStatus: deviceStatus.provisioningStatus
   };
 
   if (deviceRepository) {
@@ -32,7 +35,10 @@ async function handleDeviceStatus({ topic, message, context, logger = console, m
       wifiRssiDbm: status.wifiRssiDbm,
       signalQuality: status.signalQuality,
       batteryLevel: status.batteryLevel,
-      lastIp: status.lastIp
+      lastIp: status.lastIp,
+      wifiSsid: status.wifiSsid,
+      hardwareId: status.hardwareId,
+      provisioningStatus: status.provisioningStatus
     });
   }
 

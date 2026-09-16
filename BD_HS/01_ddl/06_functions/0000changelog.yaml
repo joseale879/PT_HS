@@ -931,3 +931,21 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260915-fn-claim-provisioned-device
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,function,device,iot,provisioning,security"
+      comment: "Associates one physical ESP32 hardware identity with an authorized logical device."
+      changes:
+        - sqlFile:
+            path: 055_fn_claim_provisioned_device.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/055_fn_claim_provisioned_device.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

@@ -3,13 +3,23 @@ const { withTransaction } = require('../../../../infrastructure/db');
 const { DeviceRepository } = require('../../../application/ports/repositories/DeviceRepository');
 
 class PostgresDeviceRepository extends DeviceRepository {
-  async recordMqttStatus({ deviceCode, connectivityStatus, eventAt, firmwareVersion, wifiRssiDbm, signalQuality, batteryLevel, lastIp }) {
-    const result = await withTransaction(null, (client) => client.query(
-      `SELECT device_id, code, administrative_status, connectivity_status, last_connection_at
-         FROM device.fn_record_device_status($1::varchar, $2::varchar, $3::timestamptz, $4::varchar,
-           $5::integer, $6::integer, $7::integer, $8::varchar)`,
-      [deviceCode, connectivityStatus, eventAt, firmwareVersion, wifiRssiDbm, signalQuality, batteryLevel, lastIp]
-    ));
+  async recordMqttStatus({ deviceCode, connectivityStatus, eventAt, firmwareVersion, wifiRssiDbm, signalQuality, batteryLevel, lastIp, wifiSsid, hardwareId, provisioningStatus }) {
+    const result = await withTransaction(null, async (client) => {
+      const statusResult = await client.query(
+        `SELECT device_id, code, administrative_status, connectivity_status, last_connection_at,
+                hardware_id, provisioning_status, provisioning_updated_at
+           FROM device.fn_record_device_status($1::varchar, $2::varchar, $3::timestamptz, $4::varchar,
+             $5::integer, $6::integer, $7::integer, $8::varchar, $9::varchar, $10::varchar)`,
+        [deviceCode, connectivityStatus, eventAt, firmwareVersion, wifiRssiDbm, signalQuality, batteryLevel, lastIp, hardwareId, provisioningStatus]
+      );
+      if (wifiSsid) {
+        await client.query(
+          'SELECT device.fn_record_device_wifi_ssid($1::varchar, $2::varchar)',
+          [deviceCode, wifiSsid]
+        );
+      }
+      return statusResult;
+    });
     return result.rows[0] || null;
   }
 
@@ -25,8 +35,9 @@ class PostgresDeviceRepository extends DeviceRepository {
   async register(device, userId, homeId) {
     const deviceId = await withTransaction(userId, async (client) => {
       const result = await client.query(
-        `SELECT device.fn_register_device_with_location($1::varchar, $2::varchar, $3::varchar, $4::varchar, $5::varchar, $6::varchar, $7::decimal) AS device_id`,
-        [device.code, device.name, device.type, device.location, device.manufacturer, device.model, device.alertThreshold]
+        `SELECT device.fn_register_device_with_provisioning($1::varchar, $2::varchar, $3::varchar, $4::varchar,
+          $5::varchar, $6::varchar, $7::varchar, $8::decimal) AS device_id`,
+        [device.code, device.name, device.type, device.hardwareId, device.location, device.manufacturer, device.model, device.alertThreshold]
       );
       const createdDeviceId = result.rows[0].device_id;
       await client.query(
@@ -49,10 +60,11 @@ class PostgresDeviceRepository extends DeviceRepository {
       if (!deviceId) return null;
 
       return client.query(
-        `SELECT d.device_id, d.code, d.name, d.type, d.location, d.manufacturer,
+        `SELECT d.device_id, d.code, d.name, d.type, d.hardware_id, d.location, d.manufacturer,
                 d.model, d.umbral_alerta, d.status, d.firmware_version,
-                d.connectivity_status, d.last_connection_at, d.wifi_rssi_dbm,
-                d.signal_quality, d.battery_level
+                d.connectivity_status, d.last_connection_at, d.last_ip, d.wifi_ssid, d.wifi_rssi_dbm,
+                d.signal_quality, d.battery_level, d.provisioning_status,
+                d.provisioning_error, d.provisioning_updated_at, d.provisioned_at
            FROM device.device d
           WHERE d.device_id = $1::uuid
           LIMIT 1`,
@@ -66,6 +78,7 @@ class PostgresDeviceRepository extends DeviceRepository {
       code: row.code,
       name: row.name,
       type: row.type,
+      hardwareId: row.hardware_id,
       location: row.location,
       manufacturer: row.manufacturer,
       model: row.model,
@@ -74,18 +87,25 @@ class PostgresDeviceRepository extends DeviceRepository {
       connectivityStatus: row.connectivity_status,
       firmwareVersion: row.firmware_version,
       lastConnectionAt: row.last_connection_at,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
       wifiRssiDbm: row.wifi_rssi_dbm,
       signalQuality: row.signal_quality,
-      batteryLevel: row.battery_level
+      batteryLevel: row.battery_level,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
     }) : null;
   }
 
   async findByUserId(userId, homeId = null) {
     const result = await withTransaction(userId, (client) => client.query(
-        `SELECT DISTINCT d.device_id, d.code, d.name, d.type, d.location, d.manufacturer,
+        `SELECT DISTINCT d.device_id, d.code, d.name, d.type, d.hardware_id, d.location, d.manufacturer,
               d.model, d.umbral_alerta, d.status, d.firmware_version,
-              d.connectivity_status, d.last_connection_at, d.wifi_rssi_dbm,
-              d.signal_quality, d.battery_level, d.created_at
+              d.connectivity_status, d.last_connection_at, d.last_ip, d.wifi_ssid, d.wifi_rssi_dbm,
+              d.signal_quality, d.battery_level, d.provisioning_status,
+              d.provisioning_error, d.provisioning_updated_at, d.provisioned_at, d.created_at
          FROM device.device d
          JOIN home.home_device hd ON hd.device_id = d.device_id
          JOIN home.home_user hu ON hu.home_id = hd.home_id
@@ -101,6 +121,7 @@ class PostgresDeviceRepository extends DeviceRepository {
       code: row.code,
       name: row.name,
       type: row.type,
+      hardwareId: row.hardware_id,
       location: row.location,
       manufacturer: row.manufacturer,
       model: row.model,
@@ -109,18 +130,25 @@ class PostgresDeviceRepository extends DeviceRepository {
       connectivityStatus: row.connectivity_status,
       firmwareVersion: row.firmware_version,
       lastConnectionAt: row.last_connection_at,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
       wifiRssiDbm: row.wifi_rssi_dbm,
       signalQuality: row.signal_quality,
-      batteryLevel: row.battery_level
+      batteryLevel: row.battery_level,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
     }));
   }
 
   async findByIdForUser(deviceId, userId) {
     const result = await withTransaction(userId, (client) => client.query(
-      `SELECT d.device_id, d.code, d.name, d.type, d.location, d.manufacturer,
+        `SELECT d.device_id, d.code, d.name, d.type, d.hardware_id, d.location, d.manufacturer,
               d.model, d.umbral_alerta, d.status, d.firmware_version,
-              d.connectivity_status, d.last_connection_at, d.wifi_rssi_dbm,
-              d.signal_quality, d.battery_level
+              d.connectivity_status, d.last_connection_at, d.last_ip, d.wifi_ssid, d.wifi_rssi_dbm,
+              d.signal_quality, d.battery_level, d.provisioning_status,
+              d.provisioning_error, d.provisioning_updated_at, d.provisioned_at
          FROM device.device d
          JOIN home.home_device hd ON hd.device_id = d.device_id
          JOIN home.home_user hu ON hu.home_id = hd.home_id
@@ -137,6 +165,7 @@ class PostgresDeviceRepository extends DeviceRepository {
       code: row.code,
       name: row.name,
       type: row.type,
+      hardwareId: row.hardware_id,
       location: row.location,
       manufacturer: row.manufacturer,
       model: row.model,
@@ -145,9 +174,62 @@ class PostgresDeviceRepository extends DeviceRepository {
       connectivityStatus: row.connectivity_status,
       firmwareVersion: row.firmware_version,
       lastConnectionAt: row.last_connection_at,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
       wifiRssiDbm: row.wifi_rssi_dbm,
       signalQuality: row.signal_quality,
-      batteryLevel: row.battery_level
+      batteryLevel: row.battery_level,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
+    }) : null;
+  }
+
+  async findByHardwareIdForUser(hardwareId, userId) {
+    const result = await withTransaction(userId, (client) => client.query(
+      `SELECT DISTINCT ON (d.device_id)
+              d.device_id, d.code, d.name, d.type, d.hardware_id, d.location,
+              d.manufacturer, d.model, d.umbral_alerta, d.status,
+               d.firmware_version, d.connectivity_status, d.last_connection_at,
+               d.last_ip, d.wifi_ssid, d.wifi_rssi_dbm, d.signal_quality, d.battery_level,
+              d.provisioning_status, d.provisioning_error,
+              d.provisioning_updated_at, d.provisioned_at
+         FROM device.device d
+         JOIN home.home_device hd ON hd.device_id = d.device_id
+         JOIN home.home_user hu ON hu.home_id = hd.home_id
+        WHERE d.hardware_id = $1::varchar
+          AND hu.user_account_id = $2::uuid
+          AND hd.status = 'Active'
+        ORDER BY d.device_id
+        LIMIT 1`,
+      [hardwareId, userId]
+    ));
+
+    const row = result.rows[0];
+    return row ? new Device({
+      id: row.device_id,
+      code: row.code,
+      name: row.name,
+      type: row.type,
+      hardwareId: row.hardware_id,
+      location: row.location,
+      manufacturer: row.manufacturer,
+      model: row.model,
+      alertThreshold: row.umbral_alerta,
+      status: row.status,
+      connectivityStatus: row.connectivity_status,
+      firmwareVersion: row.firmware_version,
+      lastConnectionAt: row.last_connection_at,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
+      wifiRssiDbm: row.wifi_rssi_dbm,
+      signalQuality: row.signal_quality,
+      batteryLevel: row.battery_level,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
     }) : null;
   }
 
@@ -261,7 +343,9 @@ class PostgresDeviceRepository extends DeviceRepository {
               updated_at = now()
         WHERE device_id = $1::uuid
         RETURNING device_id, code, name, type, location, manufacturer, model,
-                  umbral_alerta, status, firmware_version, last_connection_at`,
+                  umbral_alerta, status, firmware_version, last_connection_at,
+                  last_ip, wifi_ssid, hardware_id, provisioning_status, provisioning_error,
+                  provisioning_updated_at, provisioned_at`,
       [deviceId, name ?? null, location ?? null, manufacturer ?? null, model ?? null, alertThreshold ?? null]
     ));
 
@@ -271,13 +355,20 @@ class PostgresDeviceRepository extends DeviceRepository {
       code: row.code,
       name: row.name,
       type: row.type,
+      hardwareId: row.hardware_id,
       location: row.location,
       manufacturer: row.manufacturer,
       model: row.model,
       alertThreshold: row.umbral_alerta,
       status: row.status,
       firmwareVersion: row.firmware_version,
-      lastConnectionAt: row.last_connection_at
+      lastConnectionAt: row.last_connection_at,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
     }) : null;
   }
 
@@ -300,7 +391,9 @@ class PostgresDeviceRepository extends DeviceRepository {
                 updated_at = now()
           WHERE device_id = $1::uuid
           RETURNING device_id, code, name, type, location, manufacturer, model,
-                    umbral_alerta, status, firmware_version, last_connection_at`,
+                    umbral_alerta, status, firmware_version, last_connection_at,
+                    last_ip, wifi_ssid, hardware_id, provisioning_status, provisioning_error,
+                    provisioning_updated_at, provisioned_at`,
         [deviceId, calibrationFactor, calibrationOffset]
       );
       if (!updated.rowCount) return null;
@@ -320,21 +413,43 @@ class PostgresDeviceRepository extends DeviceRepository {
       code: result.code,
       name: result.name,
       type: result.type,
+      hardwareId: result.hardware_id,
       location: result.location,
       manufacturer: result.manufacturer,
       model: result.model,
       alertThreshold: result.umbral_alerta,
       status: result.status,
       firmwareVersion: result.firmware_version,
-      lastConnectionAt: result.last_connection_at
+      lastConnectionAt: result.last_connection_at,
+      lastIp: result.last_ip,
+      wifiSsid: result.wifi_ssid,
+      provisioningStatus: result.provisioning_status,
+      provisioningError: result.provisioning_error,
+      provisioningUpdatedAt: result.provisioning_updated_at,
+      provisionedAt: result.provisioned_at
     });
   }
 
   async updateStatusForUser({ userId, deviceId, status, reason }) {
-    const result = await withTransaction(userId, (client) => client.query(
-      `SELECT * FROM device.fn_update_device_status($1::uuid, $2::varchar, $3::varchar)`,
-      [deviceId, status, reason]
-    ));
+    const result = await withTransaction(userId, async (client) => {
+      const updated = await client.query(
+        `SELECT * FROM device.fn_update_device_status($1::uuid, $2::varchar, $3::varchar)`,
+        [deviceId, status, reason]
+      );
+      if (!updated.rows[0]) return updated;
+
+      return client.query(
+        `SELECT d.device_id, d.code, d.name, d.type, d.hardware_id, d.location,
+                d.manufacturer, d.model, d.umbral_alerta, d.status, d.firmware_version,
+                d.connectivity_status, d.last_connection_at, d.last_ip, d.wifi_ssid,
+                d.wifi_rssi_dbm, d.signal_quality, d.battery_level, d.provisioning_status,
+                d.provisioning_error, d.provisioning_updated_at, d.provisioned_at
+           FROM device.device d
+          WHERE d.device_id = $1::uuid
+          LIMIT 1`,
+        [deviceId]
+      );
+    });
 
     const row = result.rows[0];
     if (!row) return null;
@@ -343,13 +458,122 @@ class PostgresDeviceRepository extends DeviceRepository {
       code: row.code,
       name: row.name,
       type: row.type,
+      hardwareId: row.hardware_id,
+      manufacturer: row.manufacturer,
+      model: row.model,
+      alertThreshold: row.umbral_alerta,
+      status: row.status,
+      location: row.location,
+      firmwareVersion: row.firmware_version,
+      lastConnectionAt: row.last_connection_at,
+      connectivityStatus: row.connectivity_status,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
+      wifiRssiDbm: row.wifi_rssi_dbm,
+      signalQuality: row.signal_quality,
+      batteryLevel: row.battery_level,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
+    });
+  }
+
+  async updateProvisioningForUser({ userId, deviceId, hardwareId, provisioningStatus, provisioningError }) {
+    const result = await withTransaction(userId, async (client) => {
+      const updated = await client.query(
+        `SELECT device_id
+           FROM device.fn_update_device_provisioning($1::uuid, $2::varchar, $3::varchar, $4::varchar)`,
+        [deviceId, hardwareId, provisioningStatus, provisioningError]
+      );
+      if (!updated.rows[0]) return updated;
+
+      return client.query(
+        `SELECT d.device_id, d.code, d.name, d.type, d.hardware_id, d.location,
+                d.manufacturer, d.model, d.umbral_alerta, d.status, d.firmware_version,
+                d.connectivity_status, d.last_connection_at, d.last_ip, d.wifi_ssid,
+                d.wifi_rssi_dbm, d.signal_quality, d.battery_level, d.provisioning_status,
+                d.provisioning_error, d.provisioning_updated_at, d.provisioned_at
+           FROM device.device d
+          WHERE d.device_id = $1::uuid
+          LIMIT 1`,
+        [deviceId]
+      );
+    });
+
+    const row = result.rows[0];
+    return row ? new Device({
+      id: row.device_id,
+      code: row.code,
+      name: row.name,
+      type: row.type,
+      hardwareId: row.hardware_id,
+      location: row.location,
       manufacturer: row.manufacturer,
       model: row.model,
       alertThreshold: row.umbral_alerta,
       status: row.status,
       firmwareVersion: row.firmware_version,
-      lastConnectionAt: row.last_connection_at
+      connectivityStatus: row.connectivity_status,
+      lastConnectionAt: row.last_connection_at,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
+      wifiRssiDbm: row.wifi_rssi_dbm,
+      signalQuality: row.signal_quality,
+      batteryLevel: row.battery_level,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
+    }) : null;
+  }
+
+  async claimHardwareForUser({ userId, deviceId, hardwareId }) {
+    const result = await withTransaction(userId, async (client) => {
+      const claimed = await client.query(
+        `SELECT device_id
+           FROM device.fn_claim_provisioned_device($1::uuid, $2::varchar)`,
+        [deviceId, hardwareId]
+      );
+      if (!claimed.rows[0]) return claimed;
+
+      return client.query(
+        `SELECT device_id, code, name, type, hardware_id, location, manufacturer,
+                model, umbral_alerta, status, firmware_version,
+                connectivity_status, last_connection_at, last_ip, wifi_ssid, wifi_rssi_dbm,
+                signal_quality, battery_level, provisioning_status,
+                provisioning_error, provisioning_updated_at, provisioned_at
+           FROM device.device
+          WHERE device_id = $1::uuid`,
+        [deviceId]
+      );
     });
+
+    const row = result.rows[0];
+    return row ? new Device({
+      id: row.device_id,
+      code: row.code,
+      name: row.name,
+      type: row.type,
+      hardwareId: row.hardware_id,
+      location: row.location,
+      manufacturer: row.manufacturer,
+      model: row.model,
+      alertThreshold: row.umbral_alerta,
+      status: row.status,
+      connectivityStatus: row.connectivity_status,
+      firmwareVersion: row.firmware_version,
+      lastConnectionAt: row.last_connection_at,
+      lastIp: row.last_ip,
+      wifiSsid: row.wifi_ssid,
+      wifiRssiDbm: row.wifi_rssi_dbm,
+      signalQuality: row.signal_quality,
+      batteryLevel: row.battery_level,
+      provisioningStatus: row.provisioning_status,
+      provisioningError: row.provisioning_error,
+      provisioningUpdatedAt: row.provisioning_updated_at,
+      provisionedAt: row.provisioned_at
+    }) : null;
   }
 
   async unlinkFromHome({ userId, deviceId, homeId }) {

@@ -1,5 +1,5 @@
 class RegisterDeviceRequest {
-  constructor({ homeId, code, name, type, location = null, manufacturer = null, model = null, alertThreshold = null }) {
+  constructor({ homeId, code = null, name, type, location = null, manufacturer = null, model = null, alertThreshold = null }) {
     this.homeId = homeId;
     this.code = code;
     this.name = name;

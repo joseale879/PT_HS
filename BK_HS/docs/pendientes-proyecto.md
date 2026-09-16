@@ -1,6 +1,6 @@
 ﻿# Plan de trabajo y pendientes â€” HidroSmart
 
-Ãšltima revisiÃ³n: 2026-09-14.
+Ãšltima revisiÃ³n: 2026-09-15.
 
 Este documento es el mapa operativo del proyecto. Distingue lo construido de lo que falta integrar, probar o endurecer. Las reglas protegidas por PostgreSQL no deben duplicarse en Node.js.
 
@@ -8,13 +8,13 @@ Este documento es el mapa operativo del proyecto. Distingue lo construido de lo 
 
 | Ãrea | Estado | Nota |
 |---|---|---|
-| Base de datos | Operativa | Liquibase aplicado: 217 changesets; sin cambios pendientes |
+| Base de datos | Operativa | Liquibase aplicado: 223 changesets; sin cambios pendientes |
 | Backend HTTP | Base funcional | Rutas, JWT, RLS y RBAC implementados |
 | Frontend web | Base funcional | Consume `/api/v1`; quedan estados visuales, pruebas de rol y cobertura frontend |
 | MQTT | Ingesta local operativa | Topics, parser, deduplicaciÃ³n e ingesta PostgreSQL controlada |
-| IoT real | Parcial | Estructura de firmware y contrato presentes; falta confirmar seguimiento en Git y probar placa/sensor real |
+| IoT real | Parcial | Firmware, contrato BLE/MQTT y puente móvil presentes; falta cargarlo/probarlo en la placa y calibrar el sensor real |
 | SMTP | Integrado | Gmail configurable; eventos de cuenta aislados de la operaciÃ³n principal |
-| Pruebas | Backend aprobadas | Backend: 157 unitarias + integración local 6/6; quedan E2E de producción y pruebas con hardware real |
+| Pruebas | Backend aprobadas | Backend: 161 unitarias + integración local 6/6; quedan E2E de producción y pruebas con hardware real |
 
 ## Ya construido y verificado
 
@@ -31,7 +31,8 @@ Este documento es el mapa operativo del proyecto. Distingue lo construido de lo 
 - [x] Cliente MQTT, topics `hidrosmart/devices/{deviceCode}/...`, parser y handlers.
 - [x] Contrato inicial compatible con ESP32: `deviceId`, `flowRateLpm`, `consumptionLiters`, `totalLiters`, `pulses`, `sampleIntervalSeconds`, `wifiRssiDbm` y `timestamp`.
 - [x] Prueba de humo MQTT con `ESP32-001`: Mosquitto recibió el mensaje y el backend lo validó/normalizó.
-- [x] Backend compilable, lint y 157 pruebas unitarias aprobadas.
+- [x] Payload del ESP32 con `hardwareId`, `signalQuality` RSSI negativo y `mqttMessageId` persistido; el reenvío del mismo ID no duplica filas.
+- [x] Backend compilable, lint y 163 pruebas unitarias aprobadas.
 
 ## Fase BK-01 â€” seguridad y contratos HTTP
 
@@ -99,9 +100,20 @@ Flujo objetivo: `ESP32 â†’ Mosquitto â†’ subscriber â†’ parser â
 
 ## Fase BK-06 â€” dispositivos y actuadores
 
+Actualización 2026-09-15: `hardwareId`, estados de aprovisionamiento y la
+telemetría del firmware nuevo ya recorren MQTT → backend → PostgreSQL →
+frontend. El frontend web y el puente móvil ya implementan el transporte BLE;
+sigue pendiente probarlo sobre la placa física.
+
 - [x] Agregar `location` al dispositivo con migración, API y edición desde el frontend.
+- [x] Centralizar la configuración del dispositivo: datos generales, red Wi-Fi,
+  IP, RSSI, estado BLE, umbral e historial en un único apartado.
+- [x] Ocultar la conexión Bluetooth cuando el ESP32 reporta Wi-Fi conectado,
+  incluso si Mosquitto todavía no está disponible.
+- [x] Persistir `wifi_ssid` y exponer `last_ip`/RSSI sin guardar contraseñas.
 - [x] Completar registro de dispositivo nuevo y vinculación de un equipo existente por `device.code`.
-- [ ] Definir provisioning fÃ­sico y credenciales MQTT por dispositivo.
+- [x] Definir provisioning BLE con hasta cinco perfiles Wi-Fi, host y puerto MQTT por dispositivo.
+- [x] Separar la identidad física `hardwareId` del código lógico y agregar consulta/claim autorizado para asociarlos.
 - [x] Persistir estados `ONLINE/OFFLINE` y `last_seen` reales.
 - [x] Crear comandos de actuadores con permiso `actuators.manage`, `correlationId`, ACK y trazabilidad de estado.
 - [x] Agregar timeout automático y auditoría específica para comandos sin ACK mediante `device.fn_timeout_actuator_commands(...)` y un job con advisory lock.

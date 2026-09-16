@@ -107,6 +107,35 @@ function parseOptionalDeviceId(data) {
   return data.deviceId;
 }
 
+function parseOptionalHardwareId(data) {
+  const value = data.hardwareId;
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{3,32}$/.test(value)) {
+    throw new Error('hardwareId debe contener entre 3 y 32 caracteres seguros');
+  }
+  return value;
+}
+
+function parseOptionalWifiSsid(data) {
+  const value = data.wifiSsid ?? data.ssid;
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || value.trim().length > 32) {
+    throw new Error('wifiSsid debe tener como máximo 32 caracteres');
+  }
+  return value.trim() || null;
+}
+
+function parseOptionalProvisioningStatus(data) {
+  const value = data.provisioningStatus ?? data.provisioningState;
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string') throw new Error('provisioningStatus no es valido');
+  const normalized = value.trim().toUpperCase();
+  if (!['PENDING', 'BLE_READY', 'WIFI_CONNECTED', 'MQTT_CONNECTED', 'COMPLETE', 'FAILED'].includes(normalized)) {
+    throw new Error('provisioningStatus no es valido');
+  }
+  return normalized;
+}
+
 function parseOptionalMessageId(data) {
   const value = data.mqttMessageId ?? data.messageId;
   if (value === undefined || value === null || value === '') return null;
@@ -144,7 +173,8 @@ function parseTelemetryMessage(message, { maxPayloadBytes } = {}) {
     voltage: parseOptionalNumber(data, 'voltage', { min: 0, max: 60 }),
     temperature: parseOptionalNumber(data, 'temperature', { min: -55, max: 125 }),
     timestamp: parseTimestamp(data.timestamp),
-    reportedDeviceId: parseOptionalDeviceId(data)
+    reportedDeviceId: parseOptionalDeviceId(data),
+    hardwareId: parseOptionalHardwareId(data)
   };
 }
 
@@ -164,7 +194,10 @@ function parseDeviceStatusMessage(message, { maxPayloadBytes } = {}) {
     signalQuality: parseOptionalInteger(data, 'signalQuality', { min: 0, max: 100 }),
     batteryLevel: parseOptionalInteger(data, 'batteryLevel', { min: 0, max: 100 }),
     lastIp: data.lastIp === undefined || data.lastIp === null ? null : String(data.lastIp).trim(),
-    reportedDeviceId: parseOptionalDeviceId(data)
+    wifiSsid: parseOptionalWifiSsid(data),
+    reportedDeviceId: parseOptionalDeviceId(data),
+    hardwareId: parseOptionalHardwareId(data),
+    provisioningStatus: parseOptionalProvisioningStatus(data)
   };
 }
 

@@ -1,6 +1,6 @@
 # Documentación del backend HidroSmart
 
-Fecha de revisión: 2026-09-14.
+Fecha de revisión: 2026-09-15.
 
 La documentación se mantiene alineada con el código que realmente está montado. Para una lectura rápida empieza por:
 
@@ -28,7 +28,7 @@ Los documentos `01` a `12` conservan decisiones de arquitectura, dominio, seguri
 
 La persistencia de telemetría MQTT está conectada mediante `device.fn_ingest_sensor_reading`, con métricas validadas e idempotencia por `mqttMessageId`. El dominio de recomendaciones está expuesto en `/api/v1/recommendations` y protegido por `reports.read` más RLS. El dominio de actuadores está expuesto en `/api/v1/actuators`, con comandos publicados por MQTT, estados persistidos y ACK por `correlationId`.
 
-El último corte comprobado tiene 157 pruebas unitarias backend aprobadas. Las
+El último corte comprobado tiene 163 pruebas unitarias backend aprobadas. Las
 pruebas autenticadas/RLS de integración se omiten cuando no se configuran
 usuarios funcionales de prueba.
 
