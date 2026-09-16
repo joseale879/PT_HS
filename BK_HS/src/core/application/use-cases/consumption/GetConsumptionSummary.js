@@ -1,3 +1,5 @@
+const { assertMaxPeriodDays } = require('../../validation/DateRangeValidation');
+
 class GetConsumptionSummary {
   constructor({ consumptionRepository }) {
     this.consumptionRepository = consumptionRepository;
@@ -9,6 +11,7 @@ class GetConsumptionSummary {
     if (!this.isDate(from) || !this.isDate(to)) throw this.badRequest('from y to deben tener formato YYYY-MM-DD');
     if (to < from) throw this.badRequest('to no puede ser anterior a from');
     if (to > this.today()) throw this.badRequest('El periodo no puede terminar en una fecha futura');
+    assertMaxPeriodDays(from, to);
 
     return this.consumptionRepository.calculateSummary({ userId, homeId, from, to });
   }

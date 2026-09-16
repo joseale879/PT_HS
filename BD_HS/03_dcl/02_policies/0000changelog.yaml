@@ -238,3 +238,21 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: false
             stripComments: false
+
+  - changeSet:
+      id: 20260913-actuator-command-rls
+      author: Hidro_Smarth
+      labels: "BD-01-dev,dcl,policy,device,actuators,mqtt,security,rls"
+      comment: Isolates actuator state and command history by active home membership.
+      changes:
+        - sqlFile:
+            path: 021_actuator_command_rls.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/03_dcl/02_policies/021_actuator_command_rls.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

@@ -24,3 +24,11 @@ test('rechaza rangos de costo inválidos', async () => {
     (error) => error.status === 400
   );
 });
+
+test('rechaza un periodo de costo mayor a 366 días', () => {
+  const useCase = new GetPeriodCost({ consumptionRepository: { calculatePeriodCost: async () => null } });
+  assert.throws(
+    () => useCase.execute({ userId: 'user', homeId, from: '2025-01-01', to: '2026-01-02' }),
+    /periodo no puede superar 366 días/
+  );
+});

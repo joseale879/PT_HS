@@ -1,6 +1,6 @@
 # Roles y permisos
 
-Fecha de revisión: 2026-09-07.
+Fecha de revisión: 2026-09-14.
 
 El backend utiliza los roles funcionales definidos en PostgreSQL. La autorización se consulta mediante `user_account.fn_app_has_permission`, usando el usuario autenticado en `app.user_id`.
 
@@ -77,3 +77,8 @@ Después del cambio, el usuario debe renovar la sesión o volver a iniciar sesi�
 `mfa.manage` y las estructuras MFA que permanecen en la base son legado de
 seguridad. Actualmente no hay rutas MFA montadas en `src/app.js` ni flujo MFA
 activo en el frontend; el flujo vigente de recuperación usa correo SMTP.
+
+La comprobación funcional de estos permisos está preparada en
+`tests/integration/roles-permissions.test.js`. Requiere cuatro cuentas locales
+configuradas por variables de entorno; no se deben guardar sus contraseñas en
+este repositorio.

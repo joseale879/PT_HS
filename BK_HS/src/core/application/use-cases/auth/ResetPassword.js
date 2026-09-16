@@ -1,10 +1,12 @@
 const { PasswordPolicy } = require('../../services/auth/PasswordPolicy');
 
 class ResetPassword {
-  constructor({ authRepository, passwordHasher, tokenService }) {
+  constructor({ authRepository, passwordHasher, tokenService, notificationService, logger = console }) {
     this.authRepository = authRepository;
     this.passwordHasher = passwordHasher;
     this.tokenService = tokenService;
+    this.notificationService = notificationService;
+    this.logger = logger;
   }
 
   async execute({ resetToken, newPassword }) {
@@ -24,7 +26,18 @@ class ResetPassword {
       error.status = 401;
       throw error;
     }
+    await this.notifyPasswordChanged(userId);
     return { userId };
+  }
+
+  async notifyPasswordChanged(userId) {
+    if (!this.notificationService?.isConfigured?.() || !this.authRepository.findNotificationProfile) return;
+    try {
+      const profile = await this.authRepository.findNotificationProfile(userId);
+      if (profile?.recipient) await this.notificationService.sendPasswordChanged(profile);
+    } catch (error) {
+      this.logger.error('[AUTH] No se pudo enviar el correo posterior a recuperación:', error.message);
+    }
   }
 
   badRequest(message) {

@@ -1,3 +1,5 @@
+const { assertMaxPeriodDays } = require('../../validation/DateRangeValidation');
+
 class GetPeriodCost {
   constructor({ consumptionRepository }) {
     this.consumptionRepository = consumptionRepository;
@@ -8,6 +10,8 @@ class GetPeriodCost {
     if (!this.isUuid(homeId)) throw this.badRequest('homeId no es válido');
     if (!this.isDate(from) || !this.isDate(to)) throw this.badRequest('from y to deben tener formato YYYY-MM-DD');
     if (to < from) throw this.badRequest('El rango de fechas no es válido');
+    if (to > new Date().toISOString().slice(0, 10)) throw this.badRequest('El periodo no puede terminar en una fecha futura');
+    assertMaxPeriodDays(from, to);
     return this.consumptionRepository.calculatePeriodCost({ userId, homeId, from, to });
   }
 

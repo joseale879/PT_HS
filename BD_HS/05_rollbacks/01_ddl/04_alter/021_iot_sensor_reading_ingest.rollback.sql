@@ -1,12 +1,6 @@
+-- No existen vistas dependientes de mqtt_message_id; el rollback es directo.
+DROP INDEX IF EXISTS consumption.uq_sensor_reading_mqtt_message;
 ALTER TABLE consumption.sensor_reading
-    DROP COLUMN IF EXISTS mqtt_message_id,
-    DROP COLUMN IF EXISTS sample_interval_seconds,
-    DROP COLUMN IF EXISTS pulses,
-    DROP COLUMN IF EXISTS total_liters,
-    DROP COLUMN IF EXISTS flow_rate_lpm;
-
+    DROP CONSTRAINT IF EXISTS ck_sensor_reading_mqtt_message_id;
 ALTER TABLE consumption.sensor_reading
-    ALTER COLUMN consumption_m3 TYPE NUMERIC(10,4);
-
-ALTER TABLE consumption.sensor_reading
-    ALTER COLUMN consumption_liters TYPE NUMERIC(10,2);
+    DROP COLUMN IF EXISTS mqtt_message_id;

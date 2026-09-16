@@ -1,9 +1,11 @@
 const { PasswordPolicy } = require('../../services/auth/PasswordPolicy');
 
 class ChangePassword {
-  constructor({ authRepository, passwordHasher }) {
+  constructor({ authRepository, passwordHasher, notificationService, logger = console }) {
     this.authRepository = authRepository;
     this.passwordHasher = passwordHasher;
+    this.notificationService = notificationService;
+    this.logger = logger;
   }
 
   async execute({ userId, currentPassword, newPassword }) {
@@ -27,6 +29,17 @@ class ChangePassword {
 
     const passwordHash = await this.passwordHasher.hash(newPassword);
     await this.authRepository.changePasswordHash({ userId, passwordHash });
+    await this.notifyPasswordChanged(userId);
+  }
+
+  async notifyPasswordChanged(userId) {
+    if (!this.notificationService?.isConfigured?.() || !this.authRepository.findNotificationProfile) return;
+    try {
+      const profile = await this.authRepository.findNotificationProfile(userId);
+      if (profile?.recipient) await this.notificationService.sendPasswordChanged(profile);
+    } catch (error) {
+      this.logger.error('[AUTH] No se pudo enviar el correo de cambio de contraseña:', error.message);
+    }
   }
 
   badRequest(message) {
