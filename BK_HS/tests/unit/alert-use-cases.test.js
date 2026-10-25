@@ -39,6 +39,8 @@ test('rechaza reglas con tipo, unidad o umbral inválidos', async () => {
   const useCase = new CreateAlertRule({ alertRepository: { createRule: async () => null } });
   assert.throws(() => useCase.execute({ userId: 'user', homeId, alertType: 'unknown', threshold: 1, unit: 'm3_day' }), (error) => error.status === 400);
   assert.throws(() => useCase.execute({ userId: 'user', homeId, alertType: 'daily_limit', threshold: -1, unit: 'm3_day' }), (error) => error.status === 400);
+  assert.throws(() => useCase.execute({ userId: 'user', homeId, alertType: 'daily_limit', threshold: 1, unit: 'm3_month' }), /unit no corresponde/);
+  assert.throws(() => useCase.execute({ userId: 'user', homeId, alertType: 'leak_detected', threshold: 30, unit: 'm3_day' }), /unit no corresponde/);
 });
 
 test('guarda umbrales diarios y mensuales válidos', async () => {

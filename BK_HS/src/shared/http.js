@@ -1,5 +1,26 @@
 const { randomUUID } = require('node:crypto');
 
+function requestContext(req, res, next, logger = console) {
+  const incoming = req.headers?.['x-request-id'];
+  const requestId = typeof incoming === 'string' && /^[A-Za-z0-9._:-]{1,100}$/.test(incoming)
+    ? incoming
+    : randomUUID();
+  req.id = requestId;
+  res.setHeader('X-Request-Id', requestId);
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    logger.info(JSON.stringify({
+      event: 'http_request',
+      requestId,
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt
+    }));
+  });
+  next();
+}
+
 function asyncHandler(handler) {
   return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 }
@@ -84,4 +105,4 @@ function databaseErrorMessage(error) {
   return messages[error.code] || null;
 }
 
-module.exports = { asyncHandler, notFound, errorHandler, getPagination, paginate };
+module.exports = { asyncHandler, notFound, errorHandler, getPagination, paginate, requestContext };

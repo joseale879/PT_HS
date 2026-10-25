@@ -35,7 +35,7 @@ const authController = new AuthController({
   registerUser: new RegisterUser({ authRepository, passwordHasher, tokenService: passwordTokenService, notificationService }),
   loginUser: new LoginUser({ authRepository, passwordHasher }),
   sessionService: new AuthSessionService({ authRepository, tokenService: new JwtTokenService() }),
-  changePassword: new ChangePassword({ authRepository, passwordHasher }),
+  changePassword: new ChangePassword({ authRepository, passwordHasher, notificationService }),
   requestPasswordReset: new RequestPasswordReset({ authRepository, tokenService: passwordTokenService, notificationService }),
   resetPassword: new ResetPassword({ authRepository, passwordHasher, tokenService: passwordTokenService }),
   getPasswordResetContext: new GetPasswordResetContext({ authRepository, tokenService: passwordTokenService })
@@ -46,6 +46,10 @@ router.post('/register', asyncHandler((req, res) => authController.register(req,
 router.post('/login', asyncHandler((req, res) => authController.login(req, res)));
 router.post('/refresh', asyncHandler((req, res) => authController.refresh(req, res)));
 router.post('/logout', authenticate, asyncHandler((req, res) => authController.logout(req, res)));
+router.get('/sessions', authenticate, asyncHandler((req, res) => authController.listSessions(req, res)));
+router.delete('/sessions/:sessionId', authenticate, asyncHandler((req, res) => authController.revokeSession(req, res)));
+router.post('/sessions/revoke-others', authenticate, asyncHandler((req, res) => authController.revokeOtherSessions(req, res)));
+router.post('/sessions/revoke-all', authenticate, asyncHandler((req, res) => authController.revokeAllSessions(req, res)));
 router.post('/change-password', authenticate, asyncHandler((req, res) => authController.change(req, res)));
 router.post('/request-password-reset', asyncHandler((req, res) => authController.requestReset(req, res)));
 router.post('/verify-email', asyncHandler((req, res) => authController.verifyEmail(req, res)));

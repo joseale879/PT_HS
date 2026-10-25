@@ -74,9 +74,9 @@ docker compose --env-file .env --profile tooling run --rm liquibase update
 
 ## Relación con MQTT
 
-Las tablas `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` ya existen para soportar IoT. La persistencia del subscriber MQTT todavía no está conectada.
+Las tablas `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` ya existen para soportar IoT. El subscriber MQTT persiste mediante la función protegida de ingesta y el pool configurado con `DB_INGEST_*`.
 
-Antes de activar esa persistencia se debe crear una migración para:
+La persistencia ya está activa. Las siguientes comprobaciones sirven para mantenerla:
 
 1. revisar la precisión de `consumption.sensor_reading.consumption_liters`, hoy `NUMERIC(10,2)`;
 2. ajustar la columna generada `consumption_m3` y las funciones/vistas dependientes;

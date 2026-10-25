@@ -36,6 +36,7 @@ function getMqttConfig(env = process.env) {
   return {
     brokerUrl,
     qos,
+    maxPayloadBytes: getPositiveInteger(env.MQTT_MAX_PAYLOAD_BYTES, 16384, 'MQTT_MAX_PAYLOAD_BYTES') || 16384,
     options: {
       clientId: env.MQTT_CLIENT_ID || `hidrosmart-backend-${process.pid}`,
       clean: true,

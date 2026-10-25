@@ -2,12 +2,17 @@ const { TOPICS, getTopicContext } = require('../../../../mqtt/topics');
 const { handleReading } = require('../../../../mqtt/handlers/reading.handler');
 const { handleDeviceStatus } = require('../../../../mqtt/handlers/device-status.handler');
 const { handleActuatorStatus } = require('../../../../mqtt/handlers/actuator-status.handler');
+const { setMqttState } = require('../../../../shared/runtimeState');
 
 class MqttSubscriber {
-  constructor({ mqttClient, qos = 1, logger = console, handlers = {} }) {
+  constructor({ mqttClient, qos = 1, maxPayloadBytes = 16 * 1024, logger = console, handlers = {}, readingRepository = null, ingestReading = null, deviceRepository = null }) {
     this.mqttClient = mqttClient;
     this.qos = qos;
+    this.maxPayloadBytes = maxPayloadBytes;
     this.logger = logger;
+    this.readingRepository = readingRepository;
+    this.ingestReading = ingestReading;
+    this.deviceRepository = deviceRepository;
     this.handlers = {
       telemetry: handlers.telemetry || handleReading,
       'device-status': handlers['device-status'] || handleDeviceStatus,
@@ -16,8 +21,8 @@ class MqttSubscriber {
     this.client = null;
     this.started = false;
     this.subscribed = false;
-    this.onConnect = this.subscribeToTopics.bind(this);
-    this.onClose = () => { this.subscribed = false; };
+    this.onConnect = () => { setMqttState({ connected: true }); this.subscribeToTopics(); };
+    this.onClose = () => { this.subscribed = false; setMqttState({ connected: false, subscribed: false }); };
     this.onMessage = this.processMessage.bind(this);
   }
 
@@ -45,6 +50,7 @@ class MqttSubscriber {
       }
 
       this.subscribed = true;
+      setMqttState({ connected: true, subscribed: true });
       this.logger.info(`[MQTT] Suscrito a ${topics.join(', ')}`);
     });
   }
@@ -59,7 +65,7 @@ class MqttSubscriber {
     }
 
     try {
-      await handler({ topic, message, context, logger: this.logger });
+      await handler({ topic, message, context, logger: this.logger, readingRepository: this.readingRepository, ingestReading: this.ingestReading, deviceRepository: this.deviceRepository, maxPayloadBytes: this.maxPayloadBytes });
     } catch (error) {
       this.logger.error(`[MQTT] Mensaje rechazado en ${topic}:`, error.message);
     }
@@ -73,6 +79,7 @@ class MqttSubscriber {
     this.client?.removeListener('message', this.onMessage);
     this.started = false;
     this.subscribed = false;
+    setMqttState({ connected: false, subscribed: false });
     this.client = null;
     await this.mqttClient.disconnect();
   }

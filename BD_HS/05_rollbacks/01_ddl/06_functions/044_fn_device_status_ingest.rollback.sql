@@ -1,0 +1,3 @@
+DROP FUNCTION IF EXISTS device.fn_record_device_status(VARCHAR, VARCHAR, TIMESTAMPTZ, VARCHAR, INTEGER, INTEGER, INTEGER, VARCHAR);
+ALTER TABLE device.device DROP CONSTRAINT IF EXISTS ck_device_connectivity_status;
+ALTER TABLE device.device DROP COLUMN IF EXISTS connectivity_status, DROP COLUMN IF EXISTS last_ip;

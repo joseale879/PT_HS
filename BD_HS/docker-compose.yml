@@ -5,7 +5,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-hidro_smart}
-      POSTGRES_USER: ${POSTGRES_USER:-Usuario}
+      POSTGRES_USER: ${POSTGRES_USER:-hidro_smart_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD_in_env}
     ports:
       - "${POSTGRES_PORT:-5433}:${POSTGRES_INTERNAL_PORT:-5432}"
@@ -14,10 +14,46 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U ${POSTGRES_USER:-Usuario} -d ${POSTGRES_DB:-hidro_smart}
+        - pg_isready -U ${POSTGRES_USER:-hidro_smart_admin} -d ${POSTGRES_DB:-hidro_smart}
       interval: 5s
       timeout: 5s
       retries: 10
+
+  db-bootstrap:
+    image: postgres:16-alpine
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-hidro_smart}
+      PGUSER: ${POSTGRES_USER:-hidro_smart_admin}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set_POSTGRES_PASSWORD_in_env}
+      APP_PASSWORD: ${DB_PASSWORD:?Set_DB_PASSWORD_in_env}
+      INGEST_PASSWORD: ${DB_INGEST_PASSWORD:?Set_DB_INGEST_PASSWORD_in_env}
+      LIQUIBASE_PASSWORD: ${LIQUIBASE_PASSWORD:?Set_LIQUIBASE_PASSWORD_in_env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'hidro_smart_app'" | grep -q 1; then
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE hidro_smart_app LOGIN;"
+        fi
+        psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_app LOGIN PASSWORD '$${APP_PASSWORD}';"
+        if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'hidro_smart_ingest'" | grep -q 1; then
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE hidro_smart_ingest LOGIN;"
+        fi
+        psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_ingest LOGIN PASSWORD '$${INGEST_PASSWORD}';"
+        if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'hidro_smart_liquibase'" | grep -q 1; then
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE hidro_smart_liquibase LOGIN;"
+        fi
+        psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_liquibase LOGIN PASSWORD '$${LIQUIBASE_PASSWORD}';"
+        psql -v ON_ERROR_STOP=1 -c "ALTER ROLE hidro_smart_liquibase CREATEROLE;"
+        psql -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE \"$${PGDATABASE}\" TO hidro_smart_liquibase;"
+        psql -v ON_ERROR_STOP=1 -c "GRANT CREATE ON DATABASE \"$${PGDATABASE}\" TO hidro_smart_liquibase;"
+        psql -v ON_ERROR_STOP=1 -c "GRANT USAGE, CREATE ON SCHEMA public TO hidro_smart_liquibase;"
+    restart: "no"
 
   liquibase:
     build:
@@ -29,6 +65,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
     working_dir: /workspace
     volumes:
       - ./:/workspace

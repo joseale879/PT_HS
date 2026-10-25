@@ -33,6 +33,52 @@ class PostgresUserRepository extends UserRepository {
     const permissions = [...new Set(result.rows.map((row) => row.permission_name).filter(Boolean))];
     return { roles, permissions };
   }
+  async changeAccountStatus({ actorId, targetUserId, status, reason }) {
+    const result = await withTransaction(actorId, (client) => client.query(
+      `SELECT user_account_id, status, suspension_reason, suspended_at, updated_at
+         FROM user_account.fn_change_account_status($1::uuid, $2::varchar, $3::varchar)`,
+      [targetUserId, status, reason]
+    ));
+    const row = result.rows[0];
+    return row ? {
+      userId: row.user_account_id,
+      status: row.status,
+      reason: row.suspension_reason,
+      suspendedAt: row.suspended_at,
+      updatedAt: row.updated_at
+    } : null;
+  }
+  async deleteAccount({ actorId, targetUserId }) {
+    const result = await withTransaction(actorId, (client) => client.query(
+      'SELECT user_account.fn_delete_user_account($1::uuid) AS deleted',
+      [targetUserId]
+    ));
+    return result.rows[0]?.deleted === true;
+  }
+  async listManagedUsers({ actorId, search, status, sort, order, limit, offset }) {
+    const result = await withTransaction(actorId, (client) => client.query(
+      `SELECT user_account_id, username, email, status, suspension_reason, created_at,
+              updated_at, full_name, document_type, document_number, roles, total_count
+         FROM user_account.fn_list_managed_users($1::varchar, $2::varchar, $3::varchar, $4::varchar, $5::integer, $6::integer)`,
+      [search, status, sort, order, limit, offset]
+    ));
+    return {
+      items: result.rows.map((row) => ({
+        userId: row.user_account_id,
+        username: row.username,
+        email: row.email,
+        status: row.status,
+        reason: row.suspension_reason,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        fullName: row.full_name,
+        documentType: row.document_type,
+        documentNumber: row.document_number,
+        roles: row.roles ? row.roles.split(', ') : []
+      })),
+      total: Number(result.rows[0]?.total_count || 0)
+    };
+  }
   async updatePreferences({ userId, language, currency }) {
     const result = await withTransaction(userId, (client) => client.query(
       `WITH selected_language AS (

@@ -88,6 +88,14 @@ class PostgresReadingIngestRepository {
 
   async save(reading) {
     const deviceCode = requiredDeviceCode(reading);
+    const mqttMessageId = reading.mqttMessageId ?? null;
+
+    if (mqttMessageId !== null && (
+      typeof mqttMessageId !== 'string'
+      || !/^[A-Za-z0-9._:-]{1,100}$/.test(mqttMessageId)
+    )) {
+      throw new Error('mqttMessageId debe contener entre 1 y 100 caracteres seguros');
+    }
 
     const flowRateLpm = requiredNonNegativeNumber(
       reading.flowRateLpm,
@@ -148,7 +156,8 @@ class PostgresReadingIngestRepository {
             flow_rate_lpm,
             total_liters,
             pulses,
-            sample_interval_seconds
+            sample_interval_seconds,
+            mqtt_message_id
           )
           VALUES (
             $1::uuid,
@@ -159,8 +168,12 @@ class PostgresReadingIngestRepository {
             $6::numeric,
             $7::numeric,
             $8::integer,
-            $9::numeric
+            $9::numeric,
+            $10::varchar
           )
+          ON CONFLICT (device_id, mqtt_message_id)
+            WHERE mqtt_message_id IS NOT NULL
+            DO NOTHING
           RETURNING
             reading_id,
             device_id,
@@ -184,13 +197,30 @@ class PostgresReadingIngestRepository {
           flowRateLpm,
           totalLiters,
           pulses,
-          sampleIntervalSeconds
+          sampleIntervalSeconds,
+          mqttMessageId
         ]
       );
 
+      if (!insertResult.rows[0]) {
+        await client.query('COMMIT');
+        return {
+          inserted: false,
+          duplicate: true,
+          readingId: null,
+          deviceCode,
+          mqttMessageId
+        };
+      }
+
       await client.query('COMMIT');
 
-      const savedReading = mapInsertedReading(insertResult.rows[0], deviceCode);
+      const savedReading = {
+        ...mapInsertedReading(insertResult.rows[0], deviceCode),
+        inserted: true,
+        duplicate: false,
+        mqttMessageId
+      };
 
       this.logger.info('[MQTT] Lectura guardada en PostgreSQL', {
         readingId: savedReading.readingId,

@@ -71,6 +71,13 @@ function getEnv() {
       process.env.ALERT_GENERATION_INTERVAL_MS || 300000
     ),
 
+    auditCleanupIntervalMs: Number(process.env.AUDIT_CLEANUP_INTERVAL_MS || 86400000),
+    auditRetentionDays: Number(process.env.AUDIT_RETENTION_DAYS || 365),
+    auditCleanupBatchSize: Number(process.env.AUDIT_CLEANUP_BATCH_SIZE || 1000),
+    actuatorCommandTimeoutIntervalMs: Number(process.env.ACTUATOR_COMMAND_TIMEOUT_INTERVAL_MS || 30000),
+    actuatorCommandTimeoutMs: Number(process.env.ACTUATOR_COMMAND_TIMEOUT_MS || 60000),
+    actuatorCommandTimeoutBatchSize: Number(process.env.ACTUATOR_COMMAND_TIMEOUT_BATCH_SIZE || 100),
+
     authRateLimitWindowMs: Number(
       process.env.AUTH_RATE_LIMIT_WINDOW_MS || 900000
     ),
@@ -87,7 +94,12 @@ function getEnv() {
       database: process.env.DB_NAME,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      max: Number(process.env.DB_POOL_MAX || 10)
+      max: Number(process.env.DB_POOL_MAX || 10),
+      ingest: {
+        user: process.env.DB_INGEST_USER || process.env.DB_USER,
+        password: process.env.DB_INGEST_PASSWORD || process.env.DB_PASSWORD,
+        max: Number(process.env.DB_INGEST_POOL_MAX || process.env.DB_POOL_MAX || 5)
+      }
     },
 
     // Pool separado para consumir datos MQTT del ESP32

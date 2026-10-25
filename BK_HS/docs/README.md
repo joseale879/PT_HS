@@ -4,19 +4,22 @@ Fecha de revisión: 2026-09-07.
 
 La documentación se mantiene alineada con el código que realmente está montado. Para una lectura rápida empieza por:
 
+- `../../docs/estado-integral.md`: estado transversal de todo el sistema.
+
 - `00-estado-actual.md`: estado comprobado del backend.
 - `00-integracion-front-back-bd.md`: conexiones, variables y flujo entre capas.
 - `03-endpoints.md`: inventario de rutas REST reales.
 - `14-mqtt-protocol.md`: contrato MQTT vigente para el backend y el ESP32.
 - `13-flujo-datos-iot.md`: flujo IoT y límites actuales.
 - `pendientes-proyecto.md`: checklist de trabajo pendiente.
+- `auditoria-p2-correcciones.md`: cierre del informe P2 y límites actuales.
 
 Los documentos `01` a `12` conservan decisiones de arquitectura, dominio, seguridad, jobs y estructura. Cuando un documento conceptual mencione una ruta o componente que no aparece en `src/app.js`, prevalece el código y la ruta real de `03-endpoints.md`.
 
 ## Mapa de documentación
 
 - `01-arquitectura-backend.md`, `04-core.md`, `05-domain.md`, `06-application.md`, `07-infrastructure.md`, `10-shared.md`, `11-config.md`, `12-estructura-proyecto.md`: organización interna.
-- `02-api.md`, `03-endpoints.md`: API; las secciones de actuadores en documentos antiguos son propuestas si no están montadas.
+- `02-api.md`, `03-endpoints.md`: contrato y rutas HTTP vigentes; `03-endpoints.md` es la fuente de verdad para actuadores.
 - `08-mqtt.md`, `13-flujo-datos-iot.md`, `14-mqtt-protocol.md`: integración MQTT.
 - `00-ambiente-local.md`, `14-seguridad-backend.md`: operación y seguridad.
 - `00-roles-y-permisos.md`, `endpoints-por-rol.md`, `frontend-endpoints-por-rol.md`: autorización.

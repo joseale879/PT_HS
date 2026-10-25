@@ -1,6 +1,6 @@
 # Protocolo MQTT implementado
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-14.
 
 Este es el contrato vigente entre el backend y el futuro firmware ESP32. Sustituye los ejemplos antiguos basados en `hidro-smart/device/...`.
 
@@ -8,7 +8,7 @@ Este es el contrato vigente entre el backend y el futuro firmware ESP32. Sustitu
 
 `{deviceCode}` debe ser el valor de `device.device.code` registrado en HidroSmart. Se permiten letras, números, guiones y guiones bajos. Ejemplo: `ESP32-246F28ABCDEF`.
 
-El código del topic es la fuente de identidad del mensaje. Cuando se implemente la persistencia, el backend deberá resolverlo contra PostgreSQL y no aceptar un dispositivo desconocido.
+El código del topic es la fuente de identidad del mensaje. El backend lo resuelve contra PostgreSQL y rechaza dispositivos desconocidos, inactivos o sin asociación autorizada.
 
 ## Topics
 
@@ -20,7 +20,7 @@ El código del topic es la fuente de identidad del mensaje. Cuando se implemente
 | backend -> ESP32 | Configuración preparada | `hidrosmart/devices/{deviceCode}/config` | 1 | según uso |
 | backend -> ESP32 | Comando preparado | `hidrosmart/devices/{deviceCode}/actuators/{valve|pump}/command` | 1 | No |
 
-El backend se suscribe actualmente a los tres topics de entrada. El publisher conoce los topics de salida, pero todavía no existe una ruta REST/caso de uso que envíe comandos de actuadores.
+El backend se suscribe actualmente a los tres topics de entrada. Los comandos salen desde `POST /api/v1/actuators/:deviceId/:actuator/commands`, se publican con QoS 1 y quedan asociados a un `correlationId` para confirmar el ACK.
 
 ## Telemetría del YF-S201
 
@@ -33,7 +33,7 @@ El parser requiere `flowRateLpm` y `consumptionLiters`.
 | `totalLiters` | No | número | mayor o igual a cero, acumulado del dispositivo |
 | `pulses` | No | entero | mayor o igual a cero |
 | `sampleIntervalSeconds` | No | número | mayor que cero si no se publica cada segundo |
-| `timestamp` | No | texto ISO-8601 | hora de medición; si falta se usa recepción |
+| `timestamp` | No | texto ISO-8601 con zona (`Z` u offset) | hora de medición; el backend la normaliza a UTC y, si falta, usa recepción |
 | `signalQuality` | No | número | RSSI en dBm si es negativo; también acepta porcentaje |
 | `wifiRssiDbm` | No | número | RSSI explícito en dBm |
 | `signalQualityPercent` | No | número | porcentaje de calidad, entre 0 y 100 |
@@ -85,8 +85,8 @@ Para `VALVE` se esperan `OPEN` y `CLOSED`; para `PUMP`, `ON` y `OFF`. El actuado
 ## Flujo actualmente implementado
 
 ```text
-MQTT broker -> MqttSubscriber -> message-parser -> handler -> logs normalizados
-                                                   -> PostgreSQL (pendiente)
+MQTT broker -> MqttSubscriber -> message-parser -> handler -> IngestReading -> PostgreSQL
+                                                   -> logs normalizados
 ```
 
 Archivos principales:
@@ -101,22 +101,26 @@ Archivos principales:
 - `src/mqtt/handlers/device-status.handler.js`
 - `src/mqtt/handlers/actuator-status.handler.js`
 
-La validación y normalización están implementadas. `reading.handler.js` todavía no invoca `ReceiveReading` ni un repositorio.
+La validación, normalización, persistencia y deduplicación están implementadas.
+`reading.handler.js` invoca `IngestReading`; la persistencia queda aislada en `PostgresTelemetryRepository`.
 
-## Persistencia pendiente
+## Persistencia implementada
 
-Cuando se cierre la ingestión, el backend deberá:
+La ingesta vigente ejecuta este circuito:
 
 1. resolver `deviceCode` contra `device.device.code`;
 2. comprobar dispositivo activo y asociación en `device.home_device`;
 3. validar límites, timestamp y duplicados;
-4. insertar consumo en `consumption.sensor_reading`;
-5. guardar salud en `device.device_telemetry_history` si corresponde;
+4. insertar consumo en `consumption.sensor_reading` mediante la función protegida;
+5. guardar las métricas de salud disponibles en el historial correspondiente;
 6. usar permisos mínimos y registrar errores sin perder el mensaje.
 
-Advertencia actual: `consumption.sensor_reading.consumption_liters` es `NUMERIC(10,2)`. No conserva la escala de `0.040 L`. Debe existir una migración Liquibase antes de ingerir lecturas por segundo y deben revisarse las funciones/vistas que usan `consumption_m3`.
+La columna actual es `NUMERIC(10,2)`. Para lecturas pequeñas como `0.040 L` se
+requiere una migración de precisión antes de considerar cerrado el contrato del
+firmware; las funciones, vistas y reportes dependientes deben revisarse juntos.
 
-Como MQTT QoS 1 puede reentregar mensajes, la persistencia debe usar una secuencia o clave de idempotencia por dispositivo.
+Como MQTT QoS 1 puede reentregar mensajes, la persistencia usa
+`mqttMessageId` y una clave única parcial por dispositivo.
 
 ## Configuración local
 
@@ -139,7 +143,9 @@ docker compose exec mosquitto mosquitto_pub -h localhost -p 1883 -t hidrosmart/d
 docker compose logs -f backend
 ```
 
-El resultado esperado hoy es un payload normalizado en los logs del backend. No se debe esperar todavía una fila nueva en PostgreSQL.
+El resultado esperado hoy es un payload procesado y una fila nueva en
+PostgreSQL, salvo que el mismo `mqttMessageId` ya exista, en cuyo caso se
+descarta el duplicado.
 
 ## Seguridad para una etapa posterior
 

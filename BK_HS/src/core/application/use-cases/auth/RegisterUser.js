@@ -9,7 +9,17 @@ class RegisterUser {
     this.notificationService = notificationService;
   }
 
-  async execute({ username, email, password, fullName, documentType, documentNumber }) {
+  async execute({ username, email, password, fullName, documentType, documentNumber, privacyPolicyAccepted, termsAccepted, privacyPolicyVersion, termsVersion, sourceIp, userAgent }) {
+    if (privacyPolicyAccepted !== true || termsAccepted !== true) {
+      const error = new Error('Debes aceptar los términos y condiciones y la política de privacidad');
+      error.status = 400;
+      throw error;
+    }
+    if (privacyPolicyVersion !== '2026-09' || termsVersion !== '2026-09') {
+      const error = new Error('La versión de los documentos legales no es válida');
+      error.status = 400;
+      throw error;
+    }
     const normalizedUsername = this.required(username, 'username', 4).toLowerCase();
     const normalizedEmail = this.required(email, 'email').toLowerCase();
     if (!isValidEmail(normalizedEmail)) {

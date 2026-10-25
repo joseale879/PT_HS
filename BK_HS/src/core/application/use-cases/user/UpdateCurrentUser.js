@@ -12,7 +12,16 @@ class UpdateCurrentUser {
     if (typeof avatarDataUrl === 'string' && Buffer.byteLength(avatarDataUrl, 'utf8') > 2.8 * 1024 * 1024) throw this.error('La foto supera el tamaño permitido de 2 MB', 400);
     const user = await this.userRepository.updateProfile({ userId, fullName: fullName.trim(), phone: phone?.trim() || null, city: city?.trim() || null, avatarDataUrl: avatarDataUrl || null });
     if (!user) throw this.error('Usuario no encontrado', 404);
+    await this.notifySensitiveDataChanged(user);
     return user;
+  }
+  async notifySensitiveDataChanged(user) {
+    if (!user?.email || !this.notificationService?.isConfigured?.()) return;
+    try {
+      await this.notificationService.sendSensitiveDataChanged({ recipient: user.email, name: user.fullName || user.username });
+    } catch (error) {
+      this.logger.error('[USER] No se pudo enviar la notificación de cambio de cuenta:', error.message);
+    }
   }
   error(message, status) { const error = new Error(message); error.status = status; return error; }
 }

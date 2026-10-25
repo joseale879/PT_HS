@@ -360,3 +360,48 @@ databaseChangeLog:
             splitStatements: true
       rollback:
         - sql: ALTER TABLE user_account.user_profile ALTER COLUMN phone TYPE VARCHAR(20);
+  - changeSet:
+      id: 20260913-actuator-command-validation
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,actuators,validation"
+      comment: Enforces the valid command set for each actuator type at database level.
+      changes:
+        - sqlFile:
+            path: 023_actuator_command_validation.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/023_actuator_command_validation.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+  - changeSet:
+      id: 20261025-reconcile-sensor-reading-materialized-views
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,consumption,materialized-views"
+      comment: "Removes views recreated by the ingest migration only on databases where the baseline view changesets have not run yet."
+      changes:
+        - sqlFile:
+            path: 025_reconcile_sensor_reading_materialized_views.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+  - changeSet:
+      id: 20260912-device-ingest-hardening
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,consumption,iot,security"
+      comment: "Adds validated telemetry fields and enforces one active home assignment per device."
+      changes:
+        - sqlFile:
+            path: 022_device_ingest_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/022_device_ingest_hardening.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

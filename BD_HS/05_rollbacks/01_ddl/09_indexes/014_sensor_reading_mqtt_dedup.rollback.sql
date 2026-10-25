@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS consumption.uq_sensor_reading_device_mqtt_message;

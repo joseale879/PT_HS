@@ -64,6 +64,43 @@ test('valida y normaliza una telemetría MQTT', () => {
   assert.equal(telemetry.timestamp, '2026-09-04T12:00:00.000Z');
 });
 
+test('entrega el identificador MQTT a persistencia para ignorar reintentos', async () => {
+  let persistedReading;
+  const result = await handleReading({
+    topic: telemetryTopic('ESP32-001'),
+    message: JSON.stringify({
+      mqttMessageId: 'reading-duplicate-001',
+      deviceId: 'ESP32-001',
+      flowRateLpm: 2,
+      consumptionLiters: 0.04
+    }),
+    logger: silentLogger,
+    readingRepository: {
+      saveFromMqtt: async (reading) => {
+        persistedReading = reading;
+        return { inserted: false, duplicate: true };
+      }
+    }
+  });
+
+  assert.equal(persistedReading.mqttMessageId, 'reading-duplicate-001');
+  assert.equal(result.savedReading.duplicate, true);
+});
+
+test('normaliza offsets ISO-8601 a UTC y rechaza timestamps sin zona horaria', () => {
+  const telemetry = parseTelemetryMessage('{"flowRateLpm":1,"consumptionLiters":0.01,"timestamp":"2026-09-04T10:30:00-05:00"}');
+  assert.equal(telemetry.timestamp, '2026-09-04T15:30:00.000Z');
+
+  assert.throws(
+    () => parseTelemetryMessage('{"flowRateLpm":1,"consumptionLiters":0.01,"timestamp":"2026-09-04T10:30:00"}'),
+    /timestamp debe ser una fecha ISO válida/
+  );
+  assert.throws(
+    () => parseTelemetryMessage('{"flowRateLpm":1,"consumptionLiters":0.01,"timestamp":"2026-09-04"}'),
+    /timestamp debe ser una fecha ISO válida/
+  );
+});
+
 test('acepta calidad porcentual o RSSI Wi-Fi y rechaza métricas fuera de rango', () => {
   const percentageTelemetry = parseTelemetryMessage('{"flowRateLpm":1,"consumptionLiters":0.01,"signalQuality":88}');
   assert.equal(percentageTelemetry.wifiRssiDbm, null);

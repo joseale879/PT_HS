@@ -37,4 +37,20 @@ async function withTransaction(userId, callback) {
   }
 }
 
-module.exports = { pool, ingestPool, withTransaction };
+async function withIngestTransaction(callback) {
+  const client = await ingestPool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, ingestPool, withTransaction, withIngestTransaction };

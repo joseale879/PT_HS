@@ -1,4 +1,4 @@
-# HidroSmart
+﻿# HidroSmart
 
 HidroSmart es una plataforma local para monitoreo inteligente de consumo de agua. El repositorio se divide en base de datos, backend, frontend web y conexión IoT mediante ESP32 + MQTT.
 
@@ -21,19 +21,19 @@ Revisión: 2026-09-09.
 | Carpeta | Responsabilidad |
 |---|---|
 | `BD_HS` | PostgreSQL, Liquibase, tablas, funciones, vistas, RLS, roles y grants |
-| `BK_HS` | API Node.js/Express, autenticación, casos de uso, repositorios, MQTT y Docker |
-| `FT_HS/Web` | Frontend React/Vite, cliente HTTP, pantallas y Nginx |
-| `FT_HS/mobile` | Cliente móvil/WebView en estado de preparación |
-| `docker-compose.yml` | Orquestación local integrada |
+| `BK_HS` | API Node.js/Express, autenticaciÃ³n, casos de uso, repositorios, MQTT y Docker |
+| `FT_HS/frontend` | Frontend React/Vite, cliente HTTP, pantallas y Nginx |
+| `firmware` | Estructura base para ESP32, MQTT, sensores, actuadores y OTA |
+| `docker-compose.yml` | OrquestaciÃ³n local integrada |
 
 ## Servicios locales
 
-| Servicio | Dirección desde Windows | Uso |
+| Servicio | DirecciÃ³n desde Windows | Uso |
 |---|---|---|
-| Frontend | `http://localhost:5173` | Aplicación web |
+| Frontend | `http://localhost:5173` | AplicaciÃ³n web |
 | Backend | `http://localhost:3000` | API REST y health |
-| Health backend | `http://localhost:3000/health` | Comprobación directa |
-| Health frontend | `http://localhost:5173/health` | Comprobación a través de Nginx |
+| Health backend | `http://localhost:3000/health` | ComprobaciÃ³n directa |
+| Health frontend | `http://localhost:5173/health` | ComprobaciÃ³n a travÃ©s de Nginx |
 | PostgreSQL | `localhost:5433` | Acceso externo de desarrollo |
 | Mailpit | `http://localhost:8025` | Bandeja de correo local |
 | MQTT | `localhost:1883` | Broker Mosquitto sin TLS para desarrollo |
@@ -396,14 +396,19 @@ docker compose --env-file .env --profile tooling run --rm liquibase validate
 docker compose --env-file .env --profile tooling run --rm liquibase status --verbose
 ```
 
-## Documentación principal
+## DocumentaciÃ³n principal
 
-- Estado integral: `BK_HS/docs/00-estado-actual.md`.
-- Integración BD/backend/frontend: `BK_HS/docs/00-integracion-front-back-bd.md`.
+- Estado integral transversal: `docs/estado-integral.md`.
+- GuÃ­a para levantar cada proyecto o toda la pila: `docs/guia-ejecucion-local.md`.
+- ValidaciÃ³n de integraciÃ³n y usuarios de prueba: `docs/validacion-integracion.md`.
+
+- Estado operativo del backend: `BK_HS/docs/00-estado-actual.md`.
+- IntegraciÃ³n BD/backend/frontend: `BK_HS/docs/00-integracion-front-back-bd.md`.
 - Endpoints: `BK_HS/docs/03-endpoints.md`.
 - MQTT: `BK_HS/docs/14-mqtt-protocol.md` y `BK_HS/docs/13-flujo-datos-iot.md`.
 - Pendientes: `BK_HS/docs/pendientes-proyecto.md`.
-- Diagnóstico de BD: `BD_HS/docs/diagnostico-actual.md`.
-- Integración web: `FT_HS/Web/INTEGRACION.md`.
+- AuditorÃ­a P2: `BK_HS/docs/auditoria-p2-correcciones.md`.
+- DiagnÃ³stico de BD: `BD_HS/docs/diagnostico-actual.md`.
+- IntegraciÃ³n web: `FT_HS/frontend/INTEGRACION.md`.
 
 Los Compose individuales de `BD_HS` y `BK_HS` se conservan por compatibilidad. Para validar el sistema completo usa el Compose de la raíz del proyecto.

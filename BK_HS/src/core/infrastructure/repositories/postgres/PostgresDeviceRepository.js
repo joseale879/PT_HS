@@ -3,6 +3,25 @@ const { withTransaction } = require('../../../../infrastructure/db');
 const { DeviceRepository } = require('../../../application/ports/repositories/DeviceRepository');
 
 class PostgresDeviceRepository extends DeviceRepository {
+  async recordMqttStatus({ deviceCode, connectivityStatus, eventAt, firmwareVersion, wifiRssiDbm, signalQuality, batteryLevel, lastIp }) {
+    const result = await withTransaction(null, (client) => client.query(
+      `SELECT device_id, code, administrative_status, connectivity_status, last_connection_at
+         FROM device.fn_record_device_status($1::varchar, $2::varchar, $3::timestamptz, $4::varchar,
+           $5::integer, $6::integer, $7::integer, $8::varchar)`,
+      [deviceCode, connectivityStatus, eventAt, firmwareVersion, wifiRssiDbm, signalQuality, batteryLevel, lastIp]
+    ));
+    return result.rows[0] || null;
+  }
+
+  async recordMqttActuatorStatus({ deviceCode, actuator, status, correlationId, reportedAt }) {
+    const result = await withTransaction(null, (client) => client.query(
+      `SELECT device_id, home_id, actuator, status, command_id, command_status, reported_at
+         FROM device.fn_record_actuator_status($1::varchar, $2::varchar, $3::varchar, $4::uuid, $5::timestamptz)`,
+      [deviceCode, actuator, status, correlationId || null, reportedAt]
+    ));
+    return result.rows[0] || null;
+  }
+
   async register(device, userId, homeId) {
     const deviceId = await withTransaction(userId, async (client) => {
       const result = await client.query(

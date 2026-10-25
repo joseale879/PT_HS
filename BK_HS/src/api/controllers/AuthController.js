@@ -39,6 +39,26 @@ class AuthController {
     res.status(204).send();
   }
 
+  async listSessions(req, res) {
+    const sessions = await this.sessionService.list({ userId: req.user.id, currentSessionId: req.user.sessionId });
+    res.json({ data: sessions });
+  }
+
+  async revokeSession(req, res) {
+    await this.sessionService.revokeSession({ userId: req.user.id, sessionId: req.params.sessionId });
+    res.status(204).send();
+  }
+
+  async revokeOtherSessions(req, res) {
+    const revokedCount = await this.sessionService.revokeOtherSessions({ userId: req.user.id, currentSessionId: req.user.sessionId });
+    res.json({ data: { revokedCount } });
+  }
+
+  async revokeAllSessions(req, res) {
+    const revokedCount = await this.sessionService.revokeAllSessions({ userId: req.user.id });
+    res.json({ data: { revokedCount } });
+  }
+
   async change(req, res) {
     await this.changePassword.execute({ userId: req.user.id, ...ChangePasswordRequest.fromRequest(req.body) });
     res.status(204).send();
@@ -47,6 +67,16 @@ class AuthController {
   async requestReset(req, res) {
     await this.requestPasswordReset.execute(RequestPasswordResetRequest.fromRequest(req.body));
     res.status(202).json({ data: { message: 'Si la cuenta existe, se enviarán instrucciones de recuperación.' } });
+  }
+
+  async resendVerification(req, res) {
+    await this.resendEmailVerification.execute({ email: req.body?.email || req.body?.login });
+    res.status(202).json({ data: { message: 'Si la cuenta existe, se enviarán instrucciones de verificación.' } });
+  }
+
+  async verify(req, res) {
+    await this.verifyEmail.execute({ token: req.body?.token || req.query?.token });
+    res.status(204).send();
   }
 
   async reset(req, res) {

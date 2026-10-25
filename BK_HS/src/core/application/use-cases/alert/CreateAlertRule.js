@@ -16,6 +16,7 @@ class CreateAlertRule {
     if (!TYPES.includes(alertType)) throw this.badRequest('alertType no es válido');
     if (!Number.isFinite(Number(threshold)) || Number(threshold) < 0) throw this.badRequest('threshold debe ser un número mayor o igual a cero');
     if (!UNITS.includes(unit)) throw this.badRequest('unit no es válida');
+    if (TYPE_UNITS[alertType] !== unit) throw this.badRequest('unit no corresponde con alertType');
     if (typeof active !== 'boolean') throw this.badRequest('active debe ser booleano');
   }
 

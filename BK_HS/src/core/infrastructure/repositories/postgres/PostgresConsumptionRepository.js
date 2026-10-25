@@ -2,6 +2,23 @@ const { ConsumptionSummary } = require('../../../domain/entities/ConsumptionSumm
 const { withTransaction } = require('../../../../infrastructure/db');
 
 class PostgresConsumptionRepository {
+  async ingestTelemetry({ deviceCode, mqttMessageId, consumptionLiters, recordedAt, flowRateLpm, totalLiters, pulses, sampleIntervalSeconds, wifiRssiDbm, signalQuality, batteryLevel, voltage, temperature }) {
+    const result = await withTransaction(null, (client) => client.query(
+      `SELECT inserted, reading_id, home_id
+         FROM device.fn_ingest_sensor_reading($1::varchar, $2::varchar, $3::numeric, $4::timestamptz,
+           $5::numeric, $6::numeric, $7::integer, $8::numeric, $9::integer, $10::integer,
+           $11::integer, $12::numeric, $13::numeric)`,
+      [deviceCode, mqttMessageId, consumptionLiters, recordedAt, flowRateLpm, totalLiters, pulses, sampleIntervalSeconds, wifiRssiDbm, signalQuality, batteryLevel, voltage, temperature]
+    ));
+    const row = result.rows[0] || {};
+    return {
+      inserted: row.inserted === true,
+      readingId: row.reading_id || null,
+      homeId: row.home_id || null,
+      duplicate: row.inserted === false
+    };
+  }
+
   async calculateSummary({ userId, homeId, from, to }) {
     const result = await withTransaction(userId, (client) => client.query(
       `SELECT * FROM consumption.fn_calculate_consumption($1::uuid, $2::date, $3::date)`,

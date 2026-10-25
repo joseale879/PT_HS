@@ -9,6 +9,7 @@ function assertReportedDevice(context, reportedDeviceId) {
 
 function buildReadingFromTelemetry(topicContext, telemetry) {
   return {
+    mqttMessageId: telemetry.mqttMessageId,
     // Código que viene desde el topic:
     // hidrosmart/devices/ESP32-001/telemetry
     deviceCode: topicContext.deviceId,
@@ -49,22 +50,20 @@ async function persistReading(readingRepository, reading) {
   throw new Error('readingRepository debe implementar saveFromMqtt(reading) o save(reading)');
 }
 
-async function handleReading({
-  topic,
-  message,
-  context,
-  logger = console,
-  readingRepository = null
-}) {
+async function handleReading({ topic, message, context, logger = console, readingRepository = null, ingestReading = null, maxPayloadBytes }) {
   const topicContext = context || getTopicContext(topic);
 
   if (!topicContext || topicContext.type !== 'telemetry') {
     throw new Error(`Topic MQTT de telemetría inválido: ${topic}`);
   }
 
-  const telemetry = parseTelemetryMessage(message);
+  const telemetry = parseTelemetryMessage(message, { maxPayloadBytes });
 
   assertReportedDevice(topicContext, telemetry.reportedDeviceId);
+
+  if (readingRepository && !telemetry.mqttMessageId) {
+    throw new Error('mqttMessageId es obligatorio para persistir una lectura MQTT');
+  }
 
   const reading = buildReadingFromTelemetry(topicContext, telemetry);
 
@@ -79,9 +78,31 @@ async function handleReading({
     timestamp: reading.timestamp
   });
 
-  const savedReading = await persistReading(readingRepository, reading);
+  const persistenceInput = {
+    deviceCode: reading.deviceCode,
+    mqttMessageId: reading.mqttMessageId,
+    consumptionLiters: reading.consumptionLiters,
+    recordedAt: reading.timestamp,
+    flowRateLpm: reading.flowRateLpm,
+    totalLiters: reading.totalLiters,
+    pulses: reading.pulses,
+    sampleIntervalSeconds: reading.sampleIntervalSeconds,
+    wifiRssiDbm: reading.wifiRssiDbm,
+    signalQuality: reading.signalQuality,
+    batteryLevel: reading.batteryLevel,
+    voltage: reading.voltage,
+    temperature: reading.temperature
+  };
+  const savedReading = ingestReading
+    ? await ingestReading.execute(persistenceInput)
+    : await persistReading(readingRepository, reading);
 
-  if (savedReading) {
+  if (savedReading?.duplicate) {
+    logger.info('[MQTT] Telemetría duplicada ignorada', {
+      deviceCode: reading.deviceCode,
+      mqttMessageId: reading.mqttMessageId
+    });
+  } else if (savedReading) {
     logger.info('[MQTT] Lectura de telemetría persistida', {
       readingId: savedReading.readingId,
       deviceCode: savedReading.deviceCode,

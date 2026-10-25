@@ -234,3 +234,20 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+  - changeSet:
+      id: 20260912-sensor-reading-mqtt-dedup-index
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,index,iot,integrity"
+      comment: "Makes MQTT ingestion idempotent per device and broker message identifier."
+      changes:
+        - sqlFile:
+            path: 014_sensor_reading_mqtt_dedup.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/09_indexes/014_sensor_reading_mqtt_dedup.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

@@ -12,6 +12,14 @@ test('rechaza un rango de consumo invertido', async () => {
   );
 });
 
+test('rechaza un periodo de consumo mayor a 366 días', async () => {
+  const useCase = new GetConsumptionSummary({ consumptionRepository: {} });
+  await assert.rejects(
+    async () => useCase.execute({ userId: validHomeId, homeId: validHomeId, from: '2025-01-01', to: '2026-01-02' }),
+    /periodo no puede superar 366 días/
+  );
+});
+
 test('mapea una consulta válida al repositorio', async () => {
   const calls = [];
   const useCase = new GetConsumptionSummary({

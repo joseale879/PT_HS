@@ -1,10 +1,11 @@
 const { isValidEmail } = require('../../../../shared/validation');
 
 class RequestPasswordReset {
-  constructor({ authRepository, tokenService, notificationService }) {
+  constructor({ authRepository, tokenService, notificationService, logger = console }) {
     this.authRepository = authRepository;
     this.tokenService = tokenService;
     this.notificationService = notificationService;
+    this.logger = logger;
   }
 
   async execute({ email }) {
@@ -12,11 +13,7 @@ class RequestPasswordReset {
     if (!isValidEmail(normalizedEmail)) {
       this.badRequest('El correo electrónico es obligatorio y debe ser válido');
     }
-    if (!this.notificationService.isConfigured()) {
-      const error = new Error('El correo de recuperación no está configurado');
-      error.status = 503;
-      throw error;
-    }
+
     const resetToken = this.tokenService.generate();
     const resetExpiresAt = this.tokenService.expiresAt();
     const resetId = await this.authRepository.createPasswordResetToken({

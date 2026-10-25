@@ -5,15 +5,13 @@ const { pool, ingestPool } = require('./src/infrastructure/db');
 const { getEnv } = require('./src/config/env');
 const { startMaterializedViewsRefreshJob } = require('./src/jobs/materializedViewsRefreshJob');
 const { startAlertGenerationJob } = require('./src/jobs/alertGenerationJob');
-
-const { MqttClient } = require('./src/core/infrastructure/services/mqtt/MqttClient');
+const { startAuditCleanupJob } = require('./src/jobs/auditCleanupJob');
+const { startActuatorCommandTimeoutJob } = require('./src/jobs/actuatorCommandTimeoutJob');
+const { mqttClient } = require('./src/core/infrastructure/services/mqtt/mqttClientSingleton');
 const { MqttSubscriber } = require('./src/core/infrastructure/services/mqtt/MqttSubscriber');
-
-const { handleReading } = require('./src/mqtt/handlers/reading.handler');
-
-const {
-  PostgresReadingIngestRepository
-} = require('./src/core/infrastructure/repositories/postgres/PostgresReadingIngestRepository');
+const { IngestReading } = require('./src/core/application/use-cases/telemetry/IngestReading');
+const { PostgresTelemetryRepository } = require('./src/core/infrastructure/repositories/postgres/PostgresTelemetryRepository');
+const { PostgresDeviceRepository } = require('./src/core/infrastructure/repositories/postgres/PostgresDeviceRepository');
 
 const env = getEnv();
 
@@ -32,30 +30,32 @@ const stopAlertGenerationJob = startAlertGenerationJob({
   pool,
   intervalMs: env.alertGenerationIntervalMs
 });
+const stopAuditCleanupJob = startAuditCleanupJob({
+  pool,
+  intervalMs: env.auditCleanupIntervalMs,
+  retentionDays: env.auditRetentionDays,
+  batchSize: env.auditCleanupBatchSize
+});
+const stopActuatorCommandTimeoutJob = startActuatorCommandTimeoutJob({
+  pool,
+  intervalMs: env.actuatorCommandTimeoutIntervalMs,
+  timeoutMs: env.actuatorCommandTimeoutMs,
+  batchSize: env.actuatorCommandTimeoutBatchSize
+});
 
 // ============================================================
 // MQTT + INGESTA DE LECTURAS DEL ESP32
 // ============================================================
 
 const mqttConfig = require('./src/config/mqtt').getMqttConfig();
-
-const mqttClient = new MqttClient();
-
-const readingRepository = new PostgresReadingIngestRepository({
-  pool: ingestPool,
-  logger: console
-});
+const telemetryRepository = new PostgresTelemetryRepository();
 
 const mqttSubscriber = new MqttSubscriber({
   mqttClient,
   qos: mqttConfig.qos,
-
-  handlers: {
-    telemetry: (payload) => handleReading({
-      ...payload,
-      readingRepository
-    })
-  }
+  maxPayloadBytes: mqttConfig.maxPayloadBytes,
+  ingestReading: new IngestReading({ telemetryRepository }),
+  deviceRepository: new PostgresDeviceRepository()
 });
 
 mqttSubscriber.start();
@@ -71,6 +71,8 @@ async function shutdown(signal) {
     try {
       stopRefreshJob();
       stopAlertGenerationJob();
+      stopAuditCleanupJob();
+      stopActuatorCommandTimeoutJob();
 
       await mqttSubscriber.stop();
 

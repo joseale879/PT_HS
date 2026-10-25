@@ -86,6 +86,10 @@ docker compose --env-file .env -p hidro_smart --profile tooling run --rm liquiba
 
 Estado verificado el 2026-09-03: `validate` y `update` fueron exitosos y `status` indicó que no había cambios pendientes.
 
+El estado vigente del 2026-09-13 conserva esa configuración y fue comprobado
+con `validate` y `status --verbose`: 206 changesets aplicados y sin cambios
+pendientes. La evidencia transversal está en `../../docs/estado-integral.md`.
+
 ## Actualización 2026-09-03
 
 Después de la verificación anterior se aplicaron los changesets de auditoría administrativa. Ejecutar nuevamente `validate`, `status` y `update` después de recuperar una base local o cambiar de volumen. El backend continúa usando únicamente `hidro_smart_app`; la consulta de auditoría se realiza mediante una función autorizada y no mediante acceso directo a la tabla.

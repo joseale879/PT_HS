@@ -9,8 +9,8 @@ class PasswordTokenService {
     return crypto.createHash('sha256').update(value, 'utf8').digest('hex');
   }
 
-  expiresAt() {
-    return new Date(Date.now() + 60 * 60 * 1000);
+  expiresAt(hours = 1) {
+    return new Date(Date.now() + hours * 60 * 60 * 1000);
   }
 }
 
