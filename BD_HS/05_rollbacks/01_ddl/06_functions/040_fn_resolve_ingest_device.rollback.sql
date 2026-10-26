@@ -1,1 +1,0 @@
-DROP FUNCTION IF EXISTS device.fn_resolve_ingest_device(VARCHAR);

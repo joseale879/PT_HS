@@ -1,0 +1,13 @@
+DROP FUNCTION IF EXISTS device.fn_ingest_sensor_reading(VARCHAR, VARCHAR, NUMERIC, TIMESTAMPTZ, NUMERIC, NUMERIC, INTEGER, NUMERIC, INTEGER, INTEGER, INTEGER, NUMERIC, NUMERIC, VARCHAR);
+DROP FUNCTION IF EXISTS device.fn_record_device_status(VARCHAR, VARCHAR, TIMESTAMPTZ, VARCHAR, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, VARCHAR);
+DROP FUNCTION IF EXISTS device.fn_update_device_provisioning(UUID, VARCHAR, VARCHAR, VARCHAR);
+DROP FUNCTION IF EXISTS device.fn_register_device_with_provisioning(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, DECIMAL);
+DROP INDEX IF EXISTS device.uq_device_hardware_id;
+ALTER TABLE device.device
+    DROP CONSTRAINT IF EXISTS ck_device_hardware_id,
+    DROP CONSTRAINT IF EXISTS ck_device_provisioning_status,
+    DROP COLUMN IF EXISTS hardware_id,
+    DROP COLUMN IF EXISTS provisioning_status,
+    DROP COLUMN IF EXISTS provisioning_error,
+    DROP COLUMN IF EXISTS provisioning_updated_at,
+    DROP COLUMN IF EXISTS provisioned_at;

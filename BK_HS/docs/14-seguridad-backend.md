@@ -1,9 +1,10 @@
 # Seguridad del Backend — Hidro Smart
 
 Estado de implementación: la autenticación activa usa JWT, refresh tokens,
-revocación de sesiones y recuperación por correo SMTP. Las secciones de MFA,
-Redis y actuadores describen capacidades futuras o legado y no deben tratarse
-como rutas disponibles mientras no aparezcan montadas en `src/app.js`.
+revocación de sesiones y recuperación por correo SMTP. MFA y Redis siguen fuera
+del alcance actual. Los actuadores ya tienen rutas montadas, permiso de negocio,
+persistencia y confirmación MQTT; todavía requieren endurecimiento del broker
+antes de producción.
 
 ## 1. Introducción
 

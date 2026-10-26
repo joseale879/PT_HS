@@ -533,10 +533,10 @@ rollback:
 ```
 
 No se deben usar rutas de Windows con `\` en los changelogs. Liquibase se ejecuta dentro de Docker y requiere rutas con `/`.
-## Estado operativo e integración IoT (2026-09-04)
+## Estado operativo e integración IoT (2026-09-14)
 
-El Compose integrado de la raíz levanta PostgreSQL, `db-bootstrap`, backend, frontend, Mailpit y Mosquitto. Liquibase se ejecuta con el perfil `tooling`; consulta `docs/guia-ejecucion-liquibase.md` para los comandos actuales.
+El Compose integrado de la raíz levanta PostgreSQL, `db-bootstrap`, backend, frontend y Mosquitto. El correo se envía mediante Gmail SMTP configurado en el `.env`. Liquibase se ejecuta con el perfil `tooling`; consulta `docs/guia-ejecucion-liquibase.md` para los comandos actuales.
 
-La base está actualizada con 166 changesets. Los objetos `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` están preparados para IoT, pero el subscriber MQTT del backend todavía no persiste lecturas.
+La base está actualizada con 217 changesets. Los objetos `device.device`, `device.home_device`, `consumption.sensor_reading` y `device.device_telemetry_history` están conectados a la ingesta MQTT protegida del backend. `device.device.location` almacena la ubicación visible del sensor hasta 120 caracteres. `consumption.fn_get_consumption_series(...)` entrega series agregadas autorizadas para las pantallas de consumo y reportes.
 
-Antes de activar la ingestión deben revisarse los grants del rol `hidro_smart_ingest`, la resolución segura del dispositivo y la precisión de `consumption.sensor_reading.consumption_liters`, actualmente `NUMERIC(10,2)`, porque el ESP32 puede enviar muestras de `0.040 L`.
+La ingestión ya está activa: el rol `hidro_smart_ingest` ejecuta la función protegida, sin `INSERT` directo sobre `consumption.sensor_reading`. La resolución segura del dispositivo, la asociación activa y la idempotencia están versionadas. Las lecturas admiten `NUMERIC(14,3)` en litros y el m³ generado conserva `NUMERIC(14,6)`, suficiente para muestras como `0.040 L`.

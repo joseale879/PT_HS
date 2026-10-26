@@ -1,181 +1,116 @@
-# HidroSmart
+﻿# HidroSmart
 
-HidroSmart es una plataforma local para monitoreo inteligente de consumo de agua. El repositorio se divide en base de datos, backend, frontend web y conexión IoT mediante ESP32 + MQTT.
+HidroSmart es una plataforma local para monitoreo inteligente de consumo de agua. El repositorio se divide en base de datos, backend, frontend unificado Web/Mobile y firmware ESP32.
 
-## Estado actualizado
+## Estado verificado
 
-Revisión: 2026-09-09.
+RevisiÃ³n: 2026-09-14.
 
-- PostgreSQL y Liquibase están operativos para la base local.
-- El backend Express se conecta a PostgreSQL y expone la API REST bajo `/api/v1`.
-- El frontend React/Vite se compila y se sirve por Nginx en Docker.
-- Registro, autenticación, sesiones, hogares, dispositivos, consumo, alertas, metas, vacaciones, soporte, tarifas, roles y auditoría tienen rutas de backend implementadas.
-- Mosquitto funciona como broker MQTT local de desarrollo.
-- El backend tiene cliente MQTT, subscriber, parser y handlers para recibir telemetría del ESP32.
-- La integración MQTT esperada queda así: `ESP32 -> Mosquitto -> Backend -> PostgreSQL -> API -> Frontend`.
-- La lectura MQTT se persiste en `consumption.sensor_reading` usando `PostgresReadingIngestRepository`, siempre que exista un dispositivo activo, por ejemplo `ESP32-001`, asociado a un hogar activo.
-- El ESP32 todavía no vive dentro del repositorio como firmware formal; se conecta publicando en el topic MQTT documentado.
+- PostgreSQL y Liquibase están operativos; la base local está actualizada con 217 changesets.
+- El backend Express estÃ¡ conectado a PostgreSQL y expone la API REST bajo `/api/v1`.
+- El frontend React/Vite estÃ¡ compilado y servido por Nginx en Docker.
+- Registro, autenticaciÃ³n, sesiones, hogares, dispositivos, consumo, alertas, metas, vacaciones, soporte, tarifas, roles y auditorÃ­a tienen rutas de backend implementadas.
+- El transporte MQTT, el cliente, el subscriber, el parser y los handlers bÃ¡sicos estÃ¡n implementados y ya aceptan una telemetrÃ­a de prueba.
+- La persistencia MQTT en `consumption.sensor_reading` estÃ¡ conectada mediante funciÃ³n SQL protegida, `mqttMessageId`, mÃ©tricas validadas y timestamps de mediciÃ³n/recepciÃ³n.
+- Privacy/ARCO estÃ¡ disponible en `/api/v1/privacy` y el resumen de consumo se puede descargar en PDF o Excel desde `/api/v1/reports`.
+- La navegaciÃ³n autenticada usa `/app/*`; el menÃº lateral es colapsable en escritorio y hamburguesa en mÃ³vil.
+- La estructura base del firmware ESP32 estÃ¡ presente en `firmware/`; la compilaciÃ³n con hardware real y su seguimiento formal en Git aÃºn deben confirmarse.
 
 ## Estructura
 
 | Carpeta | Responsabilidad |
 |---|---|
 | `BD_HS` | PostgreSQL, Liquibase, tablas, funciones, vistas, RLS, roles y grants |
-| `BK_HS` | API Node.js/Express, autenticación, casos de uso, repositorios, MQTT y Docker |
-| `FT_HS/Web` | Frontend React/Vite, cliente HTTP, pantallas y Nginx |
-| `FT_HS/mobile` | Cliente móvil/WebView en estado de preparación |
-| `docker-compose.yml` | Orquestación local integrada |
+| `BK_HS` | API Node.js/Express, autenticaciÃ³n, casos de uso, repositorios, MQTT y Docker |
+| `FT_HS/frontend` | Frontend React/Vite, cliente HTTP, pantallas y Nginx |
+| `firmware` | Estructura base para ESP32, MQTT, sensores, actuadores y OTA |
+| `docker-compose.yml` | OrquestaciÃ³n local integrada |
 
 ## Servicios locales
 
-| Servicio | Dirección desde Windows | Uso |
+| Servicio | DirecciÃ³n desde Windows | Uso |
 |---|---|---|
-| Frontend | `http://localhost:5173` | Aplicación web |
+| Frontend | `http://localhost:5173` | AplicaciÃ³n web |
 | Backend | `http://localhost:3000` | API REST y health |
-| Health backend | `http://localhost:3000/health` | Comprobación directa |
-| Health frontend | `http://localhost:5173/health` | Comprobación a través de Nginx |
+| Health backend | `http://localhost:3000/health` | ComprobaciÃ³n directa |
+| Health frontend | `http://localhost:5173/health` | ComprobaciÃ³n a travÃ©s de Nginx |
 | PostgreSQL | `localhost:5433` | Acceso externo de desarrollo |
-| Mailpit | `http://localhost:8025` | Bandeja de correo local |
 | MQTT | `localhost:1883` | Broker Mosquitto sin TLS para desarrollo |
 
-Dentro de Docker, el backend usa `postgres:5432`, `mailpit:1025` y `mosquitto:1883`. El navegador no accede directamente a PostgreSQL ni al broker MQTT: usa Nginx y la API.
+Dentro de Docker, el backend usa `postgres:5432` y `mosquitto:1883`. El navegador no accede directamente a PostgreSQL ni al broker: usa Nginx y la API.
 
-## Variables de entorno
+## Inicio desde cero con Docker
 
-Copia `.env.example` a `.env` y completa valores locales. No publiques `.env` ni contraseñas.
+Ejecuta los comandos desde `PT_HS`. Requiere Docker Desktop iniciado.
 
-Variables mínimas importantes:
+1. Si aÃºn no existe el archivo raÃ­z, crÃ©alo desde la plantilla:
 
-```env
-NODE_ENV=development
-POSTGRES_DB=hidro_smart
-POSTGRES_USER=hidro_smart_admin
-POSTGRES_PASSWORD=CAMBIA_ESTA_CONTRASENA_POSTGRES
-POSTGRES_PORT=5433
+   ```powershell
+   Copy-Item .env.example .env
+   ```
 
-DB_USER=hidro_smart_app
-DB_PASSWORD=CAMBIA_ESTA_CONTRASENA_BACKEND
-DB_INGEST_USER=hidro_smart_ingest
-DB_INGEST_PASSWORD=CAMBIA_ESTA_CONTRASENA_INGEST
-DB_INGEST_POOL_MAX=5
+   Revisa los valores locales de `.env`. No publiques ese archivo ni sus contraseÃ±as.
 
-BACKEND_PORT=3000
-FRONTEND_PORT=5173
-CORS_ORIGIN=http://localhost:5173,http://localhost
+2. Comprueba Docker y la configuraciÃ³n:
 
-JWT_SECRET=CAMBIA_ESTE_SECRETO_JWT_LARGO_Y_ALEATORIO
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=30d
-JWT_ISSUER=hidro-smart-api
-JWT_AUDIENCE=hidro-smart-web
+   ```powershell
+   docker version
+   docker compose --env-file .env config --quiet
+   ```
 
-FRONTEND_URL=http://localhost:5173
-PASSWORD_RESET_URL=http://localhost:5173
+3. Levanta PostgreSQL, el bootstrap del usuario de aplicaciÃ³n y Mosquitto:
 
-SMTP_HOST=mailpit
-SMTP_PORT=1025
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM="HidroSmart <no-reply@localhost>"
-MAILPIT_SMTP_PORT=1025
-MAILPIT_UI_PORT=8025
+   ```powershell
+   docker compose --env-file .env up -d postgres db-bootstrap mosquitto
+   ```
 
-MQTT_PORT=1883
-MQTT_BROKER_URL=mqtt://mosquitto:1883
-MQTT_CLIENT_ID=hidrosmart-backend
-MQTT_USERNAME=
-MQTT_PASSWORD=
-MQTT_QOS=1
-MQTT_RECONNECT_PERIOD_MS=3000
-MQTT_CONNECT_TIMEOUT_MS=10000
-```
+4. Valida y aplica las migraciones antes de iniciar la aplicaciÃ³n:
 
-## Inicio local recomendado
+   ```powershell
+   docker compose --env-file .env --profile tooling run --rm liquibase validate
+   docker compose --env-file .env --profile tooling run --rm liquibase status --verbose
+   docker compose --env-file .env --profile tooling run --rm liquibase update
+   ```
 
-Desde la raíz del proyecto, donde está `docker-compose.yml`:
+5. Construye y levanta backend y frontend:
 
-```powershell
-Copy-Item .env.example .env
-```
+   ```powershell
+   docker compose --env-file .env up -d --build backend frontend
+   ```
 
-Edita `.env` y cambia como mínimo:
+6. Comprueba el estado y las URLs:
 
-```text
-POSTGRES_PASSWORD
-DB_PASSWORD
-DB_INGEST_PASSWORD
-JWT_SECRET
-```
+   ```powershell
+   docker compose --env-file .env ps
+   Invoke-WebRequest http://localhost:3000/health
+   Invoke-WebRequest http://localhost:5173/health
+   ```
 
-Levanta primero PostgreSQL, bootstrap, Mosquitto y Mailpit:
+El correo usa Gmail si el `.env` contiene las variables `SMTP_*`. Las credenciales reales
+deben permanecer Ãºnicamente en archivos locales.
+
+## Inicio normal
+
+Cuando la base ya fue aplicada, basta con ejecutar:
 
 ```powershell
-docker compose --env-file .env up -d postgres db-bootstrap mosquitto mailpit
+docker compose --env-file .env up -d
 ```
 
-Valida Liquibase:
+Si agregas nuevos changesets, ejecuta nuevamente `validate`, `status` y `update`
+antes de reiniciar el backend.
+
+## Reinicio completamente limpio
+
+Este comando elimina el volumen local de PostgreSQL y los datos de desarrollo.
+Ãšsalo solo para reconstruir la base desde cero:
 
 ```powershell
-docker compose --env-file .env --profile tooling run --rm liquibase validate
+docker compose --env-file .env down --volumes --remove-orphans
 ```
 
-Aplica migraciones:
-
-```powershell
-docker compose --env-file .env --profile tooling run --rm liquibase update
-```
-
-Levanta backend y frontend:
-
-```powershell
-docker compose --env-file .env up -d --build backend frontend
-```
-
-Verifica contenedores:
-
-```powershell
-docker compose --env-file .env ps
-```
-
-Verifica health:
-
-```powershell
-Invoke-WebRequest http://localhost:3000/health
-Invoke-WebRequest http://localhost:5173/health
-```
-
-## Comandos rápidos para correr todo
-
-Si ya tienes `.env` listo y la base ya fue migrada:
-
-```powershell
-docker compose --env-file .env up -d --build
-```
-
-Ver logs del backend:
-
-```powershell
-docker compose --env-file .env logs -f backend
-```
-
-Ver logs filtrando MQTT:
-
-```powershell
-docker compose --env-file .env logs -f backend | findstr MQTT
-```
-
-Bajar servicios:
-
-```powershell
-docker compose --env-file .env down
-```
-
-Bajar servicios y borrar volumen de base de datos local:
-
-```powershell
-docker compose --env-file .env down -v
-```
+DespuÃ©s repite el flujo de inicio desde cero. No uses este comando para una
+actualizaciÃ³n normal.
 
 ## Liquibase
 
@@ -187,14 +122,15 @@ docker compose --env-file .env --profile tooling run --rm liquibase status --ver
 docker compose --env-file .env --profile tooling run --rm liquibase update
 ```
 
-El servicio `db-bootstrap` prepara los roles de aplicación e ingesta:
+`db-bootstrap` prepara el rol de aplicaciÃ³n `hidro_smart_app`. El servicio backend no debe conectarse con el administrador de Liquibase.
 
-```text
-hidro_smart_app
-hidro_smart_ingest
-```
+## API y frontend
 
-El backend no debe conectarse con el usuario administrador de Liquibase.
+El frontend centraliza las llamadas en `FT_HS/frontend/src/shared/http/apiClient.ts`. En Docker se compila con `VITE_API_URL=/api/v1` y Nginx reenvÃ­a `/api/` al backend. En desarrollo directo puede usarse `VITE_API_URL=http://localhost:3000/api/v1`.
+
+Los grupos REST montados son: `/auth`, `/homes`, `/devices`, `/consumption`, `/users`, `/tariffs`, `/alerts`, `/goals`, `/vacation`, `/roles`, `/support`, `/audit`, `/privacy`, `/reports` y `/recommendations`. La lista detallada y los permisos estÃ¡n en `BK_HS/docs/03-endpoints.md` y `BK_HS/docs/endpoints-por-rol.md`.
+
+La navegaciÃ³n actual del frontend usa React Router y los mÃ³dulos principales consumen las APIs disponibles. El indicador de flujo actual del dashboard representa el Ãºltimo punto agregado horario; no es caudal MQTT en tiempo real. La matriz de roles ya estÃ¡ automatizada; quedan pruebas manuales/E2E y ajustes visuales puntuales.
 
 ## MQTT
 
@@ -206,204 +142,47 @@ hidrosmart/devices/+/status
 hidrosmart/devices/+/actuators/+/status
 ```
 
-El ESP32 debe publicar telemetría en:
-
-```text
-hidrosmart/devices/ESP32-001/telemetry
-```
-
-Payload recomendado:
+La telemetrÃ­a mÃ­nima recomendada para el ESP32 es:
 
 ```json
 {
-  "deviceId": "ESP32-001",
   "flowRateLpm": 2.4,
   "consumptionLiters": 0.04,
   "totalLiters": 3.407,
   "pulses": 18,
-  "sampleIntervalSeconds": 1,
   "signalQuality": -56,
-  "timestamp": "2026-09-09T15:30:00Z"
+  "timestamp": "2026-09-04T15:30:00Z"
 }
 ```
 
-Flujo esperado:
-
-```text
-ESP32 -> Mosquitto -> Backend MQTT -> PostgresReadingIngestRepository -> consumption.sensor_reading
-```
-
-Para que la lectura se guarde, el código del dispositivo del topic debe existir en la base:
-
-```text
-ESP32-001
-```
-
-Y debe estar asociado a un hogar activo.
-
-## Prueba MQTT sin ESP32
-
-Terminal 1: dejar viendo logs del backend.
-
-```powershell
-docker compose --env-file .env logs -f backend
-```
-
-Terminal 2: publicar telemetría de prueba en Mosquitto.
-
-```powershell
-docker compose --env-file .env exec mosquitto mosquitto_pub -h localhost -p 1883 -t "hidrosmart/devices/ESP32-001/telemetry" -m '{"deviceId":"ESP32-001","flowRateLpm":2.4,"consumptionLiters":0.04,"totalLiters":3.407,"pulses":18,"sampleIntervalSeconds":1,"signalQuality":-56}'
-```
-
-En los logs del backend debe aparecer:
-
-```text
-[MQTT] Lectura de telemetría recibida
-[MQTT] Lectura de telemetría persistida
-```
-
-Si aparece `Lectura recibida pero no persistida`, falta inyectar `PostgresReadingIngestRepository` en `BK_HS/server.js`.
-
-Si aparece `No existe un dispositivo activo vinculado a un hogar activo`, falta crear o asociar el dispositivo `ESP32-001`.
-
-## Verificar datos guardados en PostgreSQL
-
-Entrar a PostgreSQL:
-
-```powershell
-docker compose --env-file .env exec postgres psql -U hidro_smart_admin -d hidro_smart
-```
-
-Consultar últimas lecturas:
-
-```sql
-SELECT
-  reading_id,
-  device_id,
-  home_id,
-  recorded_at,
-  consumption_liters,
-  consumption_m3,
-  flow_rate_lpm,
-  total_liters,
-  pulses,
-  sample_interval_seconds,
-  created_at
-FROM consumption.sensor_reading
-ORDER BY recorded_at DESC
-LIMIT 10;
-```
-
-También puedes ejecutar la consulta directa desde PowerShell:
-
-```powershell
-docker compose --env-file .env exec postgres psql -U hidro_smart_admin -d hidro_smart -c "SELECT reading_id, device_id, home_id, recorded_at, consumption_liters, flow_rate_lpm, total_liters, pulses FROM consumption.sensor_reading ORDER BY recorded_at DESC LIMIT 10;"
-```
-
-## Conexión desde ESP32
-
-En el código del ESP32 usa:
-
-```cpp
-const char* DEVICE_CODE = "ESP32-001";
-const char* MQTT_TELEMETRY_TOPIC = "hidrosmart/devices/ESP32-001/telemetry";
-```
-
-El broker no debe ser `localhost`. Desde el ESP32 debes poner la IP local de tu PC.
-
-En Windows:
-
-```powershell
-ipconfig
-```
-
-Busca:
-
-```text
-Dirección IPv4
-```
-
-Ejemplo:
-
-```cpp
-const char* MQTT_SERVER = "192.168.1.105";
-const int MQTT_PORT = 1883;
-```
-
-## API y frontend
-
-El frontend centraliza las llamadas en:
-
-```text
-FT_HS/Web/src/shared/http/apiClient.ts
-```
-
-En Docker se compila con:
-
-```text
-VITE_API_URL=/api/v1
-```
-
-Nginx reenvía `/api/` al backend. En desarrollo directo puede usarse:
-
-```text
-VITE_API_URL=http://localhost:3000/api/v1
-```
-
-Los grupos REST montados son:
-
-```text
-/auth
-/homes
-/devices
-/consumption
-/users
-/tariffs
-/alerts
-/goals
-/vacation
-/roles
-/support
-/audit
-```
-
-El frontend no debe conectarse directamente a MQTT ni a PostgreSQL. Debe leer datos por la API del backend.
+El contrato completo, normalizaciÃ³n y comandos de prueba estÃ¡n en `BK_HS/docs/14-mqtt-protocol.md`. La telemetrÃ­a y los estados MQTT pasan por parser, handler y funciones SQL protegidas; los comandos de actuadores salen por la API REST y sus ACK se correlacionan con `correlationId`.
 
 ## Pruebas conocidas
 
-Comandos útiles del backend:
+- Backend: `npm test` — 156 pruebas unitarias aprobadas en la última ejecución.
+- Backend: `npm run check` y `npm run lint` â€” aprobados.
+- Frontend: `npm run lint`, `npm run typecheck` y `npm run build` â€” aprobados. `npm test` finaliza con 0 pruebas porque aÃºn no hay suite automatizada frontend.
+- Base de datos: `validate` y `status --verbose` â€” aprobados.
+- MQTT: publicaciÃ³n local de telemetrÃ­a vÃ¡lida recibida y normalizada por el backend â€” aprobada.
+- Pruebas de integraciÃ³n: `npm run seed:integration` prepara las cuatro cuentas
+  de prueba y `npm run test:integration` ejecuta health, autorizaciÃ³n, RLS y MQTT.
+  Sin esas variables de entorno, las pruebas autenticadas se omiten.
 
-```powershell
-cd BK_HS
-npm install
-npm test
-npm run check
-```
+## DocumentaciÃ³n principal
 
-Comandos útiles del frontend:
+- Estado integral transversal: `docs/estado-integral.md`.
+- GuÃ­a para levantar cada proyecto o toda la pila: `docs/guia-ejecucion-local.md`.
+- ValidaciÃ³n de integraciÃ³n y usuarios de prueba: `docs/validacion-integracion.md`.
+- GuÃ­a de dispositivos IoT: `docs/dispositivos-iot.md`.
 
-```powershell
-cd FT_HS/Web
-npm install
-npm run format:check
-npm run build
-```
-
-Comandos útiles de base de datos:
-
-```powershell
-docker compose --env-file .env --profile tooling run --rm liquibase validate
-docker compose --env-file .env --profile tooling run --rm liquibase status --verbose
-```
-
-## Documentación principal
-
-- Estado integral: `BK_HS/docs/00-estado-actual.md`.
-- Integración BD/backend/frontend: `BK_HS/docs/00-integracion-front-back-bd.md`.
+- Estado operativo del backend: `BK_HS/docs/00-estado-actual.md`.
+- IntegraciÃ³n BD/backend/frontend: `BK_HS/docs/00-integracion-front-back-bd.md`.
 - Endpoints: `BK_HS/docs/03-endpoints.md`.
 - MQTT: `BK_HS/docs/14-mqtt-protocol.md` y `BK_HS/docs/13-flujo-datos-iot.md`.
 - Pendientes: `BK_HS/docs/pendientes-proyecto.md`.
-- Diagnóstico de BD: `BD_HS/docs/diagnostico-actual.md`.
-- Integración web: `FT_HS/Web/INTEGRACION.md`.
+- AuditorÃ­a P2: `BK_HS/docs/auditoria-p2-correcciones.md`.
+- DiagnÃ³stico de BD: `BD_HS/docs/diagnostico-actual.md`.
+- IntegraciÃ³n web: `FT_HS/frontend/INTEGRACION.md`.
 
-Los Compose individuales de `BD_HS` y `BK_HS` se conservan por compatibilidad. Para validar el sistema completo usa el Compose de la raíz del proyecto.
+Los Compose individuales de `BD_HS` y `BK_HS` se conservan por compatibilidad. Para validar el sistema completo usa el Compose de esta raÃ­z.
+- Bitácora de cambios verificados del 2026-09-14: `docs/cambios-2026-09-14.md`.

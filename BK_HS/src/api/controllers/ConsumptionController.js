@@ -3,14 +3,16 @@ const { ConsumptionSummaryResponse } = require('../../core/application/dtos/resp
 const { DailyConsumptionRequest } = require('../../core/application/dtos/requests/DailyConsumptionRequest');
 const { MonthlyConsumptionRequest } = require('../../core/application/dtos/requests/MonthlyConsumptionRequest');
 const { HourlyConsumptionRequest } = require('../../core/application/dtos/requests/HourlyConsumptionRequest');
+const { ConsumptionSeriesRequest } = require('../../core/application/dtos/requests/ConsumptionSeriesRequest');
 
 class ConsumptionController {
-  constructor({ getConsumptionSummary, getDailyConsumption, getMonthlyConsumption, getHourlyConsumption, getPeriodCost }) {
+  constructor({ getConsumptionSummary, getDailyConsumption, getMonthlyConsumption, getHourlyConsumption, getPeriodCost, getConsumptionSeries }) {
     this.getConsumptionSummary = getConsumptionSummary;
     this.getDailyConsumption = getDailyConsumption;
     this.getMonthlyConsumption = getMonthlyConsumption;
     this.getHourlyConsumption = getHourlyConsumption;
     this.getPeriodCost = getPeriodCost;
+    this.getConsumptionSeries = getConsumptionSeries;
   }
 
   async summary(req, res) {
@@ -42,6 +44,20 @@ class ConsumptionController {
       to: req.query.to
     });
     res.json({ data: result });
+  }
+
+  async series(req, res) {
+    const input = ConsumptionSeriesRequest.fromRequest(req.query);
+    const result = await this.getConsumptionSeries.execute({ userId: req.user.id, ...input });
+    res.json({
+      data: {
+        homeId: input.homeId,
+        from: input.from,
+        to: input.to,
+        groupBy: input.groupBy,
+        points: result
+      }
+    });
   }
 }
 

@@ -9,6 +9,16 @@ function getPositiveInteger(value, fallback, variableName) {
   return parsed;
 }
 
+function getBoolean(value, fallback, variableName) {
+  if (value === undefined || value === '') return fallback;
+
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === 'true') return true;
+  if (normalized === 'false') return false;
+
+  throw new Error(`${variableName} debe ser true o false`);
+}
+
 function getMqttConfig(env = process.env) {
   const brokerUrl = env.MQTT_BROKER_URL;
 
@@ -36,6 +46,11 @@ function getMqttConfig(env = process.env) {
   return {
     brokerUrl,
     qos,
+    // Compatibilidad temporal con el firmware anterior, que no enviaba
+    // mqttMessageId. Debe desactivarse cuando todos los dispositivos estén
+    // actualizados para recuperar la idempotencia proporcionada por el ESP32.
+    allowLegacyTelemetry: getBoolean(env.MQTT_ALLOW_LEGACY_TELEMETRY, true, 'MQTT_ALLOW_LEGACY_TELEMETRY'),
+    maxPayloadBytes: getPositiveInteger(env.MQTT_MAX_PAYLOAD_BYTES, 16384, 'MQTT_MAX_PAYLOAD_BYTES') || 16384,
     options: {
       clientId: env.MQTT_CLIENT_ID || `hidrosmart-backend-${process.pid}`,
       clean: true,

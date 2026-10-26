@@ -15,6 +15,20 @@ function text(value, field, max) {
   return value.trim();
 }
 
+const PRIORITIES = ['Baja', 'Media', 'Alta'];
+const STATUSES = ['Abierto', 'En Proceso', 'Resuelto', 'Cerrado'];
+
+function catalogValue(value, field, values) {
+  const normalized = text(value, field, 20).toLowerCase();
+  const match = values.find((candidate) => candidate.toLowerCase() === normalized);
+  if (!match) {
+    const error = new Error(`${field} no es válido`);
+    error.status = 400;
+    throw error;
+  }
+  return match;
+}
+
 class CreateTicket {
   constructor({ repository }) { this.repository = repository; }
 
@@ -23,7 +37,9 @@ class CreateTicket {
     return this.repository.create({
       userId,
       category: text(category, 'category', 50),
-      priority: priority ? text(priority, 'priority', 20) : 'Media',
+      priority: priority === undefined || priority === null || (typeof priority === 'string' && !priority.trim())
+        ? 'Media'
+        : catalogValue(priority, 'priority', PRIORITIES),
       title: text(title, 'title', 200),
       description: text(description, 'description', 5000)
     });
@@ -54,8 +70,8 @@ class UpdateTicket {
     }
     return this.repository.update({
       userId, ticketId,
-      ...(status === undefined ? {} : { status: text(status, 'status', 20) }),
-      ...(priority === undefined ? {} : { priority: text(priority, 'priority', 20) }),
+      ...(status === undefined ? {} : { status: catalogValue(status, 'status', STATUSES) }),
+      ...(priority === undefined ? {} : { priority: catalogValue(priority, 'priority', PRIORITIES) }),
       ...(assignedTo === undefined || assignedTo === null ? { assignedTo } : (uuid(assignedTo, 'assignedTo'), { assignedTo }))
     });
   }

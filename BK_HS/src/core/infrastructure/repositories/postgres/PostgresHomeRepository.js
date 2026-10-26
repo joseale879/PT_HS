@@ -17,7 +17,8 @@ class PostgresHomeRepository extends HomeRepository {
 
   async findByUserId(userId) {
     const result = await withTransaction(userId, (client) => client.query(
-      `SELECT h.home_id, h.name, h.address, h.city, h.tier, h.status, h.created_at
+      `SELECT h.home_id, h.name, h.address, h.city, h.tier, h.status, h.created_at,
+              hu.home_role
          FROM home.home h
          JOIN home.home_user hu ON hu.home_id = h.home_id
         WHERE hu.user_account_id = $1::uuid
@@ -32,13 +33,15 @@ class PostgresHomeRepository extends HomeRepository {
       city: row.city,
       tier: row.tier,
       status: row.status,
+      homeRole: row.home_role,
       createdAt: row.created_at
     }));
   }
 
   async findByIdForUser(homeId, userId) {
     const result = await withTransaction(userId, (client) => client.query(
-      `SELECT h.home_id, h.name, h.address, h.city, h.tier, h.status, h.created_at
+      `SELECT h.home_id, h.name, h.address, h.city, h.tier, h.status, h.created_at,
+              hu.home_role
          FROM home.home h
          JOIN home.home_user hu ON hu.home_id = h.home_id
         WHERE h.home_id = $1::uuid
@@ -55,6 +58,7 @@ class PostgresHomeRepository extends HomeRepository {
       city: row.city,
       tier: row.tier,
       status: row.status,
+      homeRole: row.home_role,
       createdAt: row.created_at
     }) : null;
   }

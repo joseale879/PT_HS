@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+out/
+.web-dist/
+src/mobile/webBundle.js
+
+# Local environment files
+
+
+!.env.example
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.log
+
+# Editor / OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Cache
+.cache/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+build/
+tmp/
+*.keystore

@@ -1,5 +1,5 @@
 class Home {
-  constructor({ id = null, name, address, city, tier = null, status = 'Active', createdAt = null }) {
+  constructor({ id = null, name, address, city, tier = null, status = 'Active', createdAt = null, homeRole = null }) {
     this.id = id;
     this.name = Home.validateText(name, 'name', 3, 100);
     this.address = Home.validateText(address, 'address', 1, 255);
@@ -7,6 +7,7 @@ class Home {
     this.tier = Home.validateTier(tier);
     this.status = status;
     this.createdAt = createdAt;
+    this.homeRole = homeRole;
   }
 
   static create(attributes) {

@@ -311,20 +311,182 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: false
             stripComments: false
+
   - changeSet:
-      id: 20260909-iot-sensor-reading-ingest
+      id: 20260912-iot-sensor-reading-ingest
       author: Hidro_Smarth
-      labels: "BD-01-dev,ddl,alter,consumption,iot,mqtt"
-      comment: "Adds IoT ingestion fields and precision for MQTT sensor readings."
+      labels: "BD-01-dev,ddl,alter,consumption,iot,integrity"
+      comment: "Adds the MQTT idempotency key without creating or modifying materialized views."
       changes:
         - sqlFile:
             path: 021_iot_sensor_reading_ingest.sql
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20260912-device-ingest-hardening
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,consumption,iot,integrity"
+      comment: "Prevents multiple active home assignments and stores validated sensor metrics with measured and received timestamps."
+      changes:
+        - sqlFile:
+            path: 022_device_ingest_hardening.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
       rollback:
         - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/022_device_ingest_hardening.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+        - sqlFile:
             path: ../../05_rollbacks/01_ddl/04_alter/021_iot_sensor_reading_ingest.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260913-actuator-command-validation
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,actuators,validation"
+      comment: Enforces the valid command set for each actuator type at database level.
+      changes:
+        - sqlFile:
+            path: 023_actuator_command_validation.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/023_actuator_command_validation.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-email-verification-pending
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account,security,email"
+      comment: "Allows Pending accounts and preserves the suspension invariant while email verification is pending."
+      changes:
+        - sqlFile:
+            path: 024_email_verification_pending.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/024_email_verification_pending.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-profile-avatar
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account,user-profile"
+      comment: "Adds the optional profile avatar data URL."
+      changes:
+        - sqlFile:
+            path: 025_profile_avatar.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/025_profile_avatar.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-profile-phone-max-60
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,user_account,user-profile,validation"
+      comment: "Allows phone values up to 60 characters for international formats."
+      changes:
+        - sqlFile:
+            path: 026_profile_phone_max_60.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/026_profile_phone_max_60.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-consumption-precision
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,consumption,iot,precision"
+      comment: "Preserves sub-liter caudalimetro readings and rebuilds dependent materialized views."
+      changes:
+        - sqlFile:
+            path: 027_consumption_precision.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/027_consumption_precision.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260914-device-location
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,location"
+      comment: "Adds the visible physical location of an IoT device."
+      changes:
+        - sqlFile:
+            path: 028_device_location.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/028_device_location.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+
+  - changeSet:
+      id: 20260915-device-provisioning
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,iot,provisioning,ble,wifi,mqtt"
+      comment: "Persists ESP32 hardware identity and provisioning state without storing Wi-Fi credentials."
+      changes:
+        - sqlFile:
+            path: 029_device_provisioning.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/029_device_provisioning.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20260915-device-wifi-metadata
+      author: Hidro_Smarth
+      labels: "BD-01-dev,ddl,alter,device,iot,wifi,security"
+      comment: "Stores the active Wi-Fi SSID and exposes no Wi-Fi password to the application."
+      changes:
+        - sqlFile:
+            path: 030_device_wifi_metadata.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/030_device_wifi_metadata.rollback.sql
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false

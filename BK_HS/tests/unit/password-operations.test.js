@@ -30,3 +30,26 @@ test('rechaza una contraseña actual incorrecta', async () => {
     (error) => error.status === 401
   );
 });
+
+test('no revierte el cambio si falla el correo posterior', async () => {
+  let changed = false;
+  const useCase = new ChangePassword({
+    authRepository: {
+      findCredentialsForUser: async () => ({ accountStatus: 'Active', passwordHash: 'old-hash' }),
+      changePasswordHash: async () => { changed = true; },
+      findNotificationProfile: async () => ({ recipient: 'user@example.com', name: 'Usuario' })
+    },
+    passwordHasher: {
+      compare: async () => true,
+      hash: async () => 'new-hash'
+    },
+    notificationService: {
+      isConfigured: () => true,
+      sendPasswordChanged: async () => { throw new Error('SMTP no disponible'); }
+    },
+    logger: { error: () => {} }
+  });
+
+  await useCase.execute({ userId: 'user-1', currentPassword: 'Old-password1!', newPassword: 'New-password2!' });
+  assert.equal(changed, true);
+});

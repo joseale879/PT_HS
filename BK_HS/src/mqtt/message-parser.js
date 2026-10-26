@@ -1,8 +1,15 @@
-function parseJsonMessage(message) {
+const DEFAULT_MAX_PAYLOAD_BYTES = 16 * 1024;
+
+function parseJsonMessage(message, maxPayloadBytes = DEFAULT_MAX_PAYLOAD_BYTES) {
+  const buffer = Buffer.isBuffer(message) ? message : Buffer.from(String(message));
+  if (buffer.byteLength > maxPayloadBytes) {
+    throw new Error(`El payload MQTT supera el maximo de ${maxPayloadBytes} bytes`);
+  }
+
   let data;
 
   try {
-    data = JSON.parse(Buffer.isBuffer(message) ? message.toString('utf8') : String(message));
+    data = JSON.parse(buffer.toString('utf8'));
   } catch (_error) {
     throw new Error('El mensaje MQTT no contiene un JSON válido');
   }
@@ -83,7 +90,8 @@ function parseTimestamp(value) {
     return new Date().toISOString();
   }
 
-  if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
+  const isoWithTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/i;
+  if (typeof value !== 'string' || !isoWithTimezone.test(value) || Number.isNaN(Date.parse(value))) {
     throw new Error('timestamp debe ser una fecha ISO válida');
   }
 
@@ -99,11 +107,59 @@ function parseOptionalDeviceId(data) {
   return data.deviceId;
 }
 
-function parseTelemetryMessage(message) {
-  const data = parseJsonMessage(message);
+function parseOptionalHardwareId(data) {
+  const value = data.hardwareId;
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{3,32}$/.test(value)) {
+    throw new Error('hardwareId debe contener entre 3 y 32 caracteres seguros');
+  }
+  return value;
+}
+
+function parseOptionalWifiSsid(data) {
+  const value = data.wifiSsid ?? data.ssid;
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || value.trim().length > 32) {
+    throw new Error('wifiSsid debe tener como máximo 32 caracteres');
+  }
+  return value.trim() || null;
+}
+
+function parseOptionalProvisioningStatus(data) {
+  const value = data.provisioningStatus ?? data.provisioningState;
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string') throw new Error('provisioningStatus no es valido');
+  const normalized = value.trim().toUpperCase();
+  if (!['PENDING', 'BLE_READY', 'WIFI_CONNECTED', 'MQTT_CONNECTED', 'COMPLETE', 'FAILED'].includes(normalized)) {
+    throw new Error('provisioningStatus no es valido');
+  }
+  return normalized;
+}
+
+function parseOptionalMessageId(data) {
+  const value = data.mqttMessageId ?? data.messageId;
+  if (value === undefined || value === null || value === '') return null;
+  if ((typeof value !== 'string' && typeof value !== 'number') || !/^[A-Za-z0-9._:-]{1,100}$/.test(String(value))) {
+    throw new Error('mqttMessageId debe contener entre 1 y 100 caracteres seguros');
+  }
+  return String(value);
+}
+
+function parseOptionalCorrelationId(data) {
+  const value = data.correlationId;
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    throw new Error('correlationId debe ser un UUID válido');
+  }
+  return value;
+}
+
+function parseTelemetryMessage(message, { maxPayloadBytes } = {}) {
+  const data = parseJsonMessage(message, maxPayloadBytes);
   const signalMetrics = parseSignalMetrics(data);
 
   return {
+    mqttMessageId: parseOptionalMessageId(data),
     flowRateLpm: parseNonNegativeNumber(data, 'flowRateLpm'),
     consumptionLiters: parseNonNegativeNumber(data, 'consumptionLiters'),
     totalLiters: parseOptionalNumber(data, 'totalLiters'),
@@ -117,12 +173,13 @@ function parseTelemetryMessage(message) {
     voltage: parseOptionalNumber(data, 'voltage', { min: 0, max: 60 }),
     temperature: parseOptionalNumber(data, 'temperature', { min: -55, max: 125 }),
     timestamp: parseTimestamp(data.timestamp),
-    reportedDeviceId: parseOptionalDeviceId(data)
+    reportedDeviceId: parseOptionalDeviceId(data),
+    hardwareId: parseOptionalHardwareId(data)
   };
 }
 
-function parseDeviceStatusMessage(message) {
-  const data = parseJsonMessage(message);
+function parseDeviceStatusMessage(message, { maxPayloadBytes } = {}) {
+  const data = parseJsonMessage(message, maxPayloadBytes);
   const status = typeof data.status === 'string' ? data.status.trim().toUpperCase() : '';
 
   if (!['ONLINE', 'OFFLINE', 'ERROR'].includes(status)) {
@@ -132,12 +189,20 @@ function parseDeviceStatusMessage(message) {
   return {
     status,
     timestamp: parseTimestamp(data.timestamp),
-    reportedDeviceId: parseOptionalDeviceId(data)
+    firmwareVersion: data.firmwareVersion === undefined || data.firmwareVersion === null ? null : String(data.firmwareVersion).trim(),
+    wifiRssiDbm: parseOptionalInteger(data, 'wifiRssiDbm', { min: -127, max: 0 }),
+    signalQuality: parseOptionalInteger(data, 'signalQuality', { min: 0, max: 100 }),
+    batteryLevel: parseOptionalInteger(data, 'batteryLevel', { min: 0, max: 100 }),
+    lastIp: data.lastIp === undefined || data.lastIp === null ? null : String(data.lastIp).trim(),
+    wifiSsid: parseOptionalWifiSsid(data),
+    reportedDeviceId: parseOptionalDeviceId(data),
+    hardwareId: parseOptionalHardwareId(data),
+    provisioningStatus: parseOptionalProvisioningStatus(data)
   };
 }
 
-function parseActuatorStatusMessage(message) {
-  const data = parseJsonMessage(message);
+function parseActuatorStatusMessage(message, { maxPayloadBytes } = {}) {
+  const data = parseJsonMessage(message, maxPayloadBytes);
   const actuator = typeof data.actuator === 'string' ? data.actuator.trim().toUpperCase() : '';
   const status = typeof data.status === 'string' ? data.status.trim().toUpperCase() : '';
 
@@ -153,6 +218,7 @@ function parseActuatorStatusMessage(message) {
   return {
     actuator,
     status,
+    correlationId: parseOptionalCorrelationId(data),
     timestamp: parseTimestamp(data.timestamp),
     reportedDeviceId: parseOptionalDeviceId(data)
   };

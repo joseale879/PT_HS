@@ -1,134 +1,159 @@
-# Plan de trabajo y pendientes — HidroSmart
+﻿# Plan de trabajo y pendientes â€” HidroSmart
 
-Última revisión: 2026-09-06.
+Ãšltima revisiÃ³n: 2026-09-15.
 
 Este documento es el mapa operativo del proyecto. Distingue lo construido de lo que falta integrar, probar o endurecer. Las reglas protegidas por PostgreSQL no deben duplicarse en Node.js.
 
 ## Estado actual
 
-| Área | Estado | Nota |
+| Ãrea | Estado | Nota |
 |---|---|---|
-| Base de datos | Operativa | Liquibase aplicado: 177 changesets; sin cambios pendientes |
+| Base de datos | Operativa | Liquibase aplicado: 223 changesets; sin cambios pendientes |
 | Backend HTTP | Base funcional | Rutas, JWT, RLS y RBAC implementados |
-| Frontend web | Base funcional | Consume `/api/v1`; quedan pantallas por conectar |
-| MQTT | Transporte listo | Topics, parser y handlers reciben telemetría; falta persistencia |
-| IoT real | Pendiente | Falta contrato definitivo, ingesta y pruebas con PostgreSQL |
-| SMTP | Base lista | Gmail/Mailpit configurables; faltan eventos automáticos adicionales |
-| Pruebas | Unitarias aprobadas | Backend: 82/82; falta integración real y E2E |
+| Frontend web | Base funcional | Consume `/api/v1`; quedan estados visuales, pruebas de rol y cobertura frontend |
+| MQTT | Ingesta local operativa | Topics, parser, deduplicaciÃ³n e ingesta PostgreSQL controlada |
+| IoT real | Parcial | Firmware, contrato BLE/MQTT y puente móvil presentes; falta cargarlo/probarlo en la placa y calibrar el sensor real |
+| SMTP | Integrado | Gmail configurable; eventos de cuenta aislados de la operaciÃ³n principal |
+| Pruebas | Backend aprobadas | Backend: 161 unitarias + integración local 6/6; quedan E2E de producción y pruebas con hardware real |
 
 ## Ya construido y verificado
 
-- [x] PostgreSQL, Liquibase, backend, frontend, Mailpit y Mosquitto en Docker Compose.
-- [x] Roles técnicos `hidro_smart_admin`, `hidro_smart_app`, `hidro_smart_ingest` y `hidro_smart_readonly`.
+- [x] PostgreSQL, Liquibase, backend, frontend y Mosquitto en Docker Compose.
+- [x] Roles tÃ©cnicos `hidro_smart_admin`, `hidro_smart_app`, `hidro_smart_ingest` y `hidro_smart_readonly`.
 - [x] Roles funcionales `Administrator`, `Support`, `HomeUser` y `Guest`.
-- [x] Grants, RLS, funciones controladas, triggers, índices, auditoría y alertas.
-- [x] Registro, login, JWT, refresh token, logout, cambio y recuperación de contraseña.
-- [x] Hogares, miembros, dispositivos, consumo histórico, tarifas, alertas, metas, vacaciones, tickets, roles y auditoría.
+- [x] Grants, RLS, funciones controladas, triggers, Ã­ndices, auditorÃ­a y alertas.
+- [x] Registro, login, JWT, refresh token, logout, cambio y recuperaciÃ³n de contraseÃ±a.
+- [x] VerificaciÃ³n de correo: alta en `Pending`, reenvÃ­o de token, activaciÃ³n y bloqueo de login sin verificar.
+- [x] Avatar de perfil opcional y telÃ©fono de hasta 60 caracteres, persistidos mediante `/users/me`.
+- [x] Hogares, miembros, dispositivos, consumo histÃ³rico, tarifas, alertas, metas, vacaciones, recomendaciones, tickets, roles y auditorÃ­a.
 - [x] Cliente HTTP del frontend y proxy Nginx hacia `/api/v1`.
+- [x] El alta de miembros valida una cuenta activa en PostgreSQL y envía el aviso de acceso mediante el SMTP configurado; el alta se conserva si SMTP falla.
 - [x] Cliente MQTT, topics `hidrosmart/devices/{deviceCode}/...`, parser y handlers.
 - [x] Contrato inicial compatible con ESP32: `deviceId`, `flowRateLpm`, `consumptionLiters`, `totalLiters`, `pulses`, `sampleIntervalSeconds`, `wifiRssiDbm` y `timestamp`.
-- [x] Prueba de humo MQTT con `HS_ESP32_001`: Mosquitto recibió el mensaje y el backend lo validó/normalizó.
-- [x] Backend compilable y 82 pruebas unitarias aprobadas.
+- [x] Prueba de humo MQTT con `ESP32-001`: Mosquitto recibió el mensaje y el backend lo validó/normalizó.
+- [x] Payload del ESP32 con `hardwareId`, `signalQuality` RSSI negativo y `mqttMessageId` persistido; el reenvío del mismo ID no duplica filas.
+- [x] Backend compilable, lint y 163 pruebas unitarias aprobadas.
 
-## Fase BK-01 — seguridad y contratos HTTP
+## Fase BK-01 â€” seguridad y contratos HTTP
 
 - [x] Impedir que `req.body` sobrescriba `userId`, `homeId`, `ruleId`, `goalId` o IDs de JWT/params.
 - [x] Alinear unidades de alertas con la BD: `m3_day`, `m3_month` y `minutes`.
 - [x] Separar el intervalo del job de alertas del refresco de vistas materializadas.
-- [x] Permitir tickets propios sin exigir `homes.manage`; reservar `tickets.manage` para administración.
-- [ ] Integrar `fn_get_my_authorization_context()` en `/me`, login o restauración de sesión.
-- [x] Corregir validación específica de actualización de metas sin exigir `homeId` innecesariamente.
-- [x] Hacer que recuperación de contraseña tenga respuesta indistinguible para correos existentes y no existentes.
+- [x] Permitir tickets propios sin exigir `homes.manage`; reservar `tickets.manage` para administraciÃ³n.
+- [x] Integrar `fn_get_my_authorization_context()` en `/me`, login o restauraciÃ³n de sesiÃ³n.
+- [x] Corregir validaciÃ³n especÃ­fica de actualizaciÃ³n de metas sin exigir `homeId` innecesariamente.
+- [x] Hacer que recuperaciÃ³n de contraseÃ±a tenga respuesta indistinguible para correos existentes y no existentes.
+- [x] Validar el contexto del enlace de recuperaciÃ³n antes de mostrar el formulario mediante `/auth/password-reset-context`.
 - [x] Vincular logout con `userId` y `sessionId`, no solo con un refresh token recibido.
 
-## Fase BK-02 — autorización, sesiones y cuenta
+## Fase BK-02 â€” autorizaciÃ³n, sesiones y cuenta
 
-- [ ] Listar, revocar una, revocar otras o revocar todas las sesiones.
-- [ ] Definir validación de `sid` activo para access tokens después del logout.
-- [ ] Confirmar o crear funciones SQL controladas para suspender, reactivar y eliminar cuentas.
-- [ ] Crear casos de uso administrativos sin `UPDATE` genérico de campos sensibles.
-- [ ] Conectar correos de bienvenida, cambio de contraseña y cambios de cuenta sin revertir el evento principal si SMTP falla.
+- [x] Listar, revocar una, revocar otras o revocar todas las sesiones mediante funciones SQL con control de propietario.
+- [x] Definir validaciÃ³n de `sid` activo para access tokens despuÃ©s del logout.
+- [x] Crear funciones SQL controladas para suspender, reactivar, bloquear y eliminar lÃ³gicamente cuentas; las operaciones no activas revocan sesiones y tokens.
+- [x] Crear servicio administrativo y funciones controladas para listar, suspender, reactivar, bloquear y eliminar lÃ³gicamente cuentas sin `UPDATE` genÃ©rico de campos sensibles.
+- [x] Conectar correos de bienvenida, cambio de contraseÃ±a y cambios de cuenta (incluido perfil) sin revertir el evento principal si SMTP falla.
 
-## Fase BK-03 — MQTT e ingesta PostgreSQL
+## Fase BK-03 â€” MQTT e ingesta PostgreSQL
 
 ### Contrato del dispositivo
 
-- [x] Confirmar el formato del identificador MQTT como `device.code` (por ejemplo `HS_ESP32_001`), no MAC ni UUID.
-- [ ] Añadir `messageId` o `sequence` monotónico para soportar QoS 1 y mensajes repetidos.
-- [ ] Mantener `timestamp` en UTC ISO 8601; usar hora de recepción solo como fallback controlado.
-- [ ] Documentar que `consumptionLiters` es el consumo del intervalo y `totalLiters` solo diagnóstico.
-- [ ] Verificar que el GPIO del ESP32 no reciba directamente una señal de 5 V del YF-S201.
+- [x] Confirmar el formato del identificador MQTT como `device.code` (por ejemplo `ESP32-001`), no MAC ni UUID.
+- [x] AÃ±adir `mqttMessageId` para soportar QoS 1 y mensajes repetidos.
+- [x] Mantener `timestamp` en UTC ISO 8601; rechazar fechas sin zona horaria y usar hora de recepciÃ³n solo como fallback controlado.
+- [x] Documentar que `consumptionLiters` es el consumo del intervalo y `totalLiters` solo diagnÃ³stico.
+- [ ] Verificar que el GPIO del ESP32 no reciba directamente una seÃ±al de 5 V del YF-S201.
 
 ### Backend y BD
 
-- [ ] Crear `IngestReading` y el puerto `TelemetryRepository`.
-- [ ] Crear `PostgresTelemetryRepository` separado del handler MQTT.
-- [ ] Crear pool de ingesta con `hidro_smart_ingest`, separado del pool HTTP `hidro_smart_app`.
-- [ ] Crear función SQL controlada para resolver `device.code → device_id → home_id`, validar estado y guardar la lectura.
-- [ ] Añadir a `sensor_reading` caudal, intervalo, pulsos y clave de mensaje si el modelo actual no los contiene.
-- [ ] Crear constraint/índice único por dispositivo y `messageId`.
-- [ ] Actualizar `last_seen` sin mezclarlo con el estado administrativo `Active/Inactive`.
-- [ ] Rechazar dispositivos inexistentes, inactivos, no asignados o mensajes fuera de rango.
-- [ ] Probar lectura válida, inválida, duplicada, timestamp inválido y dispositivo no autorizado.
+- [x] Crear `IngestReading` y el puerto `TelemetryRepository`.
+- [x] Crear `PostgresTelemetryRepository` separado del handler MQTT.
+- [x] Crear pool de ingesta separado del pool HTTP; usa `DB_INGEST_USER`/`DB_INGEST_PASSWORD` y ejecuta la funciÃ³n protegida.
+- [x] Crear funciÃ³n SQL controlada para resolver `device.code â†’ device_id â†’ home_id`, validar estado y guardar la lectura.
+- [x] AÃ±adir a `sensor_reading` la clave de mensaje, caudal, intervalo, pulsos y mÃ©tricas de telemetrÃ­a.
+- [x] Crear constraint/Ã­ndice Ãºnico por dispositivo y `mqttMessageId`.
+- [x] Actualizar `last_seen` sin mezclarlo con el estado administrativo `Active/Inactive`.
+- [x] Rechazar dispositivos inexistentes, inactivos, no asignados o mensajes fuera de rango.
+- [x] Probar lectura vÃ¡lida, invÃ¡lida, duplicada, timestamp invÃ¡lido y dispositivo no autorizado.
 
-Flujo objetivo: `ESP32 → Mosquitto → subscriber → parser → IngestReading → función SQL → hidro_smart_ingest → sensor_reading`.
+Flujo objetivo: `ESP32 â†’ Mosquitto â†’ subscriber â†’ parser â†’ IngestReading â†’ funciÃ³n SQL â†’ hidro_smart_ingest â†’ sensor_reading`.
 
-## Fase BK-04 — alertas, consumo y tiempo real
+## Fase BK-04 â€” alertas, consumo y tiempo real
 
-- [ ] Confirmar que el job llama únicamente a `alert_rate.fn_generate_alert_events(...)`.
-- [ ] No recalcular en Node límites diarios, mensuales, vacaciones, fugas ni deduplicación.
-- [ ] Probar los cinco tipos de alerta y su comportamiento durante vacaciones.
-- [ ] Conectar el frontend a lecturas persistidas, consumo reciente y estado del dispositivo.
-- [ ] Agregar tiempo real solo después de estabilizar la ingesta MQTT.
+- [x] Confirmar que el job llama Ãºnicamente a `alert_rate.fn_generate_alert_events(...)`.
+- [x] No recalcular en Node lÃ­mites diarios, mensuales, vacaciones, fugas ni deduplicaciÃ³n.
+- [ ] Probar los cinco tipos de alerta y su comportamiento durante vacaciones con datos funcionales reales; la validaciÃ³n de tipo/unidad ya estÃ¡ cubierta en backend.
+- [x] Cubrir con pruebas unitarias la validaciÃ³n y delegaciÃ³n de guardar, consultar y eliminar el modo vacaciones.
+- [x] Conectar el frontend a lecturas persistidas, consumo reciente y estado del dispositivo en dashboard, reportes y `/app/consumption`.
+- [x] Crear `consumption.fn_get_consumption_series(...)` y `GET /api/v1/consumption/advanced` para series diarias, horarias, mensuales y por ubicación; Dashboard, Consumo y Reportes ya la consumen.
+- [x] Exponer historial de alertas pendientes para que Dashboard muestre eventos reales del hogar y no un mensaje sintético.
+- [ ] Agregar tiempo real solo despuÃ©s de estabilizar la ingesta MQTT.
 
-## Fase BK-05 — soporte, privacidad y reportes
+## Fase BK-05 â€” soporte, privacidad y reportes
 
-- [ ] Separar casos de uso de tickets propios y administración de Support.
-- [ ] Crear módulo Privacy/ARCO: solicitudes propias, administración, respuesta y estado.
-- [ ] Implementar exportación de datos únicamente del usuario autenticado.
-- [ ] Crear reportes: generar, listar, consultar, completar/fallar y descargar primero CSV.
-- [ ] Probar RLS de tickets, respuestas, ARCO y `generated_report` con Usuario A vs Usuario B.
+- [x] Separar operaciones de tickets propios y administraciÃ³n de Support mediante casos de uso y permisos distintos.
+- [x] Crear mÃ³dulo Privacy/ARCO: consentimientos, solicitudes propias, administraciÃ³n, respuesta, estado y paginaciÃ³n.
+- [x] Implementar exportaciÃ³n JSON del usuario autenticado sin hashes, tokens ni secretos y descarga resumida del consumo en PDF/Excel.
+- [x] Implementar recomendaciones propias: listado filtrable, resumen por hogar y actualizaciÃ³n de estado/utilidad protegidos por `reports.read` y RLS.
+- [x] Persistir reportes: generar, listar, consultar, completar/fallar y conservar archivos PDF/Excel en `generated_report`; el historial se consulta con paginaciÃ³n y filtros.
+- [x] Probar RLS de tickets, respuestas, ARCO y `generated_report` con un usuario contextual aislado; la integración PostgreSQL valida visibilidad propia y cero filas sin contexto.
 
-## Fase BK-06 — dispositivos y actuadores
+## Fase BK-06 â€” dispositivos y actuadores
 
-- [ ] Definir provisioning físico y credenciales MQTT por dispositivo.
-- [ ] Persistir estados `ONLINE/OFFLINE` y `last_seen` reales.
-- [ ] Crear comandos de actuadores con permisos, `correlationId`, ACK, timeout y auditoría.
-- [ ] Antes de producción, agregar autenticación, ACL por topic y TLS en Mosquitto.
+Actualización 2026-09-15: `hardwareId`, estados de aprovisionamiento y la
+telemetría del firmware nuevo ya recorren MQTT → backend → PostgreSQL →
+frontend. El frontend web y el puente móvil ya implementan el transporte BLE;
+sigue pendiente probarlo sobre la placa física.
 
-## Operación y calidad
+- [x] Agregar `location` al dispositivo con migración, API y edición desde el frontend.
+- [x] Centralizar la configuración del dispositivo: datos generales, red Wi-Fi,
+  IP, RSSI, estado BLE, umbral e historial en un único apartado.
+- [x] Ocultar la conexión Bluetooth cuando el ESP32 reporta Wi-Fi conectado,
+  incluso si Mosquitto todavía no está disponible.
+- [x] Persistir `wifi_ssid` y exponer `last_ip`/RSSI sin guardar contraseñas.
+- [x] Completar registro de dispositivo nuevo y vinculación de un equipo existente por `device.code`.
+- [x] Definir provisioning BLE con hasta cinco perfiles Wi-Fi, host y puerto MQTT por dispositivo.
+- [x] Separar la identidad física `hardwareId` del código lógico y agregar consulta/claim autorizado para asociarlos.
+- [x] Persistir estados `ONLINE/OFFLINE` y `last_seen` reales.
+- [x] Crear comandos de actuadores con permiso `actuators.manage`, `correlationId`, ACK y trazabilidad de estado.
+- [x] Agregar timeout automático y auditoría específica para comandos sin ACK mediante `device.fn_timeout_actuator_commands(...)` y un job con advisory lock.
+- [ ] Antes de producciÃ³n, agregar autenticaciÃ³n, ACL por topic y TLS en Mosquitto.
 
-- [ ] Agregar `auditCleanupJob` usando `audit.prc_clean_old_audit_logs(...)`.
-- [ ] Agregar readiness separado de liveness para PostgreSQL y MQTT.
-- [ ] Añadir `requestId` y logging estructurado sin secretos.
-- [ ] Limitar rangos de consumo, paginación, filtros y ordenamiento en consultas grandes.
-- [ ] Ejecutar integración con PostgreSQL real, E2E, backup y restore.
-- [ ] Reordenar carpetas solo después de estabilizar comportamiento y pruebas.
+## OperaciÃ³n y calidad
 
-## Rectificación frontend — 2026-09-07
+- [x] Agregar `auditCleanupJob` usando `audit.prc_clean_old_audit_logs(...)`.
+- [x] Agregar readiness separado de liveness para PostgreSQL y MQTT.
+- [x] AÃ±adir `requestId` y logging estructurado sin secretos.
+- [x] Limitar a 366 dÃ­as los rangos de resumen, costo y reportes PDF/Excel; la paginaciÃ³n, filtros y ordenamiento restantes se mantienen por endpoint.
+- [x] Ejecutar integraciÃ³n con PostgreSQL real y MQTT; quedan E2E, backup y restore.
+- [ ] Reordenar carpetas solo despuÃ©s de estabilizar comportamiento y pruebas.
 
-Estas observaciones ya fueron atendidas en `FT_HS/Web`:
+## RectificaciÃ³n frontend â€” 2026-09-13
+
+Estas observaciones ya fueron atendidas en `FT_HS/frontend`:
 
 - [x] El hogar activo se centraliza en el layout autenticado y se comparte con dashboard, dispositivos, reportes, metas, alertas y vacaciones.
 - [x] Metas consulta `GET /api/v1/goals/:goalId/progress`; el porcentaje ya no se calcula con el consumo mensual del navegador.
-- [x] Alertas consulta pendientes, historial y umbrales desde el backend; los límites se muestran en m³.
-- [x] Configuración carga perfil, fecha de registro, hogares y dispositivos desde la API.
-- [x] Configuración dejó de mostrar sesiones, tokens, exportación, eliminación, foto y switches de privacidad ficticios, porque esas rutas todavía no existen en BK_HS.
-- [x] Reportes dejó de ofrecer exportación y administración de tarifas ficticias; mantiene únicamente consultas disponibles.
+- [x] Alertas consulta pendientes, historial y umbrales desde el backend; los lÃ­mites se muestran en mÂ³.
+- [x] ConfiguraciÃ³n carga perfil, fecha de registro, hogares y dispositivos desde la API.
+- [x] ConfiguraciÃ³n dejÃ³ de mostrar tokens, exportaciÃ³n, eliminaciÃ³n, foto y switches de privacidad ficticios; ahora la gestiÃ³n de sesiones consume el contrato backend y permite revocar sesiones.
+- [x] La gestiÃ³n administrativa de usuarios consume `/users` con bÃºsqueda, filtros, paginaciÃ³n y acciones de estado.
+- [x] Reportes dejÃ³ de ofrecer exportaciÃ³n y administraciÃ³n de tarifas ficticias; mantiene Ãºnicamente consultas disponibles.
+- [x] Recomendaciones consume `GET /api/v1/recommendations`, el resumen por hogar y el cambio de estado sin datos quemados.
 - [x] Idioma y moneda se guardan juntos en `/users/me/preferences` antes de cambiar la interfaz.
-- [x] Se añadió corrección de textos históricos con codificación dañada para evitar mostrar `Ã`, `Â` o `â`.
+- [x] Se aÃ±adiÃ³ correcciÃ³n de textos histÃ³ricos con codificaciÃ³n daÃ±ada para evitar mostrar `Ãƒ`, `Ã‚` o `Ã¢`.
 
-Pendientes que siguen siendo reales y no se marcaron como terminados: revocación de sesiones remotas, Privacy/ARCO, exportación de datos, reportes descargables, persistencia MQTT y tiempo real. No se deben volver a simular en el frontend hasta publicar sus endpoints.
+Pendientes que siguen siendo reales: generaciÃ³n automÃ¡tica de recomendaciones, pruebas manuales/E2E, tiempo real y validaciÃ³n con hardware. La pantalla de recomendaciones es actualmente informativa y visual; la exportaciÃ³n JSON, los reportes PDF/Excel directos y su historial persistido ya estÃ¡n disponibles. La auditorÃ­a se consulta mediante funciÃ³n SQL y endpoint administrativo protegido; no se concede acceso directo a la tabla al rol de aplicaciÃ³n. La persistencia MQTT de lecturas, estados de dispositivos y estados de actuadores ya estÃ¡ publicada y queda probarla con un ESP32 real.
 
 ## Orden recomendado
 
-1. Contexto de autorización y sesiones.
-2. Recuperación de contraseña y logout seguro.
+1. Contexto de autorizaciÃ³n y sesiones.
+2. RecuperaciÃ³n de contraseÃ±a y logout seguro.
 3. Metas, alertas y tickets alineados con BD.
 4. Pruebas RLS/RBAC con usuarios reales.
-5. Contrato `messageId` y migración IoT.
-6. Ingesta MQTT con `hidro_smart_ingest`.
-7. Estados reales de dispositivos y consumo reciente.
-8. Privacy/ARCO, reportes y eventos SMTP.
-9. Actuadores y endurecimiento de Mosquitto.
-10. E2E, backup/restore y reorganización final.
+5. Validar el contrato `messageId` con firmware real.
+6. Completar estados reales de dispositivos y consumo reciente.
+7. Validar reportes PDF/Excel, series avanzadas y pruebas finales de eventos SMTP.
+8. Actuadores reales y endurecimiento de Mosquitto.
+9. E2E, backup/restore y reorganizaciÃ³n final.
+- Corte y cambios verificados del 2026-09-14: `../../docs/cambios-2026-09-14.md`.

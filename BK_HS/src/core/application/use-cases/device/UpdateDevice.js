@@ -5,15 +5,16 @@ class UpdateDevice {
     this.deviceRepository = deviceRepository;
   }
 
-  async execute({ userId, deviceId, name, manufacturer, model, alertThreshold }) {
+  async execute({ userId, deviceId, name, location, manufacturer, model, alertThreshold }) {
     if (!userId) throw new Error('El usuario autenticado es obligatorio');
     if (!this.isUuid(deviceId)) this.badRequest('deviceId no es válido');
 
-    const hasChanges = [name, manufacturer, model, alertThreshold].some((value) => value !== undefined);
+    const hasChanges = [name, location, manufacturer, model, alertThreshold].some((value) => value !== undefined);
     if (!hasChanges) this.badRequest('Debe enviar al menos un campo para actualizar');
 
     const attributes = {};
     if (name !== undefined) attributes.name = Device.validateText(name, 'name', 1, 100);
+    if (location !== undefined) attributes.location = Device.optionalText(location, 'location', 120);
     if (manufacturer !== undefined) attributes.manufacturer = Device.optionalText(manufacturer, 'manufacturer', 100);
     if (model !== undefined) attributes.model = Device.optionalText(model, 'model', 100);
     if (alertThreshold !== undefined) attributes.alertThreshold = Device.validatePositive(alertThreshold, 'alertThreshold');

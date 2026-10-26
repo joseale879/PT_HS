@@ -16,15 +16,24 @@ const { ListHomeMembershipRequests } = require('../core/application/use-cases/ho
 const { PostgresHomeRepository } = require('../core/infrastructure/repositories/postgres/PostgresHomeRepository');
 const { HomeController } = require('./controllers/HomeController');
 const { PostgresPermissionChecker } = require('../core/infrastructure/security/PostgresPermissionChecker');
+const { NotificationService } = require('../core/application/services/notifications/NotificationService');
+const { SmtpEmailSender } = require('../core/infrastructure/notifications/SmtpEmailSender');
+const { getEnv } = require('../config/env');
 
 const homeRepository = new PostgresHomeRepository();
+const env = getEnv();
+const notificationService = new NotificationService({
+  sender: new SmtpEmailSender({ smtp: env.smtp }),
+  frontendUrl: env.frontendUrl,
+  passwordResetUrl: env.passwordResetUrl
+});
 const homeController = new HomeController({
   createHome: new CreateHome({ homeRepository }),
   updateHome: new UpdateHome({ homeRepository }),
   listUserHomes: new ListUserHomes({ homeRepository }),
   getHome: new GetHome({ homeRepository }),
   listHomeMembers: new ListHomeMembers({ homeRepository }),
-  addHomeMember: new AddHomeMember({ homeRepository }),
+  addHomeMember: new AddHomeMember({ homeRepository, notificationService }),
   changeHomeMemberRole: new ChangeHomeMemberRole({ homeRepository }),
   removeHomeMember: new RemoveHomeMember({ homeRepository }),
   requestHomeMembership: new RequestHomeMembership({ homeRepository }),

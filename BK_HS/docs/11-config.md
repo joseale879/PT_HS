@@ -1,30 +1,30 @@
-# Configuración actual del backend
+﻿# ConfiguraciÃ³n actual del backend
 
-Fecha de revisión: 2026-09-07.
+Fecha de revisiÃ³n: 2026-09-14.
 
-Este documento refleja los nombres de variables y archivos que existen en el backend actual. Redis no forma parte de la pila integrada actual; no se debe agregar como dependencia hasta que exista una decisión y un servicio real.
+Este documento refleja los nombres de variables y archivos que existen en el backend actual. Redis no forma parte de la pila integrada actual; no se debe agregar como dependencia hasta que exista una decisiÃ³n y un servicio real.
 
 ## Archivos reales
 
 - `src/config/env.js`: carga y normaliza variables de entorno.
-- `src/config/mqtt.js`: configuración MQTT.
+- `src/config/mqtt.js`: configuraciÃ³n MQTT.
 - `src/infrastructure/db.js`: pool PostgreSQL.
-- `src/app.js`: creación de Express y montaje de rutas.
+- `src/app.js`: creaciÃ³n de Express y montaje de rutas.
 - `server.js`: arranque del servidor y servicios de infraestructura.
 
-## Variables HTTP y aplicación
+## Variables HTTP y aplicaciÃ³n
 
 | Variable | Uso |
 |---|---|
-| `NODE_ENV` | entorno de ejecución |
+| `NODE_ENV` | entorno de ejecuciÃ³n |
 | `PORT` | puerto HTTP del backend |
-| `CORS_ORIGIN` | orígenes permitidos |
+| `CORS_ORIGIN` | orÃ­genes permitidos |
 | `APP_TIMEZONE` | zona horaria de negocio |
-| `FRONTEND_URL` | URL pública del frontend |
-| `PASSWORD_RESET_URL` | base de enlaces de recuperación |
+| `FRONTEND_URL` | URL pÃºblica del frontend |
+| `PASSWORD_RESET_URL` | base de enlaces de recuperaciÃ³n |
 | `MATERIALIZED_VIEWS_REFRESH_MS` | intervalo de refresco de vistas |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | ventana del rate limit de auth |
-| `AUTH_RATE_LIMIT_MAX` | máximo de solicitudes de auth |
+| `AUTH_RATE_LIMIT_MAX` | mÃ¡ximo de solicitudes de auth |
 
 ## PostgreSQL
 
@@ -51,18 +51,21 @@ El backend usa un pool y transacciones. No debe usar `hidro_smart_admin` para op
 
 No se deben escribir secretos reales en el repositorio ni en `VITE_*`.
 
-## SMTP
+## SMTP de Gmail
 
-| Variable | Mailpit en Docker | Gmail u otro SMTP |
-|---|---|---|
-| `SMTP_HOST` | `mailpit` | host del proveedor |
-| `SMTP_PORT` | `1025` | puerto del proveedor |
-| `SMTP_SECURE` | `false` | según TLS del proveedor |
-| `SMTP_USER` | vacío | usuario local |
-| `SMTP_PASSWORD` | vacío | secreto local |
-| `SMTP_FROM` | remitente local | remitente permitido |
+El backend utiliza Nodemailer para enviar los eventos de correo mediante Gmail.
+Configura únicamente en el `.env` local:
 
-El backend utiliza Nodemailer. En desarrollo se revisan los mensajes en `http://localhost:8025`; las credenciales SMTP reales solo se configuran en `.env` local.
+| Variable | Valor local |
+|---|---|
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_SECURE` | `false` (STARTTLS) |
+| `SMTP_USER` | tu cuenta Gmail |
+| `SMTP_PASSWORD` | contraseña de aplicación de Gmail |
+| `SMTP_FROM` | remitente permitido por la cuenta |
+
+No se deben guardar credenciales reales en documentación, ejemplos ni código.
 
 ## MQTT
 
@@ -70,13 +73,13 @@ El backend utiliza Nodemailer. En desarrollo se revisan los mensajes en `http://
 |---|---|---|
 | `MQTT_BROKER_URL` | `mqtt://mosquitto:1883` | `mqtt://localhost:1883` |
 | `MQTT_CLIENT_ID` | `hidrosmart-backend` | valor local equivalente |
-| `MQTT_USERNAME` | vacío en broker local | según broker |
-| `MQTT_PASSWORD` | vacío en broker local | según broker |
+| `MQTT_USERNAME` | vacÃ­o en broker local | segÃºn broker |
+| `MQTT_PASSWORD` | vacÃ­o en broker local | segÃºn broker |
 | `MQTT_QOS` | `1` | `1` |
 | `MQTT_RECONNECT_PERIOD_MS` | `3000` | configurable |
 | `MQTT_CONNECT_TIMEOUT_MS` | `10000` | configurable |
 
-El subscriber usa los topics definidos en `src/mqtt/topics.js`. La configuración del broker local está en `BK_HS/docker/mosquitto/mosquitto.conf` y permite anónimo solo para desarrollo.
+El subscriber usa los topics definidos en `src/mqtt/topics.js`. La configuraciÃ³n del broker local estÃ¡ en `BK_HS/docker/mosquitto/mosquitto.conf` y permite anÃ³nimo solo para desarrollo.
 
 ## Frontend
 
@@ -89,9 +92,9 @@ El navegador nunca debe usar `postgres:5432`, `localhost:5433` o `localhost:1883
 
 ## Archivos de entorno
 
-- Raíz: `.env` para el Compose integrado.
-- Backend: `BK_HS/.env` para ejecución independiente.
-- Web: `FT_HS/Web/.env` para ejecución independiente.
+- RaÃ­z: `.env` para el Compose integrado.
+- Backend: `BK_HS/.env` para ejecuciÃ³n independiente.
+- Web: `FT_HS/frontend/.env` para ejecuciÃ³n independiente.
 - `.env.example` contiene plantillas sin secretos.
 
 Los valores reales deben mantenerse fuera de Git.

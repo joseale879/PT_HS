@@ -1,6 +1,8 @@
 class AddHomeMember {
-  constructor({ homeRepository }) {
+  constructor({ homeRepository, notificationService, logger = console }) {
     this.homeRepository = homeRepository;
+    this.notificationService = notificationService;
+    this.logger = logger;
   }
 
   async execute({ userId, homeId, email, homeRole }) {
@@ -24,7 +26,38 @@ class AddHomeMember {
       error.status = 404;
       throw error;
     }
-    return member;
+
+    const notification = await this.notifyMember({ member, homeId, userId });
+    return { member, notification };
+  }
+
+  async notifyMember({ member, homeId, userId }) {
+    const configured = Boolean(this.notificationService?.isConfigured?.());
+    const result = { sent: false, configured };
+    if (!configured || !member.email || !this.notificationService?.sendHomeAccessGranted) return result;
+
+    let homeName;
+    if (this.homeRepository.findByIdForUser) {
+      try {
+        const home = await this.homeRepository.findByIdForUser(homeId, userId);
+        homeName = home?.name;
+      } catch (error) {
+        this.logger.error('[HOME] No se pudo consultar el nombre del hogar para el correo:', error.message);
+      }
+    }
+
+    try {
+      await this.notificationService.sendHomeAccessGranted({
+        recipient: member.email,
+        name: member.full_name || member.username,
+        homeName,
+        homeRole: member.home_role
+      });
+      result.sent = true;
+    } catch (error) {
+      this.logger.error('[HOME] No se pudo enviar el correo de acceso al hogar:', error.message);
+    }
+    return result;
   }
 
   isUuid(value) {

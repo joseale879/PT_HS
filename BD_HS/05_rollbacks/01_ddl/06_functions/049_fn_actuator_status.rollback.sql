@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS device.fn_record_actuator_status(VARCHAR, VARCHAR, VARCHAR, UUID, TIMESTAMPTZ);

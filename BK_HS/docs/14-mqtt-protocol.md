@@ -1,14 +1,14 @@
 # Protocolo MQTT implementado
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-15.
 
-Este es el contrato vigente entre el backend y el futuro firmware ESP32. Sustituye los ejemplos antiguos basados en `hidro-smart/device/...`.
+Este es el contrato vigente entre el backend y el firmware ESP32 versionado. Sustituye los ejemplos antiguos basados en `hidro-smart/device/...`.
 
 ## Identidad del dispositivo
 
-`{deviceCode}` debe ser el valor de `device.device.code` registrado en HidroSmart. Se permiten letras, números, guiones y guiones bajos. Ejemplo: `ESP32-246F28ABCDEF`.
+`{deviceCode}` debe ser el valor de `device.device.code` registrado en HidroSmart. Se permiten letras, números, guiones y guiones bajos. En el ESP32 actual, si no se configura manualmente, coincide con el `hardwareId`, por ejemplo `HS-141F47470968`.
 
-El código del topic es la fuente de identidad del mensaje. Cuando se implemente la persistencia, el backend deberá resolverlo contra PostgreSQL y no aceptar un dispositivo desconocido.
+El código del topic es la fuente de identidad del mensaje. El backend lo resuelve contra PostgreSQL y rechaza dispositivos desconocidos, inactivos o sin asociación autorizada.
 
 ## Topics
 
@@ -20,7 +20,7 @@ El código del topic es la fuente de identidad del mensaje. Cuando se implemente
 | backend -> ESP32 | Configuración preparada | `hidrosmart/devices/{deviceCode}/config` | 1 | según uso |
 | backend -> ESP32 | Comando preparado | `hidrosmart/devices/{deviceCode}/actuators/{valve|pump}/command` | 1 | No |
 
-El backend se suscribe actualmente a los tres topics de entrada. El publisher conoce los topics de salida, pero todavía no existe una ruta REST/caso de uso que envíe comandos de actuadores.
+El backend se suscribe actualmente a los tres topics de entrada. Los comandos salen desde `POST /api/v1/actuators/:deviceId/:actuator/commands`, se publican con QoS 1 y quedan asociados a un `correlationId` para confirmar el ACK.
 
 ## Telemetría del YF-S201
 
@@ -32,8 +32,11 @@ El parser requiere `flowRateLpm` y `consumptionLiters`.
 | `consumptionLiters` | Sí | número | mayor o igual a cero, consumo del intervalo |
 | `totalLiters` | No | número | mayor o igual a cero, acumulado del dispositivo |
 | `pulses` | No | entero | mayor o igual a cero |
+| `mqttMessageId` | Sí en firmware nuevo | texto | estable entre reintentos del mismo evento, hasta 100 caracteres |
+| `deviceId` | No | texto | si llega, debe coincidir con el código del topic |
+| `hardwareId` | No | texto | identidad física estable del eFuse, hasta 32 caracteres |
 | `sampleIntervalSeconds` | No | número | mayor que cero si no se publica cada segundo |
-| `timestamp` | No | texto ISO-8601 | hora de medición; si falta se usa recepción |
+| `timestamp` | No | texto ISO-8601 con zona (`Z` u offset) | hora de medición; el backend la normaliza a UTC y, si falta, usa recepción |
 | `signalQuality` | No | número | RSSI en dBm si es negativo; también acepta porcentaje |
 | `wifiRssiDbm` | No | número | RSSI explícito en dBm |
 | `signalQualityPercent` | No | número | porcentaje de calidad, entre 0 y 100 |
@@ -56,7 +59,14 @@ Ejemplo recomendado para la primera prueba:
 
 `consumptionLiters` representa solo el intervalo publicado, no el acumulado. Si el firmware mide una vez por segundo, `2.40 L/min / 60 = 0.040 L` en ese segundo.
 
-`signalQuality: -56` se normaliza como `wifiRssiDbm: -56` y como calidad porcentual para el futuro historial de dispositivo. El firmware puede enviar directamente `wifiRssiDbm` y `signalQualityPercent` si ya calcula ambos.
+El firmware nuevo debe enviar `mqttMessageId` estable en cada lectura para
+permitir deduplicaciÃ³n cuando MQTT QoS 1 reentrega un mensaje. Mientras se
+actualiza el ESP32 instalado, el backend local acepta el formato antiguo sin
+ese campo cuando `MQTT_ALLOW_LEGACY_TELEMETRY=true` y genera un identificador
+temporal para no perder las mÃ©tricas. Esta compatibilidad debe desactivarse
+despuÃ©s de actualizar el firmware.
+
+`signalQuality: -56` se normaliza como `wifiRssiDbm: -56` y como calidad porcentual para el historial de dispositivo. El firmware actual publica el RSSI con el valor negativo, por ejemplo `-38`; el firmware también puede enviar directamente `wifiRssiDbm` y `signalQualityPercent` si ya calcula ambos.
 
 `totalLiters` es útil para diagnóstico, pero el total confiable del sistema debe calcularse con lecturas persistidas porque el contador del ESP32 puede reiniciarse.
 
@@ -72,6 +82,12 @@ Topic: `hidrosmart/devices/{deviceCode}/status`
 
 Estados admitidos: `ONLINE`, `OFFLINE` y `ERROR`.
 
+El estado puede incluir `hardwareId`, `provisioningState`, `firmwareVersion`,
+`lastIp`, `ssid`, `wifiRssiDbm` y `timestamp`. El backend normaliza
+`provisioningState` a `provisioning_status`, guarda el SSID en
+`device.device.wifi_ssid` y actualiza `last_ip`. La contraseña Wi-Fi no forma
+parte del protocolo MQTT.
+
 ## Estado de actuadores
 
 Topic: `hidrosmart/devices/{deviceCode}/actuators/{valve|pump}/status`.
@@ -85,8 +101,8 @@ Para `VALVE` se esperan `OPEN` y `CLOSED`; para `PUMP`, `ON` y `OFF`. El actuado
 ## Flujo actualmente implementado
 
 ```text
-MQTT broker -> MqttSubscriber -> message-parser -> handler -> logs normalizados
-                                                   -> PostgreSQL (pendiente)
+MQTT broker -> MqttSubscriber -> message-parser -> handler -> IngestReading -> PostgreSQL
+                                                   -> logs normalizados
 ```
 
 Archivos principales:
@@ -101,22 +117,26 @@ Archivos principales:
 - `src/mqtt/handlers/device-status.handler.js`
 - `src/mqtt/handlers/actuator-status.handler.js`
 
-La validación y normalización están implementadas. `reading.handler.js` todavía no invoca `ReceiveReading` ni un repositorio.
+La validación, normalización, persistencia y deduplicación están implementadas.
+`reading.handler.js` invoca `IngestReading`; la persistencia queda aislada en `PostgresTelemetryRepository`.
 
-## Persistencia pendiente
+## Persistencia implementada
 
-Cuando se cierre la ingestión, el backend deberá:
+La ingesta vigente ejecuta este circuito:
 
 1. resolver `deviceCode` contra `device.device.code`;
 2. comprobar dispositivo activo y asociación en `device.home_device`;
 3. validar límites, timestamp y duplicados;
-4. insertar consumo en `consumption.sensor_reading`;
-5. guardar salud en `device.device_telemetry_history` si corresponde;
+4. insertar consumo en `consumption.sensor_reading` mediante la función protegida;
+5. guardar las métricas de salud disponibles en el historial correspondiente;
 6. usar permisos mínimos y registrar errores sin perder el mensaje.
 
-Advertencia actual: `consumption.sensor_reading.consumption_liters` es `NUMERIC(10,2)`. No conserva la escala de `0.040 L`. Debe existir una migración Liquibase antes de ingerir lecturas por segundo y deben revisarse las funciones/vistas que usan `consumption_m3`.
+La columna `consumption_liters` usa `NUMERIC(14,3)` y el m³ generado usa
+`NUMERIC(14,6)`. El contrato fue validado con un payload equivalente al ESP32;
+queda probar la placa física completa.
 
-Como MQTT QoS 1 puede reentregar mensajes, la persistencia debe usar una secuencia o clave de idempotencia por dispositivo.
+Como MQTT QoS 1 puede reentregar mensajes, la persistencia usa
+`mqttMessageId` y una clave única parcial por dispositivo.
 
 ## Configuración local
 
@@ -125,21 +145,24 @@ Como MQTT QoS 1 puede reentregar mensajes, la persistencia debe usar una secuenc
 | `MQTT_BROKER_URL` | `mqtt://mosquitto:1883` | `mqtt://localhost:1883` |
 | `MQTT_CLIENT_ID` | `hidrosmart-backend` | valor local equivalente |
 | `MQTT_QOS` | `1` | `1` |
+| `MQTT_ALLOW_LEGACY_TELEMETRY` | `true` en local | `true` mientras se actualiza el ESP32 |
 | `MQTT_RECONNECT_PERIOD_MS` | `3000` | configurable |
 | `MQTT_CONNECT_TIMEOUT_MS` | `10000` | configurable |
 
-El broker de desarrollo escucha en `localhost:1883` desde Windows. `BK_HS/docker/mosquitto/mosquitto.conf` permite conexiones anónimas, no usa TLS y no tiene persistencia.
+El broker de desarrollo escucha en `localhost:1883` desde Windows. `BK_HS/docker/mosquitto/mosquitto.conf` permite conexiones anónimas y no usa TLS; la persistencia local está habilitada y se conserva en el volumen `hidro_smart_mosquitto_data`. En producción deben activarse autenticación, ACL y TLS.
 
 ## Prueba local
 
 Con Docker levantado:
 
 ```powershell
-docker compose exec mosquitto mosquitto_pub -h localhost -p 1883 -t hidrosmart/devices/ESP32-246F28ABCDEF/telemetry -q 1 -m '{"flowRateLpm":2.4,"consumptionLiters":0.04,"totalLiters":3.407,"pulses":18,"signalQuality":-56,"timestamp":"2026-09-04T15:30:00Z"}'
+docker compose exec mosquitto mosquitto_pub -h localhost -p 1883 -t hidrosmart/devices/ESP32-246F28ABCDEF/telemetry -q 1 -m '{"mqttMessageId":"manual-esp32-001","deviceId":"ESP32-246F28ABCDEF","flowRateLpm":2.4,"consumptionLiters":0.04,"totalLiters":3.407,"pulses":18,"wifiRssiDbm":-56,"timestamp":"2026-09-04T15:30:00Z"}'
 docker compose logs -f backend
 ```
 
-El resultado esperado hoy es un payload normalizado en los logs del backend. No se debe esperar todavía una fila nueva en PostgreSQL.
+El resultado esperado hoy es un payload procesado y una fila nueva en
+PostgreSQL, salvo que el mismo `mqttMessageId` ya exista, en cuyo caso se
+descarta el duplicado.
 
 ## Seguridad para una etapa posterior
 

@@ -1,0 +1,2 @@
+-- La funcion anterior se conserva al revertir este changeset; el changeset
+-- 040 sigue siendo la definicion base del contrato de ingesta.

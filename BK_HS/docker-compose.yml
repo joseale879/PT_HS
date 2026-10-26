@@ -1,13 +1,6 @@
 name: hidro_smart_backend
 
 services:
-  mailpit:
-    image: axllent/mailpit:v1.21
-    ports:
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "${MAILPIT_UI_PORT:-8025}:8025"
-    restart: unless-stopped
-
   mosquitto:
     image: eclipse-mosquitto:2.0.21
     ports:
@@ -24,34 +17,44 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       MATERIALIZED_VIEWS_REFRESH_MS: ${MATERIALIZED_VIEWS_REFRESH_MS:-300000}
       ALERT_GENERATION_INTERVAL_MS: ${ALERT_GENERATION_INTERVAL_MS:-300000}
+      AUDIT_CLEANUP_INTERVAL_MS: ${AUDIT_CLEANUP_INTERVAL_MS:-86400000}
+      AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-365}
+      AUDIT_CLEANUP_BATCH_SIZE: ${AUDIT_CLEANUP_BATCH_SIZE:-1000}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
-      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_HOST: ${DB_DOCKER_HOST:-host.docker.internal}
       DB_PORT: ${DB_PORT:-5433}
       DB_NAME: ${DB_NAME:-hidro_smart}
       DB_USER: ${DB_USER:-hidro_smart_app}
       DB_PASSWORD: ${DB_PASSWORD:?Set_DB_PASSWORD_in_env}
       DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      DB_INGEST_USER: ${DB_INGEST_USER:-hidro_smart_ingest}
+      DB_INGEST_PASSWORD: ${DB_INGEST_PASSWORD:?Set_DB_INGEST_PASSWORD_in_env}
+      DB_INGEST_POOL_MAX: ${DB_INGEST_POOL_MAX:-5}
       JWT_SECRET: ${JWT_SECRET:?Set_JWT_SECRET_in_env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
       JWT_ISSUER: ${JWT_ISSUER:-hidro-smart-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-hidro-smart-web}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173}
-      SMTP_HOST: ${SMTP_HOST:-mailpit}
-      SMTP_PORT: ${SMTP_PORT:-1025}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173/login}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-HidroSmart <no-reply@localhost>}
-      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://mosquitto:1883}
+      SMTP_FROM: ${SMTP_FROM:-HidroSmart <no-reply@gmail.com>}
+      REPORT_STORAGE_DIR: /app/storage/reports
+      MQTT_BROKER_URL: ${MQTT_DOCKER_BROKER_URL:-mqtt://mosquitto:1883}
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-hidrosmart-backend}
       MQTT_USERNAME: ${MQTT_USERNAME:-}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
       MQTT_QOS: ${MQTT_QOS:-1}
+      MQTT_ALLOW_LEGACY_TELEMETRY: ${MQTT_ALLOW_LEGACY_TELEMETRY:-true}
       MQTT_RECONNECT_PERIOD_MS: ${MQTT_RECONNECT_PERIOD_MS:-3000}
       MQTT_CONNECT_TIMEOUT_MS: ${MQTT_CONNECT_TIMEOUT_MS:-10000}
-      DB_INGEST_USER: ${DB_INGEST_USER:-hidro_smart_ingest}
-      DB_INGEST_PASSWORD: ${DB_INGEST_PASSWORD:?Set_DB_INGEST_PASSWORD_in_env}
+      MQTT_MAX_PAYLOAD_BYTES: ${MQTT_MAX_PAYLOAD_BYTES:-16384}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     healthcheck:
@@ -60,10 +63,14 @@ services:
       timeout: 5s
       retries: 5
     depends_on:
-      mailpit:
-        condition: service_started
       mosquitto:
         condition: service_started
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - hidro_smart_report_data:/app/storage/reports
     restart: unless-stopped
+
+volumes:
+  hidro_smart_report_data:
+    name: hidro_smart_report_data

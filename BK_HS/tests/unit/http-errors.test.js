@@ -30,3 +30,11 @@ test('mapea JSON inválido a 400 sin filtrar detalles internos', () => {
   assert.match(response.body.error.message, /JSON/);
   assert.ok(response.body.meta.requestId);
 });
+
+test('mapea cuerpos demasiado grandes a un error HTTP uniforme', () => {
+  const response = responseDouble();
+  errorHandler({ status: 413, type: 'entity.too.large', message: 'request entity too large' }, {}, response, () => {});
+  assert.equal(response.statusCode, 413);
+  assert.equal(response.body.error.code, 'PAYLOAD_TOO_LARGE');
+  assert.equal(response.body.error.message, 'La solicitud supera el tamaño permitido');
+});
