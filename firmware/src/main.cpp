@@ -1193,10 +1193,22 @@ void loop() {
   // aqui dejaba lecturas acumuladas y rompia la sincronizacion con el frontend.
   if (mqttClient.connected() && pendingSampleSeconds > 0.0f) {
     const float pendingFlowRateLpm = pendingConsumptionLiters / (pendingSampleSeconds / 60.0f);
-    if (publishTelemetry(pendingPulses, pendingFlowRateLpm, pendingConsumptionLiters, pendingSampleSeconds)) {
+    const bool published = publishTelemetry(
+      pendingPulses,
+      pendingFlowRateLpm,
+      pendingConsumptionLiters,
+      pendingSampleSeconds
+    );
+    if (published) {
       pendingPulses = 0;
       pendingConsumptionLiters = 0.0f;
       pendingSampleSeconds = 0.0f;
+    } else {
+      // PubSubClient may report a stale socket as connected. Force a fresh
+      // session so the normal retry path can recover instead of queuing data
+      // indefinitely behind a connection that cannot publish.
+      Serial.println("[MQTT] Publicacion fallida; cierro la sesion para reintentar.");
+      mqttClient.disconnect();
     }
   }
 }
