@@ -74,6 +74,7 @@ constexpr unsigned long WIFI_TIMEOUT_MS = 15000UL;
 constexpr unsigned long WIFI_RETRY_INTERVAL_MS = 10000UL;
 constexpr unsigned long MQTT_RETRY_INTERVAL_MS = 5000UL;
 constexpr unsigned long NTP_WARNING_INTERVAL_MS = 30000UL;
+constexpr unsigned long NTP_SYNC_RETRY_INTERVAL_MS = 30000UL;
 constexpr time_t MIN_VALID_EPOCH = 1735689600;
 constexpr unsigned long TOTAL_SAVE_INTERVAL_MS = 300000UL;
 constexpr float TOTAL_SAVE_MIN_DELTA_LITERS = 1.0f;
@@ -117,6 +118,8 @@ unsigned long lastTotalSaveAt = 0;
 unsigned long lastWifiAttemptAt = 0;
 unsigned long lastMqttAttemptAt = 0;
 unsigned long lastNtpWarningAt = 0;
+unsigned long lastNtpAttemptAt = 0;
+bool ntpAttemptMade = false;
 bool bleInitialized = false;
 bool bleAdvertising = false;
 volatile bool bleClientConnected = false;
@@ -501,6 +504,23 @@ bool synchronizeSystemTime() {
 #endif
 }
 
+bool ensureSystemTime() {
+#if HIDROSMART_MQTT_USE_TLS
+  if (time(nullptr) >= MIN_VALID_EPOCH) return true;
+
+  const unsigned long now = millis();
+  if (ntpAttemptMade && now - lastNtpAttemptAt < NTP_SYNC_RETRY_INTERVAL_MS) {
+    return false;
+  }
+
+  ntpAttemptMade = true;
+  lastNtpAttemptAt = now;
+  return synchronizeSystemTime();
+#else
+  return true;
+#endif
+}
+
 bool connectToWifi(const String& ssid, const String& password, unsigned long timeoutMs) {
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
@@ -539,7 +559,7 @@ bool connectKnownWifi() {
       mqttPort = knownNetworks[index].mqttPort == 0 ? HIDROSMART_MQTT_PORT : knownNetworks[index].mqttPort;
 #endif
 #if HIDROSMART_MQTT_USE_TLS
-      synchronizeSystemTime();
+      ensureSystemTime();
 #endif
       saveNetwork(knownNetworks[index].ssid, knownNetworks[index].password, mqttHost, mqttPort);
       saveMqttConfiguration(mqttHost, mqttPort);
@@ -666,7 +686,7 @@ bool connectMqtt() {
     Serial.println("[MQTT] El perfil TLS solo permite mqtt.flespi.io:8883.");
     return false;
   }
-  if (time(nullptr) < MIN_VALID_EPOCH) {
+  if (!ensureSystemTime()) {
     const unsigned long now = millis();
     if (lastNtpWarningAt == 0 || now - lastNtpWarningAt >= NTP_WARNING_INTERVAL_MS) {
       Serial.println("[NTP] Aun no hay hora valida; MQTT/TLS espera sincronizacion. Se requiere Internet, DNS y UDP/123.");
