@@ -47,13 +47,15 @@ export function FloatingLanguageSwitcher() {
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button
-            className="size-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700"
+            className="floating-language-trigger size-14 rounded-full bg-blue-600 p-0 text-white shadow-lg hover:bg-blue-700"
             aria-label={t('settings.language')}
           >
-            <div className="flex flex-col items-center justify-center">
+            <span className="floating-language-trigger__content">
               <Globe className="size-5" />
-              <span className="mt-0.5 text-xs">{currentLanguage.code.toUpperCase()}</span>
-            </div>
+              <span className="floating-language-trigger__code">
+                {currentLanguage.code.toUpperCase()}
+              </span>
+            </span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

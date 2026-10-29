@@ -118,7 +118,7 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="goals-config space-y-6">
       <div>
         <h2 className="text-2xl">Metas de consumo</h2>
         <p className="text-gray-600">
@@ -153,7 +153,7 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
           </CardContent>
         </Card>
       )}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>

@@ -32,19 +32,15 @@ function LoadingScreen() {
   const { t } = useTranslation();
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-100 p-4">
-      <div className="text-center space-y-4">
-        <div className="relative flex items-center justify-center">
-          <div className="bg-blue-600 p-4 rounded-2xl">
-            <img
-              src={logoImage}
-              alt="HidroSmart Logo"
-              className="h-24 w-auto mx-auto animate-pulse sm:h-32"
-            />
-          </div>
-          <Loader2 className="size-10 text-blue-600 animate-spin absolute -bottom-2 -right-2" />
+      <div className="text-center">
+        <div className="mx-auto flex size-32 items-center justify-center rounded-2xl bg-blue-600 p-4">
+          <img src={logoImage} alt="HidroSmart Logo" className="size-24 object-contain" />
         </div>
-        <h2 className="text-3xl text-blue-900 hidrosmart-logo">{t('app.name')}</h2>
-        <p className="text-gray-600">{t('app.loadingSystem')}</p>
+        <h2 className="mt-4 text-3xl text-blue-900 hidrosmart-logo">{t('app.name')}</h2>
+        <div className="mt-2 flex items-center justify-center gap-2 text-gray-600">
+          <Loader2 className="size-4 animate-spin text-blue-600" aria-hidden="true" />
+          <p>{t('app.loadingSystem')}</p>
+        </div>
       </div>
     </div>
   );

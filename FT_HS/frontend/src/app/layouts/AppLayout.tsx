@@ -445,8 +445,8 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
                   sidebarCollapsed ? 'common.expandNavigationMenu' : 'common.collapseNavigationMenu'
                 )}
               >
-                <span className="block bg-blue-600 p-2 rounded-lg transition-colors hover:bg-blue-500">
-                  <img src={logoImage} alt="" className="h-12 w-auto" />
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-blue-600 p-1 transition-colors hover:bg-blue-500">
+                  <img src={logoImage} alt="" className="size-10 object-contain" />
                 </span>
               </button>
               <h1 className={`text-2xl hidrosmart-logo ${sidebarCollapsed ? 'hidden' : ''}`}>

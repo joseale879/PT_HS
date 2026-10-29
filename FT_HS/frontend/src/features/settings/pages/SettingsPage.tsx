@@ -525,7 +525,7 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs defaultValue="profile" className="settings-tabs w-full">
         <TabsList className="settings-tabs-carousel w-full">
           <TabsTrigger value="profile">{t('settings.profile')}</TabsTrigger>
           <TabsTrigger value="security">{t('settings.security')}</TabsTrigger>
