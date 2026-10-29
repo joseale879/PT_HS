@@ -15,6 +15,7 @@ import {
   Database,
   Activity,
   Loader2,
+  Lightbulb,
 } from 'lucide-react';
 import logoImage from '@/imports/aaa-Photoroom-1.png';
 import { Button } from '@shared/ui/button';
@@ -68,6 +69,11 @@ const ReportsAnalytics = lazy(() =>
     default: component,
   }))
 );
+const RecommendationsPage = lazy(() =>
+  import('@features/recommendations/pages/RecommendationsPage').then(({ RecommendationsPage: component }) => ({
+    default: component,
+  }))
+);
 const NotificationsPanel = lazy(() =>
   import('@features/alerts/pages/AlertsPage').then(({ NotificationsPanel: component }) => ({
     default: component,
@@ -114,6 +120,7 @@ const viewPaths: Record<string, string> = {
   devices: '/app/devices',
   consumption: '/app/consumption',
   reports: '/app/reports',
+  recommendations: '/app/recommendations',
   goals: '/app/goals',
   notifications: '/app/alerts',
   support: '/app/support',
@@ -232,6 +239,13 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
         ariaLabel: t('nav.reports'),
       },
       {
+        id: 'recommendations',
+        label: t('nav.recommendations'),
+        icon: Lightbulb,
+        requiredPermission: 'reports.read',
+        ariaLabel: t('nav.recommendations'),
+      },
+      {
         id: 'goals',
         label: t('nav.goals'),
         icon: Target,
@@ -262,7 +276,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
   const menuItems = getMenuItems();
   const mobileNavigationIds = isAdministrator
     ? ['admin-panel', 'users', 'audit', 'settings']
-    : ['dashboard', 'homes', 'reports', 'goals', 'settings'];
+    : ['dashboard', 'homes', 'reports', 'recommendations', 'goals', 'settings'];
   const mobileNavigationItems = mobileNavigationIds
     .map((id) => menuItems.find((item) => item.id === id))
     .filter((item): item is MenuItem => Boolean(item));
@@ -297,6 +311,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
     'support-panel': 'tickets.manage',
     consumption: 'consumption.read',
     reports: 'reports.read',
+    recommendations: 'reports.read',
     goals: 'homes.manage',
     notifications: 'alerts.manage',
   };
@@ -313,6 +328,7 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
     devices: ['HomeUser', 'Guest'],
     consumption: ['HomeUser', 'Guest'],
     reports: ['HomeUser', 'Guest'],
+    recommendations: ['HomeUser', 'Guest'],
     goals: ['HomeUser'],
   };
 
@@ -387,6 +403,8 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
         return <ConsumptionPage homeId={selectedHomeId} />;
       case 'reports':
         return <ReportsAnalytics homeId={selectedHomeId} />;
+      case 'recommendations':
+        return <RecommendationsPage homeId={selectedHomeId} />;
       case 'goals':
         return <GoalsConfig homeId={selectedHomeId} />;
       case 'notifications':

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
 import { Badge } from '@shared/ui/badge';
 import { Button } from '@shared/ui/button';
+import { Link } from 'react-router-dom';
 import {
   Droplets,
   TrendingDown,
@@ -14,12 +15,12 @@ import {
   ArrowRight,
   Lightbulb,
 } from 'lucide-react';
-import { createConsumptionRecommendations } from '@features/dashboard/consumption-recommendations.js';
 import { DailyConsumptionChart } from '@features/consumption/charts/DailyConsumptionChart';
 import { WeeklyConsumptionChart } from '@features/consumption/charts/WeeklyConsumptionChart';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { alertsApi, consumptionApi, devicesApi } from '@shared/http/httpClient';
+import { alertsApi, consumptionApi, devicesApi, recommendationsApi } from '@shared/http/httpClient';
+import type { Recommendation } from '@shared/http/httpClient';
 
 interface DashboardHomeProps {
   homeId?: string;
@@ -42,6 +43,9 @@ export function DashboardHome({ homeId }: DashboardHomeProps) {
   const [alerts, setAlerts] = useState<
     Array<{ id: string; type: string; message: string; time: string }>
   >([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [recommendationsError, setRecommendationsError] = useState(false);
   const [pendingAlertCount, setPendingAlertCount] = useState(0);
   const [hourlyPoints, setHourlyPoints] = useState<
     Array<{ hour: number; averageConsumptionM3: number }>
@@ -203,6 +207,35 @@ export function DashboardHome({ homeId }: DashboardHomeProps) {
       .finally(() => setIsLoading(false));
   }, [homeId, t]);
 
+  useEffect(() => {
+    if (!homeId) {
+      setRecommendations([]);
+      setRecommendationsLoading(false);
+      setRecommendationsError(false);
+      return;
+    }
+    let active = true;
+    setRecommendationsLoading(true);
+    setRecommendationsError(false);
+    recommendationsApi
+      .list(homeId)
+      .then(({ data }) => {
+        if (active) setRecommendations(data);
+      })
+      .catch(() => {
+        if (active) {
+          setRecommendations([]);
+          setRecommendationsError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setRecommendationsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [homeId]);
+
   const MetricValue = ({ value }: { value: number }) =>
     isLoading || hasLoadError ? '—' : `${value.toFixed(2)} m³`;
 
@@ -224,13 +257,6 @@ export function DashboardHome({ homeId }: DashboardHomeProps) {
       </div>
     );
   };
-
-  const recommendations = createConsumptionRecommendations({
-    todayM3: currentConsumption.today,
-    weekM3: currentConsumption.week,
-    todayChangePercent: comparisons.today,
-    weekChangePercent: comparisons.week,
-  });
 
   return (
     <div className="min-w-0 space-y-7 lg:space-y-8">
@@ -286,29 +312,34 @@ export function DashboardHome({ homeId }: DashboardHomeProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('dashboard.savingRecommendations')}</CardTitle>
-          <CardDescription>{t('dashboard.personalizedSuggestions')}</CardDescription>
+          <CardTitle>{t('recommendations.title')}</CardTitle>
+          <CardDescription>{t('recommendations.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {recommendationsLoading ? (
             <p className="text-sm text-gray-500">{t('dashboard.recommendationsLoading')}</p>
-          ) : hasLoadError ? (
+          ) : recommendationsError ? (
             <p className="text-sm text-amber-700">{t('dashboard.recommendationsUnavailable')}</p>
+          ) : recommendations.length === 0 ? (
+            <p className="text-sm text-gray-500">{t('recommendations.empty')}</p>
           ) : (
-            <ul className="space-y-3" aria-label={t('dashboard.savingRecommendations')}>
-              {recommendations.map((recommendation, index) => (
-                <li key={`${recommendation.key}-${index}`} className="flex items-start gap-3 rounded-lg border p-4">
+            <ul className="space-y-3" aria-label={t('recommendations.title')}>
+              {recommendations.slice(0, 3).map((recommendation) => (
+                <li key={recommendation.userRecommendationId} className="flex items-start gap-3 rounded-lg border p-4">
                   <Lightbulb className="mt-0.5 size-5 shrink-0 text-amber-500" aria-hidden="true" />
-                  <p className="text-sm text-gray-700">
-                    {t(`dashboard.${recommendation.key}`, {
-                      percent: recommendation.percent,
-                      value: recommendation.value.toFixed(2),
-                    })}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900">{recommendation.title}</p>
+                    <p className="mt-1 text-sm text-gray-700">{recommendation.description}</p>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
+          <div className="mt-4 flex justify-end">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/app/recommendations">{t('nav.recommendations')}</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
