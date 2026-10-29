@@ -937,7 +937,7 @@ export const alertsApi = {
   updateRule: (ruleId: number | string, payload: Partial<AlertRuleInput>) =>
     apiClient.patch<{ data: AlertRule }>(`/alerts/rules/${ruleId}`, payload),
   deleteRule: (ruleId: number | string) => apiClient.delete<void>(`/alerts/rules/${ruleId}`),
-  saveThresholds: (homeId: number | string, payload: { dailyLimit: number | null; monthlyLimit: number | null; active: boolean }) =>
+  saveThresholds: (homeId: number | string, payload: { dailyLimit?: number; monthlyLimit?: number; active: boolean }) =>
     apiClient.put<{ data: AlertThresholdConfiguration }>(`/alerts/home/${homeId}/thresholds`, payload),
   deleteThresholds: (homeId: number | string) =>
     apiClient.delete<void>(`/alerts/home/${homeId}/thresholds`),

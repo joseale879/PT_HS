@@ -113,8 +113,8 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
     setSavingThresholds(true);
     try {
       await alertsApi.saveThresholds(homeId, {
-        dailyLimit: daily,
-        monthlyLimit: monthly,
+        dailyLimit: daily ?? undefined,
+        monthlyLimit: monthly ?? undefined,
         active: thresholdsActive,
       });
       toast.success('Límites de alerta guardados.');
