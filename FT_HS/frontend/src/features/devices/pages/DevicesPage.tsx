@@ -139,6 +139,7 @@ export function DeviceManagement({
   const [commandingMeasurement, setCommandingMeasurement] = useState<string | null>(null);
   const [pendingMeasurement, setPendingMeasurement] = useState<Record<string, boolean>>({});
   const [provisioningDevice, setProvisioningDevice] = useState<Device | null>(null);
+  const provisioningDeviceRef = useRef<Device | null>(null);
   const [provisioningHardwareId, setProvisioningHardwareId] = useState('');
   const [provisioningSaving, setProvisioningSaving] = useState(false);
   const [bleConnection, setBleConnection] = useState<BleProvisioningConnection | null>(null);
@@ -338,6 +339,7 @@ export function DeviceManagement({
       : savedLocation
         ? OTHER_LOCATION_OPTION
         : '';
+    provisioningDeviceRef.current = device;
     setProvisioningDevice(device);
     setEditName(device.name);
     setEditLocation(savedLocation);
@@ -360,6 +362,7 @@ export function DeviceManagement({
   const closeProvisioning = () => {
     bleConnection?.disconnect();
     setBleConnection(null);
+    provisioningDeviceRef.current = null;
     setProvisioningDevice(null);
     setProvisioningUnlinked(false);
     setBlePassword('');
@@ -370,10 +373,11 @@ export function DeviceManagement({
     hardwareIdOverride?: string,
     showSuccess = true
   ): Promise<Partial<Device> | null> => {
-    if (!provisioningDevice) return Promise.resolve(null);
+    const activeProvisioningDevice = provisioningDeviceRef.current || provisioningDevice;
+    if (!activeProvisioningDevice) return Promise.resolve(null);
     const hardwareId = (hardwareIdOverride || provisioningHardwareId).trim();
     if (!hardwareId) return Promise.resolve(null);
-    if (provisioningDevice.hardwareId === hardwareId) {
+    if (activeProvisioningDevice.hardwareId === hardwareId) {
       return Promise.resolve({ hardwareId } as Partial<Device>);
     }
     if (claimingHardwareRef.current?.hardwareId === hardwareId) {
@@ -382,12 +386,18 @@ export function DeviceManagement({
 
     const promise = (async (): Promise<Partial<Device> | null> => {
       try {
-        const response = await devicesApi.claimHardware(provisioningDevice.deviceId, hardwareId);
+        const response = await devicesApi.claimHardware(
+          activeProvisioningDevice.deviceId,
+          hardwareId
+        );
         const updated = response.data as Partial<Device>;
+        provisioningDeviceRef.current = { ...activeProvisioningDevice, ...updated };
         setProvisioningHardwareId(String(updated.hardwareId || hardwareId));
         setDevices((current) =>
           current.map((device) =>
-            device.deviceId === provisioningDevice.deviceId ? { ...device, ...updated } : device
+            device.deviceId === activeProvisioningDevice.deviceId
+              ? { ...device, ...updated }
+              : device
           )
         );
         setProvisioningDevice((current) => (current ? { ...current, ...updated } : current));
@@ -421,11 +431,12 @@ export function DeviceManagement({
     if (status.ssid) setBleSsid(status.ssid);
 
     const nextStatus = state ? BLE_BACKEND_STATUS[state] : 'BLE_READY';
-    if (!provisioningDevice) return;
+    const activeProvisioningDevice = provisioningDeviceRef.current || provisioningDevice;
+    if (!activeProvisioningDevice) return;
     const reportedDeviceCode = String(status.deviceCode || '').trim();
     if (
       !reportedDeviceCode ||
-      reportedDeviceCode.toUpperCase() !== provisioningDevice.code.toUpperCase()
+      reportedDeviceCode.toUpperCase() !== activeProvisioningDevice.code.toUpperCase()
     ) {
       return;
     }
@@ -451,7 +462,7 @@ export function DeviceManagement({
         );
       }
     }
-    let deviceForStatus = provisioningDevice;
+    let deviceForStatus = activeProvisioningDevice;
     const reportedHardwareId = String(status.hardwareId || '').trim();
     const activeOnRequestedCode = [
       'wifi_connected',
@@ -462,16 +473,16 @@ export function DeviceManagement({
     ].includes(reportedState);
     if (
       reportedHardwareId &&
-      reportedHardwareId !== provisioningDevice.hardwareId &&
+      reportedHardwareId !== activeProvisioningDevice.hardwareId &&
       activeOnRequestedCode
     ) {
       const claimed = await claimHardware(reportedHardwareId, false);
       if (!claimed) return;
-      deviceForStatus = { ...provisioningDevice, ...claimed };
+      deviceForStatus = { ...activeProvisioningDevice, ...claimed };
     }
     if (
       reportedHardwareId &&
-      reportedHardwareId !== provisioningDevice.hardwareId &&
+      reportedHardwareId !== activeProvisioningDevice.hardwareId &&
       !activeOnRequestedCode
     ) {
       return;
@@ -490,6 +501,7 @@ export function DeviceManagement({
               : null,
       });
       const updated = response.data as Partial<Device>;
+      provisioningDeviceRef.current = { ...deviceForStatus, ...updated };
       setDevices((current) =>
         current.map((device) =>
           device.deviceId === deviceForStatus.deviceId ? { ...device, ...updated } : device
@@ -527,6 +539,13 @@ export function DeviceManagement({
     } finally {
       setBleConnecting(false);
     }
+  };
+
+  const openProvisioningAndConnectBle = (device: Device) => {
+    openProvisioning(device);
+    // requestDevice must run inside the original user click for the browser
+    // to display the Bluetooth device picker.
+    void connectBle();
   };
 
   const sendBleConfiguration = async () => {
@@ -576,6 +595,7 @@ export function DeviceManagement({
         alertThreshold: editAlertThreshold.trim() ? Number(editAlertThreshold) : undefined,
       });
       const updated = deviceResponse.data as Partial<Device>;
+      provisioningDeviceRef.current = { ...provisioningDevice, ...updated };
       setEditLocation(savedLocation);
       setDevices((current) =>
         current.map((device) =>
@@ -603,6 +623,10 @@ export function DeviceManagement({
       setProvisioningUnlinked(
         (current) => current || affectedCodeSet.has(provisioningDevice?.code || '')
       );
+      const activeProvisioningDevice = provisioningDeviceRef.current;
+      if (activeProvisioningDevice && affectedCodeSet.has(activeProvisioningDevice.code)) {
+        provisioningDeviceRef.current = { ...activeProvisioningDevice, homeId: '' };
+      }
       setProvisioningDevice((current) =>
         current && affectedCodeSet.has(current.code) ? { ...current, homeId: '' } : current
       );
@@ -928,6 +952,84 @@ export function DeviceManagement({
                           )}
                         </Badge>
                       </div>
+                      {canManageAssignedDevice &&
+                        (() => {
+                          const measurementEnabled = device.measurementEnabled !== false;
+                          const online = device.connectivityStatus === 'ONLINE';
+                          const waitingForConfirmation =
+                            pendingMeasurement[device.deviceId] !== undefined;
+                          const measurementButtonLabel = waitingForConfirmation
+                            ? 'devices.measurementWaiting'
+                            : !online
+                              ? 'devices.configureWifiBluetooth'
+                              : measurementEnabled
+                                ? 'devices.pauseMeasurement'
+                                : 'devices.resumeMeasurement';
+                          return (
+                            <div className="iot-measurement-panel flex min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-medium text-slate-600">
+                                    {t('devices.measurementState')}
+                                  </span>
+                                  <Badge variant={measurementEnabled ? 'default' : 'secondary'}>
+                                    {t(
+                                      measurementEnabled
+                                        ? 'devices.measurementActive'
+                                        : 'devices.measurementPaused'
+                                    )}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  className="w-full sm:w-auto"
+                                  variant={
+                                    !online
+                                      ? 'outline'
+                                      : measurementEnabled
+                                        ? 'destructive'
+                                        : 'default'
+                                  }
+                                  size="sm"
+                                  disabled={
+                                    waitingForConfirmation ||
+                                    commandingMeasurement === device.deviceId ||
+                                    (!online && bleConnecting)
+                                  }
+                                  title={
+                                    !online ? t('devices.measurementDeviceOffline') : undefined
+                                  }
+                                  onClick={() =>
+                                    online
+                                      ? void toggleMeasurement(device)
+                                      : openProvisioningAndConnectBle(device)
+                                  }
+                                >
+                                  {waitingForConfirmation ? (
+                                    <Loader2 className="mr-2 size-4 animate-spin" />
+                                  ) : !online ? (
+                                    bleConnecting ? (
+                                      <Loader2 className="mr-2 size-4 animate-spin" />
+                                    ) : (
+                                      <Bluetooth className="mr-2 size-4" />
+                                    )
+                                  ) : commandingMeasurement === device.deviceId ? (
+                                    <Loader2 className="mr-2 size-4 animate-spin" />
+                                  ) : measurementEnabled ? (
+                                    <Pause className="mr-2 size-4" />
+                                  ) : (
+                                    <Play className="mr-2 size-4" />
+                                  )}
+                                  {t(measurementButtonLabel)}
+                                </Button>
+                              </div>
+                              <p className="text-xs leading-relaxed text-slate-500">
+                                {online
+                                  ? t('devices.measurementMonitoringHint')
+                                  : t('devices.measurementDeviceOffline')}
+                              </p>
+                            </div>
+                          );
+                        })()}
                     </CardHeader>
                     <CardContent className="iot-device-card-content space-y-4 border-t border-slate-100 pt-4">
                       <div className="iot-alert-threshold flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-sm">
@@ -1025,77 +1127,6 @@ export function DeviceManagement({
                         </div>
                       )}
                       <div className="iot-device-actions flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                        {canManageAssignedDevice &&
-                          (() => {
-                            const measurementEnabled = device.measurementEnabled !== false;
-                            const online = device.connectivityStatus === 'ONLINE';
-                            const waitingForConfirmation =
-                              pendingMeasurement[device.deviceId] !== undefined;
-                            const measurementButtonLabel = waitingForConfirmation
-                              ? 'devices.measurementWaiting'
-                              : !online
-                                ? 'devices.configureWifiBluetooth'
-                                : measurementEnabled
-                                  ? 'devices.pauseMeasurement'
-                                  : 'devices.resumeMeasurement';
-                            return (
-                              <div className="iot-measurement-panel flex min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-xs font-medium text-slate-600">
-                                    {t('devices.measurementState')}
-                                  </span>
-                                  <Badge variant={measurementEnabled ? 'default' : 'secondary'}>
-                                    {t(
-                                      measurementEnabled
-                                        ? 'devices.measurementActive'
-                                        : 'devices.measurementPaused'
-                                    )}
-                                  </Badge>
-                                </div>
-                                <Button
-                                  className="w-full"
-                                  variant={
-                                    !online
-                                      ? 'outline'
-                                      : measurementEnabled
-                                        ? 'destructive'
-                                        : 'default'
-                                  }
-                                  size="sm"
-                                  disabled={
-                                    waitingForConfirmation ||
-                                    commandingMeasurement === device.deviceId
-                                  }
-                                  title={
-                                    !online ? t('devices.measurementDeviceOffline') : undefined
-                                  }
-                                  onClick={() =>
-                                    online
-                                      ? void toggleMeasurement(device)
-                                      : openProvisioning(device)
-                                  }
-                                >
-                                  {waitingForConfirmation ? (
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                  ) : !online ? (
-                                    <Bluetooth className="mr-2 size-4" />
-                                  ) : commandingMeasurement === device.deviceId ? (
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                  ) : measurementEnabled ? (
-                                    <Pause className="mr-2 size-4" />
-                                  ) : (
-                                    <Play className="mr-2 size-4" />
-                                  )}
-                                  {t(measurementButtonLabel)}
-                                </Button>
-                                <p className="text-xs leading-relaxed text-slate-500">
-                                  {online
-                                    ? t('devices.measurementMonitoringHint')
-                                    : t('devices.measurementDeviceOffline')}
-                                </p>
-                              </div>
-                            );
-                          })()}
                         {canManageAssignedDevice && (
                           <Button
                             className="flex-1"
