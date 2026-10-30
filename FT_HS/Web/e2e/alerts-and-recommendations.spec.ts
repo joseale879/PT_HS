@@ -17,21 +17,50 @@ const MONTHLY_RULE = {
   unit: 'm3_month',
   active: true,
 };
+const BACKEND_RECOMMENDATION = {
+  userRecommendationId: 'recommendation-e2e-001',
+  recommendationId: 'recommendation-template-e2e-001',
+  userId: 'user-e2e-001',
+  homeId: HOME_ID,
+  title: 'Consejo guardado por el backend',
+  description: 'Revisa posibles fugas para reducir el consumo del hogar.',
+  category: 'Consumo',
+  activationThreshold: 0.75,
+  thresholdUnit: 'm3_day',
+  status: 'Pending',
+  usefulness: null,
+  sentAt: '2026-10-29T12:00:00.000Z',
+  readAt: null,
+};
 
 type CapturedRequests = {
   loginCsrfHeader: string | null;
   thresholdBody: Record<string, unknown> | null;
   createdRuleBody: Record<string, unknown> | null;
+  updatedRuleBodies: Array<Record<string, unknown>>;
+  recommendationUpdateBody: Record<string, unknown> | null;
 };
 
 async function installApiMocks(page: Page): Promise<CapturedRequests> {
   let authenticated = false;
   let thresholds = { dailyLimit: 0.5, monthlyLimit: 15, active: true };
   let rules: Array<Record<string, unknown>> = [TODAY_DAILY_RULE, MONTHLY_RULE];
+  let recommendations: Array<Record<string, unknown>> = [BACKEND_RECOMMENDATION];
+  let recommendationSummary = {
+    homeId: HOME_ID,
+    totalRecommendations: 1,
+    appliedCount: 0,
+    pendingCount: 1,
+    dismissedCount: 0,
+    averageUsefulness: null,
+    refreshedAt: '2026-10-29T12:00:00.000Z',
+  };
   const captured: CapturedRequests = {
     loginCsrfHeader: null,
     thresholdBody: null,
     createdRuleBody: null,
+    updatedRuleBodies: [],
+    recommendationUpdateBody: null,
   };
   const today = await page.evaluate(() => {
     const date = new Date();
@@ -93,6 +122,12 @@ async function installApiMocks(page: Page): Promise<CapturedRequests> {
     if (method === 'GET' && path === `/alerts/home/${HOME_ID}/rules`) {
       return respond({ data: rules });
     }
+    if (method === 'GET' && path === '/recommendations') {
+      return respond({ data: recommendations, pagination: { page: 1, pageSize: 20, total: recommendations.length } });
+    }
+    if (method === 'GET' && path === `/recommendations/home/${HOME_ID}/summary`) {
+      return respond({ data: recommendationSummary });
+    }
     if (method === 'PUT' && path === `/alerts/home/${HOME_ID}/thresholds`) {
       captured.thresholdBody = request.postDataJSON() as Record<string, unknown>;
       thresholds = { ...thresholds, ...captured.thresholdBody } as typeof thresholds;
@@ -105,6 +140,27 @@ async function installApiMocks(page: Page): Promise<CapturedRequests> {
         { ...captured.createdRuleBody, ruleId: 'custom-rule-001', homeId: HOME_ID },
       ];
       return respond({ data: rules[rules.length - 1] }, 201);
+    }
+    if (method === 'PATCH' && path.startsWith('/alerts/rules/')) {
+      const ruleId = path.split('/').at(-1);
+      const changes = request.postDataJSON() as Record<string, unknown>;
+      captured.updatedRuleBodies.push(changes);
+      rules = rules.map((rule) => rule.ruleId === ruleId ? { ...rule, ...changes } : rule);
+      return respond({ data: rules.find((rule) => rule.ruleId === ruleId) });
+    }
+    if (method === 'PATCH' && path.startsWith('/recommendations/')) {
+      captured.recommendationUpdateBody = request.postDataJSON() as Record<string, unknown>;
+      const userRecommendationId = path.split('/').at(-1);
+      recommendations = recommendations.map((recommendation) =>
+        recommendation.userRecommendationId === userRecommendationId
+          ? { ...recommendation, ...captured.recommendationUpdateBody }
+          : recommendation
+      );
+      const updated = recommendations.find((recommendation) => recommendation.userRecommendationId === userRecommendationId);
+      if (captured.recommendationUpdateBody.status === 'Applied') {
+        recommendationSummary = { ...recommendationSummary, appliedCount: 1, pendingCount: 0 };
+      }
+      return respond({ data: updated });
     }
     if (method === 'GET' && path === '/consumption/summary') {
       const from = url.searchParams.get('from') || '';
@@ -169,7 +225,7 @@ test('el usuario puede guardar umbrales diarios y mensuales del hogar', async ({
   await expect(page.locator('#monthly-alert-limit')).toHaveValue('18.5');
 });
 
-test('el usuario puede crear una regla adicional con un umbral', async ({ page }) => {
+test('el usuario puede crear y actualizar una regla de alerta', async ({ page }) => {
   const requests = await installApiMocks(page);
   await signIn(page, requests);
   await page.goto('/app/alerts');
@@ -183,12 +239,26 @@ test('el usuario puede crear una regla adicional con un umbral', async ({ page }
     unit: 'm3_day',
     active: true,
   });
+  const threshold = page.locator('input[aria-label^="Umbral:"]');
+  await expect(threshold).toBeVisible();
+  await threshold.fill('3.25');
+  await page.getByRole('checkbox', { name: 'Activa', exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect.poll(() => requests.updatedRuleBodies.at(-1)).toEqual({
+    alertType: 'excessive_consumption',
+    unit: 'm3_day',
+    threshold: 3.25,
+    active: false,
+  });
 });
 
-test('el panel propone recomendaciones basadas en el consumo devuelto por la API', async ({ page }) => {
+test('el panel muestra recomendaciones del backend y permite registrar su estado', async ({ page }) => {
   const requests = await installApiMocks(page);
   await signIn(page, requests);
 
-  await expect(page.getByText(/Hoy consumiste 100%/)).toBeVisible();
-  await expect(page.getByText(/Esta semana registraste 4\.20 m³, 20% más que la anterior/)).toBeVisible();
+  await expect(page.getByText('Consejo guardado por el backend')).toBeVisible();
+  await page.goto('/app/recommendations');
+  await expect(page.getByText('Revisa posibles fugas para reducir el consumo del hogar.')).toBeVisible();
+  await page.getByRole('button', { name: 'Aplicada', exact: true }).click();
+  await expect.poll(() => requests.recommendationUpdateBody).toEqual({ status: 'Applied' });
 });

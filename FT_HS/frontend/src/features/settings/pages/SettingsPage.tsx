@@ -527,12 +527,9 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
 
       <Tabs defaultValue="profile" className="settings-tabs w-full">
         <TabsList className="settings-tabs-carousel w-full">
-          <TabsTrigger value="profile">{t('settings.profile')}</TabsTrigger>
-          <TabsTrigger value="security">{t('settings.security')}</TabsTrigger>
-          <TabsTrigger value="privacy">{t('settings.privacy')}</TabsTrigger>
-          <TabsTrigger value="preferences">{t('settings.preferences')}</TabsTrigger>
-          <TabsTrigger value="notifications">{t('notifications.title')}</TabsTrigger>
-          <TabsTrigger value="account">{t('settings.accountTab')}</TabsTrigger>
+          <TabsTrigger value="profile">{t('settings.profileAccount')}</TabsTrigger>
+          <TabsTrigger value="security">{t('settings.securityPrivacy')}</TabsTrigger>
+          <TabsTrigger value="preferences">{t('settings.preferencesNotifications')}</TabsTrigger>
           <TabsTrigger value="support">
             <Headphones className="size-4" aria-hidden="true" />
             {t(isAdministrator ? 'nav.supportPanel' : 'nav.support')}
@@ -654,6 +651,30 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
                 <Button variant="outline" onClick={() => setProfile(savedProfile)}>
                   {t('common.cancel')}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('settings.accountInfo')}</CardTitle>
+              <CardDescription>{t('settings.accountInfoDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div className="text-sm text-gray-600">{t('settings.registrationDate')}</div>
+                <div className="text-sm">{formatDate(summary.createdAt)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">{t('settings.accountType')}</div>
+                <Badge>{roleLabel}</Badge>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">{t('settings.registeredHomes')}</div>
+                <div className="text-sm">{summary.homes ?? '—'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">{t('settings.activeDevices')}</div>
+                <div className="text-sm">{summary.devices ?? '—'}</div>
               </div>
             </CardContent>
           </Card>
@@ -831,358 +852,333 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('settings.dataPrivacy')}</CardTitle>
+                <CardDescription>{t('settings.dataPrivacyDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert>
+                  <Shield className="size-4" />
+                  <AlertDescription>{t('settings.privacyAvailable')}</AlertDescription>
+                </Alert>
 
-        <TabsContent value="privacy">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.dataPrivacy')}</CardTitle>
-              <CardDescription>{t('settings.dataPrivacyDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Alert>
-                <Shield className="size-4" />
-                <AlertDescription>{t('settings.privacyAvailable')}</AlertDescription>
-              </Alert>
-
-              <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="font-medium">{t('settings.exportData')}</div>
-                  <div className="text-sm text-gray-600">{t('settings.exportDataDesc')}</div>
+                <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="font-medium">{t('settings.exportData')}</div>
+                    <div className="text-sm text-gray-600">{t('settings.exportDataDesc')}</div>
+                  </div>
+                  <Button onClick={handleExportData} disabled={privacyActionLoading}>
+                    {privacyActionLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Download className="size-4" />
+                    )}
+                    {t('settings.downloadExport')}
+                  </Button>
                 </div>
-                <Button onClick={handleExportData} disabled={privacyActionLoading}>
-                  {privacyActionLoading ? (
-                    <Loader2 className="size-4 animate-spin" />
+
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center gap-2 font-medium">
+                    <FileText className="size-4" />
+                    {t('settings.privacyRequestTitle')}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[220px_1fr]">
+                    <div className="space-y-2">
+                      <Label htmlFor="privacy-request-type">
+                        {t('settings.privacyRequestType')}
+                      </Label>
+                      <select
+                        id="privacy-request-type"
+                        className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        value={privacyRequestType}
+                        onChange={(event) => setPrivacyRequestType(event.target.value)}
+                      >
+                        <option value="access">{t('settings.privacyAccess')}</option>
+                        <option value="rectification">{t('settings.privacyRectification')}</option>
+                        <option value="cancellation">{t('settings.privacyCancellation')}</option>
+                        <option value="opposition">{t('settings.privacyOpposition')}</option>
+                        <option value="portability">{t('settings.privacyPortability')}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="privacy-request-description">
+                        {t('settings.privacyRequestDescription')}
+                      </Label>
+                      <textarea
+                        id="privacy-request-description"
+                        className="min-h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        maxLength={5000}
+                        value={privacyRequestDescription}
+                        onChange={(event) => setPrivacyRequestDescription(event.target.value)}
+                        placeholder={t('settings.privacyRequestPlaceholder')}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleCreatePrivacyRequest}
+                    disabled={privacyActionLoading}
+                  >
+                    {t('settings.submitPrivacyRequest')}
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-medium">{t('settings.privacyRequestsTitle')}</h3>
+                  {privacyRequestsLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Loader2 className="size-4 animate-spin" />
+                      {t('settings.loading')}
+                    </div>
+                  ) : privacyRequests.length === 0 ? (
+                    <p className="text-sm text-gray-600">{t('settings.privacyRequestsEmpty')}</p>
                   ) : (
-                    <Download className="size-4" />
-                  )}
-                  {t('settings.downloadExport')}
-                </Button>
-              </div>
-
-              <div className="space-y-3 rounded-lg border p-4">
-                <div className="flex items-center gap-2 font-medium">
-                  <FileText className="size-4" />
-                  {t('settings.privacyRequestTitle')}
-                </div>
-                <div className="grid gap-3 sm:grid-cols-[220px_1fr]">
-                  <div className="space-y-2">
-                    <Label htmlFor="privacy-request-type">{t('settings.privacyRequestType')}</Label>
-                    <select
-                      id="privacy-request-type"
-                      className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      value={privacyRequestType}
-                      onChange={(event) => setPrivacyRequestType(event.target.value)}
-                    >
-                      <option value="access">{t('settings.privacyAccess')}</option>
-                      <option value="rectification">{t('settings.privacyRectification')}</option>
-                      <option value="cancellation">{t('settings.privacyCancellation')}</option>
-                      <option value="opposition">{t('settings.privacyOpposition')}</option>
-                      <option value="portability">{t('settings.privacyPortability')}</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="privacy-request-description">
-                      {t('settings.privacyRequestDescription')}
-                    </Label>
-                    <textarea
-                      id="privacy-request-description"
-                      className="min-h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      maxLength={5000}
-                      value={privacyRequestDescription}
-                      onChange={(event) => setPrivacyRequestDescription(event.target.value)}
-                      placeholder={t('settings.privacyRequestPlaceholder')}
-                    />
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={handleCreatePrivacyRequest}
-                  disabled={privacyActionLoading}
-                >
-                  {t('settings.submitPrivacyRequest')}
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-medium">{t('settings.privacyRequestsTitle')}</h3>
-                {privacyRequestsLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Loader2 className="size-4 animate-spin" />
-                    {t('settings.loading')}
-                  </div>
-                ) : privacyRequests.length === 0 ? (
-                  <p className="text-sm text-gray-600">{t('settings.privacyRequestsEmpty')}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {privacyRequests.map((request) => (
-                      <div key={request.requestId} className="rounded-md border p-3 text-sm">
-                        <div className="flex flex-wrap justify-between gap-2">
-                          <span className="font-medium">{request.type}</span>
-                          <Badge variant="outline">{request.status}</Badge>
+                    <div className="space-y-2">
+                      {privacyRequests.map((request) => (
+                        <div key={request.requestId} className="rounded-md border p-3 text-sm">
+                          <div className="flex flex-wrap justify-between gap-2">
+                            <span className="font-medium">{request.type}</span>
+                            <Badge variant="outline">{request.status}</Badge>
+                          </div>
+                          <p className="mt-1 text-gray-600">{request.description || '—'}</p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {t('settings.privacyDeadline', {
+                              date: formatDate(request.deadlineAt),
+                            })}
+                          </p>
                         </div>
-                        <p className="mt-1 text-gray-600">{request.description || '—'}</p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {t('settings.privacyDeadline', { date: formatDate(request.deadlineAt) })}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="preferences">
           <div className="space-y-6">
             <LanguageSelector />
             <VacationMode homeId={homeId} />
-          </div>
-        </TabsContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <BellRing className="mr-2 inline size-5" />
+                  {t('notifications.settings')}
+                </CardTitle>
+                <CardDescription>{t('notifications.settingsDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between gap-4 rounded-lg border bg-blue-50 p-4">
+                  <div>
+                    <p className="font-medium">{t('notifications.title')}</p>
+                    <p className="text-sm text-gray-600">{t('notifications.settingsDesc')}</p>
+                  </div>
+                  <Switch
+                    checked={notificationSettings.notificationsEnabled}
+                    disabled={notificationSettingsLoading || notificationSettingsSaving}
+                    onCheckedChange={(checked) =>
+                      setNotificationSettings((current) => ({
+                        ...current,
+                        notificationsEnabled: checked,
+                      }))
+                    }
+                    aria-label={t('notifications.title')}
+                  />
+                </div>
 
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <BellRing className="mr-2 inline size-5" />
-                {t('notifications.settings')}
-              </CardTitle>
-              <CardDescription>{t('notifications.settingsDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between gap-4 rounded-lg border bg-blue-50 p-4">
                 <div>
-                  <p className="font-medium">{t('notifications.title')}</p>
-                  <p className="text-sm text-gray-600">{t('notifications.settingsDesc')}</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.notificationsEnabled}
-                  disabled={notificationSettingsLoading || notificationSettingsSaving}
-                  onCheckedChange={(checked) =>
-                    setNotificationSettings((current) => ({
-                      ...current,
-                      notificationsEnabled: checked,
-                    }))
-                  }
-                  aria-label={t('notifications.title')}
-                />
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center gap-2 font-medium">
-                  <BellRing className="size-4" />
-                  {t('notifications.consumptionNotifications')}
-                </div>
-                <div className="rounded-lg border px-4">
-                  <NotificationToggle
-                    id="notification-daily-report"
-                    label={t('notifications.dailyConsumptionReport')}
-                    description={t('notifications.dailyConsumptionReportDesc')}
-                    checked={notificationSettings.notificationPreferences.consumption.dailyReport}
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('consumption', 'dailyReport', checked)
-                    }
-                  />
-                  <NotificationToggle
-                    id="notification-weekly-report"
-                    label={t('notifications.weeklyReport')}
-                    description={t('notifications.weeklyReportDesc')}
-                    checked={notificationSettings.notificationPreferences.consumption.weeklyReport}
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('consumption', 'weeklyReport', checked)
-                    }
-                  />
-                  <NotificationToggle
-                    id="notification-monthly-report"
-                    label={t('notifications.monthlyReport')}
-                    description={t('notifications.monthlyReportDesc')}
-                    checked={notificationSettings.notificationPreferences.consumption.monthlyReport}
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('consumption', 'monthlyReport', checked)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center gap-2 font-medium">
-                  <BellRing className="size-4" />
-                  {t('notifications.criticalAlerts')}
-                </div>
-                <div className="rounded-lg border px-4">
-                  <NotificationToggle
-                    id="notification-leak-detection"
-                    label={t('notifications.leakDetection')}
-                    description={t('notifications.leakDetectionDesc')}
-                    checked={notificationSettings.notificationPreferences.alerts.leakDetection}
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('alerts', 'leakDetection', checked)
-                    }
-                  />
-                  <NotificationToggle
-                    id="notification-abnormal-consumption"
-                    label={t('notifications.abnormalConsumption')}
-                    description={t('notifications.abnormalConsumptionDesc')}
-                    checked={
-                      notificationSettings.notificationPreferences.alerts.abnormalConsumption
-                    }
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('alerts', 'abnormalConsumption', checked)
-                    }
-                  />
-                  <NotificationToggle
-                    id="notification-flow-threshold"
-                    label={t('notifications.flowThresholdExceeded')}
-                    description={t('notifications.flowThresholdExceededDesc')}
-                    checked={
-                      notificationSettings.notificationPreferences.alerts.flowThresholdExceeded
-                    }
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('alerts', 'flowThresholdExceeded', checked)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center gap-2 font-medium">
-                  <BellRing className="size-4" />
-                  {t('notifications.deviceStatus')}
-                </div>
-                <div className="rounded-lg border px-4">
-                  <NotificationToggle
-                    id="notification-device-disconnected"
-                    label={t('notifications.deviceDisconnected')}
-                    description={t('notifications.deviceDisconnectedDesc')}
-                    checked={
-                      notificationSettings.notificationPreferences.devices.deviceDisconnected
-                    }
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('devices', 'deviceDisconnected', checked)
-                    }
-                  />
-                  <NotificationToggle
-                    id="notification-low-battery"
-                    label={t('notifications.lowBattery')}
-                    description={t('notifications.lowBatteryDesc')}
-                    checked={notificationSettings.notificationPreferences.devices.lowBattery}
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('devices', 'lowBattery', checked)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center gap-2 font-medium">
-                  <Mail className="size-4" />
-                  {t('notifications.notificationChannels')}
-                </div>
-                <div className="rounded-lg border px-4">
-                  <NotificationToggle
-                    id="notification-email"
-                    label={`${t('notifications.email')} (Gmail)`}
-                    description={t('notifications.emailDesc')}
-                    checked={notificationSettings.notificationPreferences.channels.email}
-                    disabled={
-                      notificationSettingsLoading ||
-                      notificationSettingsSaving ||
-                      !notificationSettings.notificationsEnabled
-                    }
-                    onCheckedChange={(checked) =>
-                      updateNotificationGroup('channels', 'email', checked)
-                    }
-                  />
-                  <div className="flex items-center justify-between gap-4 border-b py-3 last:border-b-0">
-                    <div>
-                      <p className="font-medium">{t('notifications.pushNotifications')}</p>
-                      <p className="text-sm text-gray-600">
-                        {t('notifications.pushNotificationsDesc')}
-                      </p>
-                    </div>
-                    <Badge variant="outline">{t('common.inDevelopment')}</Badge>
+                  <div className="mb-2 flex items-center gap-2 font-medium">
+                    <BellRing className="size-4" />
+                    {t('notifications.consumptionNotifications')}
+                  </div>
+                  <div className="rounded-lg border px-4">
+                    <NotificationToggle
+                      id="notification-daily-report"
+                      label={t('notifications.dailyConsumptionReport')}
+                      description={t('notifications.dailyConsumptionReportDesc')}
+                      checked={notificationSettings.notificationPreferences.consumption.dailyReport}
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('consumption', 'dailyReport', checked)
+                      }
+                    />
+                    <NotificationToggle
+                      id="notification-weekly-report"
+                      label={t('notifications.weeklyReport')}
+                      description={t('notifications.weeklyReportDesc')}
+                      checked={
+                        notificationSettings.notificationPreferences.consumption.weeklyReport
+                      }
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('consumption', 'weeklyReport', checked)
+                      }
+                    />
+                    <NotificationToggle
+                      id="notification-monthly-report"
+                      label={t('notifications.monthlyReport')}
+                      description={t('notifications.monthlyReportDesc')}
+                      checked={
+                        notificationSettings.notificationPreferences.consumption.monthlyReport
+                      }
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('consumption', 'monthlyReport', checked)
+                      }
+                    />
                   </div>
                 </div>
-              </div>
 
-              <Button
-                onClick={handleSaveNotificationSettings}
-                disabled={notificationSettingsLoading || notificationSettingsSaving}
-              >
-                {notificationSettingsSaving && <Loader2 className="size-4 animate-spin" />}
-                {t('settings.saveChanges')}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                <div>
+                  <div className="mb-2 flex items-center gap-2 font-medium">
+                    <BellRing className="size-4" />
+                    {t('notifications.criticalAlerts')}
+                  </div>
+                  <div className="rounded-lg border px-4">
+                    <NotificationToggle
+                      id="notification-leak-detection"
+                      label={t('notifications.leakDetection')}
+                      description={t('notifications.leakDetectionDesc')}
+                      checked={notificationSettings.notificationPreferences.alerts.leakDetection}
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('alerts', 'leakDetection', checked)
+                      }
+                    />
+                    <NotificationToggle
+                      id="notification-abnormal-consumption"
+                      label={t('notifications.abnormalConsumption')}
+                      description={t('notifications.abnormalConsumptionDesc')}
+                      checked={
+                        notificationSettings.notificationPreferences.alerts.abnormalConsumption
+                      }
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('alerts', 'abnormalConsumption', checked)
+                      }
+                    />
+                    <NotificationToggle
+                      id="notification-flow-threshold"
+                      label={t('notifications.flowThresholdExceeded')}
+                      description={t('notifications.flowThresholdExceededDesc')}
+                      checked={
+                        notificationSettings.notificationPreferences.alerts.flowThresholdExceeded
+                      }
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('alerts', 'flowThresholdExceeded', checked)
+                      }
+                    />
+                  </div>
+                </div>
 
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.accountInfo')}</CardTitle>
-              <CardDescription>{t('settings.accountInfoDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <div className="text-sm text-gray-600">{t('settings.registrationDate')}</div>
-                <div className="text-sm">{formatDate(summary.createdAt)}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600">{t('settings.accountType')}</div>
-                <Badge>{roleLabel}</Badge>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600">{t('settings.registeredHomes')}</div>
-                <div className="text-sm">{summary.homes ?? '—'}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600">{t('settings.activeDevices')}</div>
-                <div className="text-sm">{summary.devices ?? '—'}</div>
-              </div>
-            </CardContent>
-          </Card>
+                <div>
+                  <div className="mb-2 flex items-center gap-2 font-medium">
+                    <BellRing className="size-4" />
+                    {t('notifications.deviceStatus')}
+                  </div>
+                  <div className="rounded-lg border px-4">
+                    <NotificationToggle
+                      id="notification-device-disconnected"
+                      label={t('notifications.deviceDisconnected')}
+                      description={t('notifications.deviceDisconnectedDesc')}
+                      checked={
+                        notificationSettings.notificationPreferences.devices.deviceDisconnected
+                      }
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('devices', 'deviceDisconnected', checked)
+                      }
+                    />
+                    <NotificationToggle
+                      id="notification-low-battery"
+                      label={t('notifications.lowBattery')}
+                      description={t('notifications.lowBatteryDesc')}
+                      checked={notificationSettings.notificationPreferences.devices.lowBattery}
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('devices', 'lowBattery', checked)
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center gap-2 font-medium">
+                    <Mail className="size-4" />
+                    {t('notifications.notificationChannels')}
+                  </div>
+                  <div className="rounded-lg border px-4">
+                    <NotificationToggle
+                      id="notification-email"
+                      label={`${t('notifications.email')} (Gmail)`}
+                      description={t('notifications.emailDesc')}
+                      checked={notificationSettings.notificationPreferences.channels.email}
+                      disabled={
+                        notificationSettingsLoading ||
+                        notificationSettingsSaving ||
+                        !notificationSettings.notificationsEnabled
+                      }
+                      onCheckedChange={(checked) =>
+                        updateNotificationGroup('channels', 'email', checked)
+                      }
+                    />
+                    <div className="flex items-center justify-between gap-4 border-b py-3 last:border-b-0">
+                      <div>
+                        <p className="font-medium">{t('notifications.pushNotifications')}</p>
+                        <p className="text-sm text-gray-600">
+                          {t('notifications.pushNotificationsDesc')}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{t('common.inDevelopment')}</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSaveNotificationSettings}
+                  disabled={notificationSettingsLoading || notificationSettingsSaving}
+                >
+                  {notificationSettingsSaving && <Loader2 className="size-4 animate-spin" />}
+                  {t('settings.saveChanges')}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="support">
