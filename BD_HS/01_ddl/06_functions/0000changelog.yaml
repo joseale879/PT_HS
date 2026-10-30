@@ -1246,3 +1246,39 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: false
             stripComments: false
+
+  - changeSet:
+      id: 20261030-default-leak-detection-rule
+      author: HidroSmart
+      labels: "ddl,function,device,iot,leak-watch,alerts,defaults"
+      comment: "Adds an active 30-minute leak detection rule to existing and newly created homes."
+      changes:
+        - sqlFile:
+            path: 073_fn_default_leak_detection_rule.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/073_fn_default_leak_detection_rule.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+
+  - changeSet:
+      id: 20261030-sync-measurement-state-to-logical-group
+      author: HidroSmart
+      labels: "ddl,function,device,iot,measurement,logical-group"
+      comment: "Keeps leak-watch state consistent across the selectable IDs of one ESP32."
+      changes:
+        - sqlFile:
+            path: 074_fn_sync_measurement_state_to_logical_group.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/074_fn_sync_measurement_state_to_logical_group.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

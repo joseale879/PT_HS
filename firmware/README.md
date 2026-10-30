@@ -2,12 +2,15 @@
 
 ## Dispositivo lógico
 
-La placa usa un solo código lógico preasignado: `HS-7A3F91C8D2E4`. Cada muestra,
-estado y comando utiliza ese dispositivo. El `hardwareId` físico se obtiene
-del eFuse y se mantiene separado del código lógico.
+La placa puede seleccionar uno de cuatro códigos lógicos preasignados:
+`HS-7A3F91C8D2E4`, `HS-B6E04D79A153`, `HS-2C8A5F01E7B9` y
+`HS-141F47470968`. Publica telemetría en el ID activo y acepta comandos para
+cualquiera de los cuatro. El `hardwareId` físico se obtiene del eFuse y sigue
+siendo independiente del código lógico activo.
 
-La ACL del token de Flespi debe permitir publicar `telemetry` y `status` y
-suscribirse a `commands` para `HS-7A3F91C8D2E4`. El backend usa su propio token.
+La ACL del token de Flespi debe permitir publicar `telemetry` y `status` para
+el ID activo y suscribirse a `commands` para los cuatro IDs. El backend usa su
+propio token.
 
 Firmware Arduino/PlatformIO del sensor HidroSmart. Lee un caudalímetro,
 conserva redes Wi-Fi en NVS, se aprovisiona por BLE y publica telemetría MQTT.
