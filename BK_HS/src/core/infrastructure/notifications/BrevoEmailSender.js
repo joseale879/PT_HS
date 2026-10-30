@@ -7,8 +7,11 @@ class BrevoEmailSender {
 
   configurationStatus() {
     const missing = [];
-    if (typeof this.brevo.apiKey !== 'string' || !this.brevo.apiKey.trim()) {
+    const apiKey = typeof this.brevo.apiKey === 'string' ? this.brevo.apiKey.trim() : '';
+    if (!apiKey) {
       missing.push('BREVO_API_KEY');
+    } else if (/^xsmtpsib-/i.test(apiKey)) {
+      missing.push('BREVO_API_KEY (usa una API key; una clave SMTP no sirve para esta integracion)');
     }
     if (typeof this.brevo.fromEmail !== 'string' || !this.brevo.fromEmail.trim()) {
       missing.push('BREVO_FROM_EMAIL');
@@ -71,10 +74,20 @@ class BrevoEmailSender {
     }
 
     if (!response.ok) {
+      const providerMessage = typeof result.message === 'string'
+        ? result.message.slice(0, 240)
+        : 'No provider detail';
+      this.logger.error?.('[BREVO] Brevo rechazo el correo transaccional', {
+        httpStatus: response.status,
+        providerCode: result.code || null,
+        providerMessage
+      });
       const error = new Error(
         `Brevo rechazó el envío (HTTP ${response.status}): ${result.message || 'Error de envío'}`
       );
       error.status = 502;
+      error.code = result.code || 'BREVO_REJECTED';
+      error.providerStatus = response.status;
       throw error;
     }
 

@@ -110,6 +110,7 @@ uint32_t bootId = 0;
 float totalLiters = 0.0f;
 float lastPersistedTotalLiters = 0.0f;
 uint32_t pendingPulses = 0;
+float pendingFlowLiters = 0.0f;
 float pendingConsumptionLiters = 0.0f;
 float pendingSampleSeconds = 0.0f;
 String pendingTelemetryTimestamp;
@@ -129,7 +130,6 @@ portMUX_TYPE blePayloadMux = portMUX_INITIALIZER_UNLOCKED;
 bool bleLocked = false;
 bool linkedToHome = false;
 bool measurementEnabled = true;
-bool flowInterruptAttached = false;
 int8_t activeKnownNetworkIndex = -1;
 bool configButtonPressed = false;
 bool configButtonHandled = false;
@@ -142,6 +142,7 @@ void saveBleLock(bool locked);
 void saveLinkedToHome(bool linked);
 void saveMeasurementEnabled(bool enabled);
 void setMeasurementEnabled(bool enabled);
+bool publishPendingTelemetry();
 void applyBlePolicy();
 
 bool takePendingBlePayload(String& payload) {
@@ -443,42 +444,24 @@ void saveTotalLiters() {
 void setMeasurementEnabled(bool enabled) {
   if (measurementEnabled == enabled) return;
 
-  if (!enabled) {
-    if (flowInterruptAttached) {
-      detachInterrupt(digitalPinToInterrupt(HIDROSMART_FLOW_PIN));
-      flowInterruptAttached = false;
-    }
-    noInterrupts();
-    pulseCount = 0;
-    interrupts();
-    pendingPulses = 0;
-    pendingConsumptionLiters = 0.0f;
-    pendingSampleSeconds = 0.0f;
-    pendingTelemetrySequence = 0;
-    pendingTelemetryTimestamp = "";
-    saveTotalLiters();
-    measurementEnabled = false;
-    saveMeasurementEnabled(false);
-    Serial.println("[MEASUREMENT] Lectura pausada por comando remoto.");
+  if (pendingSampleSeconds > 0.0f && !publishPendingTelemetry()) {
+    Serial.println("[MEASUREMENT] Cambio rechazado: telemetria pendiente no enviada.");
     return;
   }
 
-  noInterrupts();
-  pulseCount = 0;
-  interrupts();
-  pendingPulses = 0;
-  pendingConsumptionLiters = 0.0f;
-  pendingSampleSeconds = 0.0f;
-  pendingTelemetrySequence = 0;
-  pendingTelemetryTimestamp = "";
-  lastSampleAt = millis();
+  if (!enabled) {
+    // Keep pulses available for leak detection while excluding them from the
+    // household metered total.
+    saveTotalLiters();
+    measurementEnabled = false;
+    saveMeasurementEnabled(false);
+    Serial.println("[MEASUREMENT] Conteo pausado; vigilancia de flujo activa.");
+    return;
+  }
+
   measurementEnabled = true;
   saveMeasurementEnabled(true);
-  if (!flowInterruptAttached) {
-    attachInterrupt(digitalPinToInterrupt(HIDROSMART_FLOW_PIN), onPulse, FALLING);
-    flowInterruptAttached = true;
-  }
-  Serial.println("[MEASUREMENT] Lectura reanudada por comando remoto.");
+  Serial.println("[MEASUREMENT] Conteo normal reanudado por comando remoto.");
 }
 
 bool synchronizeSystemTime() {
@@ -813,9 +796,9 @@ bool publishTelemetry(uint32_t pulses, float flowRateLpm, float consumptionLiter
       sizeof(payload),
       "{\"mqttMessageId\":\"%s\",\"deviceId\":\"%s\",\"hardwareId\":\"%s\",\"timestamp\":\"%s\","
       "\"flowRateLpm\":%.3f,\"consumptionLiters\":%.5f,\"totalLiters\":%.5f,"
-      "\"pulses\":%lu,\"sampleIntervalSeconds\":%.3f,\"wifiRssiDbm\":%ld,\"signalQuality\":%ld}",
+      "\"pulses\":%lu,\"sampleIntervalSeconds\":%.3f,\"measurementEnabled\":%s,\"wifiRssiDbm\":%ld,\"signalQuality\":%ld}",
       messageId.c_str(), logicalCode, hardwareId.c_str(), timestamp.c_str(), flowRateLpm,
-      consumptionLiters, totalLiters, pulses, intervalSeconds, static_cast<long>(WiFi.RSSI()),
+      consumptionLiters, totalLiters, pulses, intervalSeconds, measurementEnabled ? "true" : "false", static_cast<long>(WiFi.RSSI()),
       static_cast<long>(WiFi.RSSI())
     );
 
@@ -832,6 +815,19 @@ bool publishTelemetry(uint32_t pulses, float flowRateLpm, float consumptionLiter
     pendingTelemetryTimestamp = "";
   }
   return allPublished;
+}
+
+bool publishPendingTelemetry() {
+  if (pendingSampleSeconds <= 0.0f) return true;
+  const float pendingFlowRateLpm = pendingFlowLiters / (pendingSampleSeconds / 60.0f);
+  if (!publishTelemetry(pendingPulses, pendingFlowRateLpm, pendingConsumptionLiters, pendingSampleSeconds)) {
+    return false;
+  }
+  pendingPulses = 0;
+  pendingFlowLiters = 0.0f;
+  pendingConsumptionLiters = 0.0f;
+  pendingSampleSeconds = 0.0f;
+  return true;
 }
 
 void handleProvisioningPayload(const String& serialized) {
@@ -1096,10 +1092,7 @@ void setup() {
   Serial.println(deviceCode);
 
   pinMode(HIDROSMART_FLOW_PIN, INPUT);
-  if (measurementEnabled) {
-    attachInterrupt(digitalPinToInterrupt(HIDROSMART_FLOW_PIN), onPulse, FALLING);
-    flowInterruptAttached = true;
-  }
+  attachInterrupt(digitalPinToInterrupt(HIDROSMART_FLOW_PIN), onPulse, FALLING);
   pinMode(CONFIG_BUTTON_PIN, INPUT_PULLUP);
 
   mqttClient.setKeepAlive(HIDROSMART_MQTT_KEEPALIVE_SECONDS);
@@ -1146,11 +1139,6 @@ void loop() {
     mqttClient.loop();
   }
 
-  if (!measurementEnabled) {
-    delay(10);
-    return;
-  }
-
   if (now - lastSampleAt < HIDROSMART_SAMPLE_INTERVAL_MS) {
     delay(10);
     return;
@@ -1168,13 +1156,15 @@ void loop() {
   const float pulsesPerSecond = pulses / intervalSeconds;
   const float flowRateLpm = pulsesPerSecond / HIDROSMART_FLOW_FACTOR;
   const float consumptionLiters = flowRateLpm * intervalSeconds / 60.0f;
-  totalLiters += consumptionLiters;
+  const float meteredConsumptionLiters = measurementEnabled ? consumptionLiters : 0.0f;
+  if (measurementEnabled) totalLiters += consumptionLiters;
   pendingPulses += pulses;
-  pendingConsumptionLiters += consumptionLiters;
+  pendingFlowLiters += consumptionLiters;
+  pendingConsumptionLiters += meteredConsumptionLiters;
   pendingSampleSeconds += intervalSeconds;
 
-  if ((now - lastTotalSaveAt >= TOTAL_SAVE_INTERVAL_MS) ||
-      (totalLiters - lastPersistedTotalLiters >= TOTAL_SAVE_MIN_DELTA_LITERS)) {
+  if (measurementEnabled && ((now - lastTotalSaveAt >= TOTAL_SAVE_INTERVAL_MS) ||
+      (totalLiters - lastPersistedTotalLiters >= TOTAL_SAVE_MIN_DELTA_LITERS))) {
     saveTotalLiters();
   }
 
@@ -1182,8 +1172,8 @@ void loop() {
   Serial.print(pulses);
   Serial.print(" | Caudal: ");
   Serial.print(flowRateLpm, 3);
-  Serial.print(" L/min | Consumo intervalo: ");
-  Serial.print(consumptionLiters, 5);
+  Serial.print(" L/min | Consumo contabilizado: ");
+  Serial.print(meteredConsumptionLiters, 5);
   Serial.print(" L | Total: ");
   Serial.print(totalLiters, 5);
   Serial.println(" L");
@@ -1191,24 +1181,10 @@ void loop() {
   // La telemetria conserva el periodo de 5 segundos aunque el navegador siga
   // conectado por BLE. BLE y MQTT pueden trabajar en paralelo; pausar MQTT
   // aqui dejaba lecturas acumuladas y rompia la sincronizacion con el frontend.
-  if (mqttClient.connected() && pendingSampleSeconds > 0.0f) {
-    const float pendingFlowRateLpm = pendingConsumptionLiters / (pendingSampleSeconds / 60.0f);
-    const bool published = publishTelemetry(
-      pendingPulses,
-      pendingFlowRateLpm,
-      pendingConsumptionLiters,
-      pendingSampleSeconds
-    );
-    if (published) {
-      pendingPulses = 0;
-      pendingConsumptionLiters = 0.0f;
-      pendingSampleSeconds = 0.0f;
-    } else {
-      // PubSubClient may report a stale socket as connected. Force a fresh
-      // session so the normal retry path can recover instead of queuing data
-      // indefinitely behind a connection that cannot publish.
-      Serial.println("[MQTT] Publicacion fallida; cierro la sesion para reintentar.");
-      mqttClient.disconnect();
-    }
+  if (mqttClient.connected() && !publishPendingTelemetry()) {
+    // PubSubClient may report a stale socket as connected. Keep the reading
+    // pending and force a fresh session so the normal retry path can recover.
+    Serial.println("[MQTT] Publicacion fallida; cierro la sesion para reintentar.");
+    mqttClient.disconnect();
   }
 }

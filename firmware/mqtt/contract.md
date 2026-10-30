@@ -35,6 +35,7 @@ Publicada cada cinco segundos por defecto en `telemetry`:
   "totalLiters": 3.4,
   "pulses": 18,
   "sampleIntervalSeconds": 5,
+  "measurementEnabled": true,
   "wifiRssiDbm": -56,
   "signalQuality": -56
 }
@@ -42,6 +43,11 @@ Publicada cada cinco segundos por defecto en `telemetry`:
 
 No cambies `mqttMessageId` al reintentar exactamente la misma lectura. El
 backend lo usa para evitar duplicados.
+
+Con `measurementEnabled: false`, `flowRateLpm` y `pulses` siguen reflejando el
+sensor; `consumptionLiters` se envía como cero y `totalLiters` queda congelado.
+La base de datos usa el caudal/pulsos durante ese modo para evaluar la regla de
+fuga continua.
 
 El cálculo predeterminado del YF-S201 es:
 
@@ -67,7 +73,7 @@ El backend publica JSON en `commands`:
 { "command": "confirm_link" }
 ```
 
-Para pausar o reanudar la toma de lecturas, el backend envía:
+Para alternar entre el conteo normal y la vigilancia de fugas, el backend envía:
 
 ```json
 {
@@ -78,12 +84,12 @@ Para pausar o reanudar la toma de lecturas, el backend envía:
 }
 ```
 
-El ESP32 persiste el valor de `enabled`, detiene o reactiva la interrupción del
-caudalímetro y responde publicando su estado actualizado con
-`measurementEnabled`. Wi-Fi y MQTT permanecen conectados para poder reanudar
-la medición remotamente. El estado de la interfaz cambia cuando llega esa
-confirmación por `status`; la aceptación del publish MQTT por sí sola no
-confirma que la placa ejecutó la orden.
+El ESP32 persiste el valor de `enabled`, pero mantiene activa la interrupción del
+caudalímetro y sigue publicando lecturas cada cinco segundos. Con `enabled: false`,
+los litros dejan de sumarse al total del hogar; el caudal y los pulsos reales se
+siguen guardando para que el detector de flujo continuo pueda generar alertas de
+fuga. Wi-Fi y MQTT permanecen conectados. La interfaz refleja el modo confirmado
+por `status`; la aceptación del publish MQTT por sí sola no confirma la ejecución.
 
 | Comando | Efecto |
 | --- | --- |
@@ -91,7 +97,7 @@ confirma que la placa ejecutó la orden.
 | `unlink` | Elimina asociación, conserva Wi-Fi y vuelve a anunciar BLE. |
 | `enable_ble` | Habilita BLE para configuración. |
 | `disable_ble` | Solo se acepta si la placa ya está asociada. |
-| `set_measurement` | Pausa o reanuda las lecturas según el booleano `enabled`; no apaga la placa ni MQTT. |
+| `set_measurement` | `enabled: false` activa vigilancia: no suma litros al total, pero conserva lecturas de caudal/pulsos para fugas; `true` reanuda el conteo normal. No apaga la placa, el sensor ni MQTT. |
 
 ## BLE
 

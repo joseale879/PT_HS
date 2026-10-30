@@ -189,7 +189,11 @@ export function RegisterScreen({
         <div className="text-center md:text-left space-y-2 md:space-y-6">
           <div className="flex min-w-0 items-center justify-center md:justify-start gap-3 sm:gap-4">
             <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-blue-600 p-2 sm:size-24 sm:rounded-2xl sm:p-3">
-              <img src={logoImage} alt="HidroSmart Logo" className="size-10 object-contain sm:size-20" />
+              <img
+                src={logoImage}
+                alt="HidroSmart Logo"
+                className="size-10 object-contain sm:size-20"
+              />
             </div>
             <h1 className="min-w-0 break-words text-xl sm:text-5xl text-blue-900 hidrosmart-logo">
               {t('app.name')}

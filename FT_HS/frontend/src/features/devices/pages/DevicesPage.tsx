@@ -397,9 +397,12 @@ export function DeviceManagement({
     }
     if (
       bleAwaitingResponseRef.current &&
-      ['provisioning_complete', 'waiting_link_confirmation', 'wifi_failed', 'mqtt_unreachable'].includes(
-        reportedState
-      )
+      [
+        'provisioning_complete',
+        'waiting_link_confirmation',
+        'wifi_failed',
+        'mqtt_unreachable',
+      ].includes(reportedState)
     ) {
       bleAwaitingResponseRef.current = false;
       if (reportedState === 'provisioning_complete') {
@@ -977,38 +980,52 @@ export function DeviceManagement({
                         </div>
                       )}
                       <div className="iot-device-actions flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                        {canManageAssignedDevice && (() => {
-                          const measurementEnabled = device.measurementEnabled !== false;
-                          const online = device.connectivityStatus === 'ONLINE';
-                          return (
-                            <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                              <div className="flex flex-col gap-1">
-                                <span className="text-xs font-medium text-slate-600">
-                                  {t('devices.measurementState')}
-                                </span>
-                                <Badge variant={measurementEnabled ? 'default' : 'secondary'}>
-                                  {t(measurementEnabled ? 'devices.measurementActive' : 'devices.measurementPaused')}
-                                </Badge>
+                        {canManageAssignedDevice &&
+                          (() => {
+                            const measurementEnabled = device.measurementEnabled !== false;
+                            const online = device.connectivityStatus === 'ONLINE';
+                            return (
+                              <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-medium text-slate-600">
+                                    {t('devices.measurementState')}
+                                  </span>
+                                  <Badge variant={measurementEnabled ? 'default' : 'secondary'}>
+                                    {t(
+                                      measurementEnabled
+                                        ? 'devices.measurementActive'
+                                        : 'devices.measurementPaused'
+                                    )}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  variant={measurementEnabled ? 'destructive' : 'default'}
+                                  size="sm"
+                                  disabled={!online || commandingMeasurement === device.deviceId}
+                                  title={
+                                    !online ? t('devices.measurementDeviceOffline') : undefined
+                                  }
+                                  onClick={() => void toggleMeasurement(device)}
+                                >
+                                  {commandingMeasurement === device.deviceId ? (
+                                    <Loader2 className="mr-2 size-4 animate-spin" />
+                                  ) : measurementEnabled ? (
+                                    <Pause className="mr-2 size-4" />
+                                  ) : (
+                                    <Play className="mr-2 size-4" />
+                                  )}
+                                  {t(
+                                    measurementEnabled
+                                      ? 'devices.pauseMeasurement'
+                                      : 'devices.resumeMeasurement'
+                                  )}
+                                </Button>
+                                <p className="w-full text-xs leading-relaxed text-slate-500">
+                                  {t('devices.measurementMonitoringHint')}
+                                </p>
                               </div>
-                              <Button
-                                variant={measurementEnabled ? 'destructive' : 'default'}
-                                size="sm"
-                                disabled={!online || commandingMeasurement === device.deviceId}
-                                title={!online ? t('devices.measurementDeviceOffline') : undefined}
-                                onClick={() => void toggleMeasurement(device)}
-                              >
-                                {commandingMeasurement === device.deviceId ? (
-                                  <Loader2 className="mr-2 size-4 animate-spin" />
-                                ) : measurementEnabled ? (
-                                  <Pause className="mr-2 size-4" />
-                                ) : (
-                                  <Play className="mr-2 size-4" />
-                                )}
-                                {t(measurementEnabled ? 'devices.pauseMeasurement' : 'devices.resumeMeasurement')}
-                              </Button>
-                            </div>
-                          );
-                        })()}
+                            );
+                          })()}
                         {canManageAssignedDevice && (
                           <Button
                             className="flex-1"

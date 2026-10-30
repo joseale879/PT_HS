@@ -1228,3 +1228,21 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: false
             stripComments: false
+
+  - changeSet:
+      id: 20261028-leak-watch-detects-flow-with-metering-paused
+      author: HidroSmart
+      labels: "ddl,function,device,iot,measurement,leak-watch,alerts"
+      comment: "Detects continuous flow from pulses while metered consumption is paused, so leak alerts remain available."
+      changes:
+        - sqlFile:
+            path: 072_fn_leak_watch_measurement_paused.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/06_functions/072_fn_leak_watch_measurement_paused.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+            stripComments: false

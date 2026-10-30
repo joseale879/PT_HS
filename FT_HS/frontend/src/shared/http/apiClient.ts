@@ -912,6 +912,7 @@ export type AlertRule = {
 export type AlertRuleInput = Pick<AlertRule, 'alertType' | 'threshold' | 'unit'> & {
   active?: boolean;
 };
+
 export const alertsApi = {
   pending: (homeId: number | string) =>
     apiClient.get<{
@@ -937,8 +938,10 @@ export const alertsApi = {
   updateRule: (ruleId: number | string, payload: Partial<AlertRuleInput>) =>
     apiClient.patch<{ data: AlertRule }>(`/alerts/rules/${ruleId}`, payload),
   deleteRule: (ruleId: number | string) => apiClient.delete<void>(`/alerts/rules/${ruleId}`),
-  saveThresholds: (homeId: number | string, payload: { dailyLimit?: number; monthlyLimit?: number; active: boolean }) =>
-    apiClient.put<{ data: AlertThresholdConfiguration }>(`/alerts/home/${homeId}/thresholds`, payload),
+  saveThresholds: (
+    homeId: number | string,
+    payload: { dailyLimit?: number; monthlyLimit?: number; active: boolean }
+  ) => apiClient.put<{ data: AlertThresholdConfiguration }>(`/alerts/home/${homeId}/thresholds`, payload),
   deleteThresholds: (homeId: number | string) =>
     apiClient.delete<void>(`/alerts/home/${homeId}/thresholds`),
 };
@@ -957,6 +960,7 @@ export const goalsApi = {
   progress: (goalId: number | string) =>
     apiClient.get<{ data: unknown }>(`/goals/${goalId}/progress`),
   create: (payload: unknown) => apiClient.post<{ data: unknown }>('/goals', payload),
+  savePlan: (payload: unknown) => apiClient.put<{ data: unknown }>('/goals/plan', payload),
   update: (goalId: number | string, payload: unknown) =>
     apiClient.put<{ data: unknown }>(`/goals/${goalId}`, payload),
   remove: (goalId: number | string) => apiClient.delete<void>(`/goals/${goalId}`),

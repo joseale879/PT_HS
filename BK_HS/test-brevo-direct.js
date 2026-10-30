@@ -16,6 +16,13 @@ async function main() {
     return;
   }
 
+  if (/^xsmtpsib-/i.test(apiKey)) {
+    console.error('ERROR: BREVO_API_KEY contiene una clave SMTP.');
+    console.error('Usa una API key de Brevo para la API HTTPS.');
+    process.exitCode = 1;
+    return;
+  }
+
   const payload = {
     sender: { name: fromName, email: fromEmail },
     to: [{ email: toEmail }],

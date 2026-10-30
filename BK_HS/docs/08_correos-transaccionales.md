@@ -42,21 +42,22 @@ Estas plantillas existen en `NotificationService`, pero no se encontró una llam
 
 Los mensajes activos se construyen con una plantilla HTML común y una versión de texto plano. `BrevoEmailSender` los envía exclusivamente mediante la API HTTPS de Brevo.
 
-Las variables de configuración son `BREVO_API_KEY`, `BREVO_FROM_EMAIL` y `BREVO_FROM_NAME`. El emisor requiere una API key y un remitente; no usa Resend, SMTP ni Mailpit como alternativas. No se registran aquí valores ni credenciales.
+Las variables de configuración son `BREVO_API_KEY`, `BREVO_FROM_EMAIL` y `BREVO_FROM_NAME`. `BREVO_API_KEY` debe ser una API key v3 de Brevo; una clave SMTP no autentica esta integración. El remitente debe estar registrado y verificado en Brevo. El emisor no usa Resend, SMTP ni Mailpit como alternativas. No se registran aquí valores ni credenciales.
 
 En producción y al probar localmente se deben revisar las variables del backend y la actividad de correo en Brevo, sin copiar secretos a chats o documentación.
 
 ## Qué significa una respuesta exitosa
 
-En registro, reenvío de verificación y recuperación, la respuesta evita revelar si una dirección está asociada a una cuenta. Un `202 Accepted` confirma que la solicitud fue procesada, pero **no confirma que el correo haya sido entregado**. Si Brevo no está configurado, la recuperación devuelve un error de configuración; si Brevo rechaza el envío, el backend devuelve un error y debe revisarse su detalle en los logs.
+En registro, reenvío de verificación y recuperación, la respuesta evita revelar si una dirección está asociada a una cuenta. Un `202 Accepted` confirma que la solicitud fue procesada, pero **no confirma que se haya intentado ni entregado el correo**: si faltan variables, el caso de uso conserva la respuesta neutral; si Brevo rechaza el envío, revisa el error `[BREVO]` en Render.
 
 Para diagnosticar una entrega, comprobar:
 
 1. Que el navegador complete CSRF y revisar el estado de la solicitud a la API.
-2. Los logs del backend si Brevo devuelve un error.
-3. La actividad, el estado de entrega y los rebotes en Brevo.
-4. La carpeta de spam del destinatario.
-5. Que el enlace generado use el dominio publicado y abra `/login` con `resetToken`.
+2. En los logs de Render, buscar el detalle `[BREVO]` y el código HTTP de rechazo.
+3. En Render, comprobar `BREVO_API_KEY` (API key, no SMTP key), `BREVO_FROM_EMAIL` y `BREVO_FROM_NAME`.
+4. En Brevo, confirmar que el remitente esté registrado/verificado y que Transactional Email esté activo.
+5. Revisar la actividad, el estado de entrega y los rebotes en Brevo; luego la carpeta de spam del destinatario.
+6. Que el enlace generado use el dominio publicado y abra `/login` con `resetToken`.
 
 ## Referencias de implementación
 

@@ -17,6 +17,7 @@ test('MQTT persiste una lectura y descarta el duplicado en PostgreSQL', { skip: 
 
   try {
     await adminPool.query('DELETE FROM consumption.sensor_reading WHERE device_id = $1::uuid', [deviceId]);
+    await adminPool.query('DELETE FROM device.device_telemetry_history WHERE device_id = $1::uuid', [deviceId]);
     await adminPool.query('DELETE FROM home.home_device WHERE device_id = $1::uuid', [deviceId]);
     await adminPool.query('DELETE FROM device.device WHERE device_id = $1::uuid', [deviceId]);
     await adminPool.query('DELETE FROM home.home WHERE home_id = $1::uuid', [homeId]);
@@ -70,6 +71,7 @@ test('MQTT persiste una lectura y descarta el duplicado en PostgreSQL', { skip: 
   } finally {
     if (mqttClient) await new Promise((resolve) => mqttClient.end(true, resolve));
     await adminPool.query('DELETE FROM consumption.sensor_reading WHERE device_id = $1::uuid', [deviceId]);
+    await adminPool.query('DELETE FROM device.device_telemetry_history WHERE device_id = $1::uuid', [deviceId]);
     await adminPool.query('DELETE FROM home.home_device WHERE device_id = $1::uuid', [deviceId]);
     await adminPool.query('DELETE FROM device.device WHERE device_id = $1::uuid', [deviceId]);
     await adminPool.query('DELETE FROM home.home WHERE home_id = $1::uuid', [homeId]);
