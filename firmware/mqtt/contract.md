@@ -1,13 +1,17 @@
 # Contrato MQTT del ESP32
 
-## Un dispositivo lógico por placa
+## Un ID lógico activo por placa
 
-El ESP32 usa únicamente el código lógico `HS-7A3F91C8D2E4` y publica una
-lectura por intervalo en su tópico `telemetry`. El `hardwareId` derivado del
+El ESP32 selecciona un solo código lógico activo por vez entre
+`HS-7A3F91C8D2E4`, `HS-B6E04D79A153`, `HS-2C8A5F01E7B9` y
+`HS-141F47470968`, y publica cada lectura una sola vez en su tópico
+`telemetry`. Se suscribe a comandos de los cuatro códigos para que la orden de
+vigilancia llegue aunque cambie el ID activo. El `hardwareId` derivado del
 eFuse identifica la placa física y no sustituye el código lógico.
 
-La ACL Flespi del ESP32 debe permitir publicar `status` y `telemetry` y
-suscribirse a `commands` para ese código. El backend conserva un token separado.
+La ACL Flespi del ESP32 debe permitir publicar `status` y `telemetry` para los
+cuatro códigos y suscribirse a `commands` para los cuatro. El backend conserva
+un token separado.
 
 ## Topics
 
@@ -58,7 +62,7 @@ consumptionLiters = flowRateLpm × segundos / 60
 
 ## Estado
 
-El estado MQTT es retenido y contiene, entre otros, `deviceId`, `hardwareId`,
+El estado MQTT retenido del código activo contiene, entre otros, `deviceId`, `hardwareId`,
 `status`, `provisioningState`, `timestamp`, `firmwareVersion`, `lastIp`,
 `linkedToHome`, `measurementEnabled`, `bleLocked`, `ssid` y `wifiRssiDbm`.
 

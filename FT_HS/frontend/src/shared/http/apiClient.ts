@@ -889,6 +889,30 @@ export type AlertEvent = {
   dismissedAt?: string | null;
 };
 
+export type AlertThresholdConfiguration = {
+  configId?: string;
+  homeId: string;
+  dailyLimit: number | null;
+  monthlyLimit: number | null;
+  active: boolean;
+  updatedAt?: string;
+};
+
+export type AlertRule = {
+  ruleId: string;
+  homeId: string;
+  alertType: 'excessive_consumption' | 'leak_detected' | 'monthly_limit' | 'daily_limit' | 'no_reading';
+  threshold: number;
+  unit: 'm3_day' | 'm3_month' | 'minutes';
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AlertRuleInput = Pick<AlertRule, 'alertType' | 'threshold' | 'unit'> & {
+  active?: boolean;
+};
+
 export const alertsApi = {
   pending: (homeId: number | string) =>
     apiClient.get<{
@@ -900,22 +924,24 @@ export const alertsApi = {
       };
     }>(`/alerts/home/${homeId}/pending`),
   rules: (homeId: number | string) =>
-    apiClient.get<{ data: unknown[] }>(`/alerts/home/${homeId}/rules`),
+    apiClient.get<{ data: AlertRule[] }>(`/alerts/home/${homeId}/rules`),
   thresholds: (homeId: number | string) =>
-    apiClient.get<{ data: unknown }>(`/alerts/home/${homeId}/thresholds`),
+    apiClient.get<{ data: AlertThresholdConfiguration | null }>(`/alerts/home/${homeId}/thresholds`),
   history: (homeId: number | string, query = '') =>
     apiClient.get<{ data: AlertEvent[]; pagination: CollectionPagination }>(
       `/alerts/home/${homeId}/history${query ? `?${query}` : ''}`
     ),
   updateStatus: (alertId: number | string, status: string) =>
     apiClient.patch<{ data: unknown }>(`/alerts/${alertId}/status`, { status }),
-  createRule: (homeId: number | string, payload: unknown) =>
-    apiClient.post<{ data: unknown }>(`/alerts/home/${homeId}/rules`, payload),
-  updateRule: (ruleId: number | string, payload: unknown) =>
-    apiClient.patch<{ data: unknown }>(`/alerts/rules/${ruleId}`, payload),
+  createRule: (homeId: number | string, payload: AlertRuleInput) =>
+    apiClient.post<{ data: AlertRule }>(`/alerts/home/${homeId}/rules`, payload),
+  updateRule: (ruleId: number | string, payload: Partial<AlertRuleInput>) =>
+    apiClient.patch<{ data: AlertRule }>(`/alerts/rules/${ruleId}`, payload),
   deleteRule: (ruleId: number | string) => apiClient.delete<void>(`/alerts/rules/${ruleId}`),
-  saveThresholds: (homeId: number | string, payload: unknown) =>
-    apiClient.put<{ data: unknown }>(`/alerts/home/${homeId}/thresholds`, payload),
+  saveThresholds: (
+    homeId: number | string,
+    payload: { dailyLimit?: number; monthlyLimit?: number; active: boolean }
+  ) => apiClient.put<{ data: AlertThresholdConfiguration }>(`/alerts/home/${homeId}/thresholds`, payload),
   deleteThresholds: (homeId: number | string) =>
     apiClient.delete<void>(`/alerts/home/${homeId}/thresholds`),
 };
@@ -934,6 +960,7 @@ export const goalsApi = {
   progress: (goalId: number | string) =>
     apiClient.get<{ data: unknown }>(`/goals/${goalId}/progress`),
   create: (payload: unknown) => apiClient.post<{ data: unknown }>('/goals', payload),
+  savePlan: (payload: unknown) => apiClient.put<{ data: unknown }>('/goals/plan', payload),
   update: (goalId: number | string, payload: unknown) =>
     apiClient.put<{ data: unknown }>(`/goals/${goalId}`, payload),
   remove: (goalId: number | string) => apiClient.delete<void>(`/goals/${goalId}`),

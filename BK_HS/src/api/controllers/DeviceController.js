@@ -1,6 +1,7 @@
 const { randomUUID } = require("node:crypto");
 const {
   DeviceResponse,
+  effectiveConnectivityStatus,
 } = require("../../core/application/dtos/responses/DeviceResponse");
 const {
   RegisterDeviceRequest,
@@ -147,7 +148,7 @@ class DeviceController {
       data: {
         deviceId: device.id,
         status: device.status,
-        connectivityStatus: device.connectivityStatus,
+        connectivityStatus: effectiveConnectivityStatus(device),
         firmwareVersion: device.firmwareVersion,
         lastConnectionAt: device.lastConnectionAt,
         lastIp: device.lastIp,
@@ -197,7 +198,7 @@ class DeviceController {
       userId: req.user.id,
       deviceId: req.params.deviceId,
     });
-    if (device.connectivityStatus !== "ONLINE") {
+    if (effectiveConnectivityStatus(device) !== "ONLINE") {
       return res.status(409).json({ error: "El dispositivo debe estar en línea para recibir la orden" });
     }
     if (!this.deviceCommandPublisher || !this.deviceCommandsTopic) {
