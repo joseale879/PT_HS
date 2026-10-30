@@ -8,6 +8,7 @@ export {
   homesApi,
   devicesApi,
   consumptionApi,
+  recommendationsApi,
   alertsApi,
   tariffApi,
   goalsApi,
@@ -16,3 +17,5 @@ export {
   supportApi,
   auditApi,
 } from './apiClient';
+
+export type { Recommendation, RecommendationSummary } from './apiClient';

@@ -556,3 +556,21 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20261029-saving-goal-daily-period
+      author: HidroSmart
+      labels: "ddl,alter,goals,daily-period,budget"
+      comment: "Allows zero-consumption goals and persists daily goal periods."
+      changes:
+        - sqlFile:
+            path: 035_saving_goal_daily_period.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/01_ddl/04_alter/035_saving_goal_daily_period.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false

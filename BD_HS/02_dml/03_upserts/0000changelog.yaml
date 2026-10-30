@@ -106,3 +106,21 @@ databaseChangeLog:
             relativeToChangelogFile: true
             splitStatements: true
             stripComments: false
+
+  - changeSet:
+      id: 20261030-restore-four-esp32-logical-ids
+      author: HidroSmart
+      labels: "dml,device,iot,provisioning,logical-group"
+      comment: "Reactivates four selectable logical aliases for one physical ESP32."
+      changes:
+        - sqlFile:
+            path: 007_restore_four_esp32_logical_ids.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+      rollback:
+        - sqlFile:
+            path: ../../05_rollbacks/02_dml/03_upserts/007_restore_four_esp32_logical_ids.rollback.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
