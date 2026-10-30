@@ -20,6 +20,55 @@ type Goal = {
   achieved?: boolean;
 };
 
+type GoalPeriod = 'daily' | 'weekly' | 'monthly';
+
+type BudgetAllowance = {
+  remainingBudget: number;
+  remainingLiters: number;
+  monthlyLiters: number;
+  dailyLiters: number;
+  weeklyLiters: number;
+};
+
+function calculateBudgetAllowance(
+  budgetValue: string,
+  status: BudgetStatus | null
+): BudgetAllowance | null {
+  const budget = Number(budgetValue);
+  const tariff = Number(status?.tariffM3 || 0);
+  if (!budgetValue.trim() || !Number.isFinite(budget) || budget < 0 || tariff <= 0 || !status) {
+    return null;
+  }
+
+  const remainingBudget = Math.max(budget - Number(status.currentCost || 0), 0);
+  const remainingLiters = (remainingBudget / tariff) * 1000;
+  const remainingDays = Math.max(status.daysInMonth - status.dayOfMonth + 1, 1);
+  const dailyLiters = remainingLiters / remainingDays;
+  return {
+    remainingBudget,
+    remainingLiters,
+    monthlyLiters: remainingLiters,
+    dailyLiters,
+    weeklyLiters: Math.min(remainingLiters, dailyLiters * 7),
+  };
+}
+
+function getPeriodLiters(
+  selectedPeriod: GoalPeriod,
+  allowance: BudgetAllowance | null,
+  status: BudgetStatus | null
+) {
+  if (allowance) return allowance[`${selectedPeriod}Liters`];
+  if (!status) return 0;
+  if (selectedPeriod === 'daily') return status.expectedDailyLiters;
+  if (selectedPeriod === 'weekly') return status.expectedWeeklyLiters;
+  return status.expectedMonthlyLiters;
+}
+
+function toM3Input(liters: number) {
+  return String(Number((liters / 1000).toFixed(4)));
+}
+
 export function GoalsConfig({ homeId }: { homeId?: string }) {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [progressByGoal, setProgressByGoal] = useState<Record<string, number>>({});
@@ -27,55 +76,96 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
   const [consumptionLimit, setConsumptionLimit] = useState('');
   const [budgetLimit, setBudgetLimit] = useState('');
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatus | null>(null);
-  const [period, setPeriod] = useState<'monthly' | 'weekly' | 'annual'>('monthly');
+  const [period, setPeriod] = useState<GoalPeriod>('monthly');
+  const [saving, setSaving] = useState(false);
 
-  const load = () => {
+  const load = async () => {
     if (!homeId) return;
     const now = new Date();
     const from = localDate(new Date(now.getFullYear(), now.getMonth(), 1));
     const to = localDate(now);
-    Promise.all([
-      goalsApi.list(homeId),
-      consumptionApi.summary(new URLSearchParams({ homeId, from, to }).toString()),
-      consumptionApi.budgetStatus(new URLSearchParams({ homeId }).toString()),
-    ])
-      .then(async ([goalResponse, summaryResponse, budgetResponse]) => {
-        const loaded = goalResponse.data as Goal[];
-        const progressResponses = await Promise.all(
-          loaded.map((goal) => goalsApi.progress(goal.goalId).catch(() => null))
-        );
-        const nextProgress: Record<string, number> = {};
-        progressResponses.forEach((response, index) => {
-          const progress = Number((response?.data as { progress?: number } | undefined)?.progress);
-          if (Number.isFinite(progress)) nextProgress[loaded[index].goalId] = progress;
-        });
-        const active = loaded.find((goal) => goal.type === 'monthly') || loaded[0];
-        setGoals(loaded);
-        setProgressByGoal(nextProgress);
-        setConsumption(Number(summaryResponse.data.totalM3 || 0));
-        setBudgetStatus(budgetResponse.data);
-        setConsumptionLimit(
-          active
-            ? String(active.targetM3)
-            : budgetResponse.data
-              ? String(budgetResponse.data.expectedMonthlyLiters / 1000)
-              : ''
-        );
-        setBudgetLimit(active?.targetBudget != null ? String(active.targetBudget) : '');
-        setPeriod(active?.type === 'weekly' || active?.type === 'annual' ? active.type : 'monthly');
-      })
-      .catch((error) =>
-        toast.error(error instanceof Error ? error.message : 'No se pudieron cargar las metas')
+    try {
+      const [goalResponse, summaryResponse, budgetResponse] = await Promise.all([
+        goalsApi.list(homeId),
+        consumptionApi.summary(new URLSearchParams({ homeId, from, to }).toString()),
+        consumptionApi.budgetStatus(new URLSearchParams({ homeId }).toString()),
+      ]);
+      const loaded = goalResponse.data as Goal[];
+      const progressResponses = await Promise.all(
+        loaded.map((goal) => goalsApi.progress(goal.goalId).catch(() => null))
       );
+      const nextProgress: Record<string, number> = {};
+      progressResponses.forEach((response, index) => {
+        const progress = Number((response?.data as { progress?: number } | undefined)?.progress);
+        if (Number.isFinite(progress)) nextProgress[loaded[index].goalId] = progress;
+      });
+
+      const today = localDate(new Date());
+      const isCurrentGoal = (goal: Goal) =>
+        goal.periodStart.slice(0, 10) <= today &&
+        (!goal.periodEnd || goal.periodEnd.slice(0, 10) >= today);
+      const active = loaded.find(
+        (goal) =>
+          ['daily', 'weekly', 'monthly'].includes(goal.type) && isCurrentGoal(goal)
+      );
+      const activePeriod: GoalPeriod =
+        active?.type === 'daily' || active?.type === 'weekly' ? active.type : 'monthly';
+      const activeMonthly = loaded.find(
+        (goal) => goal.type === 'monthly' && isCurrentGoal(goal)
+      );
+      const currentBudget =
+        budgetResponse.data?.monthlyBudget ?? activeMonthly?.targetBudget ?? null;
+      const budgetValue = currentBudget == null ? '' : String(currentBudget);
+      const loadedAllowance = calculateBudgetAllowance(budgetValue, budgetResponse.data);
+
+      setGoals(loaded);
+      setProgressByGoal(nextProgress);
+      setConsumption(Number(summaryResponse.data.totalM3 || 0));
+      setBudgetStatus(budgetResponse.data);
+      setPeriod(activePeriod);
+      setBudgetLimit(budgetValue);
+      setConsumptionLimit(
+        active
+          ? String(active.targetM3)
+          : toM3Input(getPeriodLiters(activePeriod, loadedAllowance, budgetResponse.data))
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudieron cargar las metas');
+    }
   };
 
   useEffect(() => {
-    load();
+    void load();
   }, [homeId]);
 
+  const budgetAllowance = calculateBudgetAllowance(budgetLimit, budgetStatus);
+  const referenceDailyLiters =
+    budgetAllowance?.dailyLiters ?? budgetStatus?.expectedDailyLiters ?? 0;
+  const referenceWeeklyLiters =
+    budgetAllowance?.weeklyLiters ?? budgetStatus?.expectedWeeklyLiters ?? 0;
+  const referenceMonthlyLiters =
+    budgetAllowance?.monthlyLiters ?? budgetStatus?.expectedMonthlyLiters ?? 0;
+
+  const selectPeriod = (nextPeriod: GoalPeriod) => {
+    setPeriod(nextPeriod);
+    setConsumptionLimit(toM3Input(getPeriodLiters(nextPeriod, budgetAllowance, budgetStatus)));
+  };
+
+  const updateBudget = (value: string) => {
+    setBudgetLimit(value);
+    const nextAllowance = calculateBudgetAllowance(value, budgetStatus);
+    setConsumptionLimit(toM3Input(getPeriodLiters(period, nextAllowance, budgetStatus)));
+  };
+
   const save = async () => {
-    if (!homeId || Number(consumptionLimit) <= 0) {
-      toast.error('El límite de consumo debe ser mayor que cero');
+    const targetM3 = Number(consumptionLimit);
+    if (!homeId || !consumptionLimit.trim() || !Number.isFinite(targetM3) || targetM3 < 0) {
+      toast.error('Ingresa un límite de consumo válido');
+      return;
+    }
+    const requestedBudget = budgetLimit.trim() ? Number(budgetLimit) : null;
+    if (requestedBudget != null && (!Number.isFinite(requestedBudget) || requestedBudget < 0)) {
+      toast.error('Ingresa un presupuesto válido');
       return;
     }
     const date = new Date();
@@ -85,26 +175,38 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
       return `${value.getFullYear()}-${month}-${day}`;
     };
     const periodStart = formatDate(date);
+    const monthStartDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    const monthEndDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
     const periodEndDate = new Date(date);
-    if (period === 'weekly') periodEndDate.setDate(periodEndDate.getDate() + 7);
-    if (period === 'monthly') periodEndDate.setMonth(periodEndDate.getMonth() + 1);
-    if (period === 'annual') periodEndDate.setFullYear(periodEndDate.getFullYear() + 1);
+    if (period === 'weekly') {
+      periodEndDate.setDate(Math.min(date.getDate() + 6, monthEndDate.getDate()));
+    }
+    if (period === 'monthly') periodEndDate.setTime(monthEndDate.getTime());
     const periodEnd = formatDate(periodEndDate);
-    const existing = goals.find((goal) => goal.type === period);
+    const monthStart = formatDate(monthStartDate);
+    const monthEnd = formatDate(monthEndDate);
+    const monthlyTargetM3 =
+      (budgetAllowance?.monthlyLiters ?? budgetStatus?.expectedMonthlyLiters ?? 0) / 1000;
     const payload = {
+      homeId,
       type: period,
-      targetM3: Number(consumptionLimit),
-      targetBudget: budgetLimit ? Number(budgetLimit) : null,
+      targetM3,
+      targetBudget: requestedBudget,
       periodStart,
       periodEnd,
+      monthlyTargetM3,
+      monthStart,
+      monthEnd,
     };
     try {
-      if (existing) await goalsApi.update(existing.goalId, payload);
-      else await goalsApi.create({ homeId, ...payload });
+      setSaving(true);
+      await goalsApi.savePlan(payload);
       toast.success('Meta guardada correctamente');
-      load();
+      await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar la meta');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -130,31 +232,29 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
           <CardHeader>
             <CardTitle>Referencia del hogar</CardTitle>
             <CardDescription>
-              Calculada con {budgetStatus.peopleCount} persona(s), {budgetStatus.daysInMonth} dias
-              del mes y{' '}
-              {budgetStatus.referenceSource === 'HOME_HISTORY'
-                ? `${budgetStatus.historyDays} dias de historial propio.`
-                : 'la referencia inicial.'}
+              {budgetAllowance
+                ? 'Calculada según el presupuesto, la tarifa y los días restantes del mes.'
+                : `Calculada con ${budgetStatus.peopleCount} persona(s), ${budgetStatus.daysInMonth} días del mes y ${budgetStatus.referenceSource === 'HOME_HISTORY' ? `${budgetStatus.historyDays} días de historial propio.` : 'la referencia inicial.'}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Referencia diaria</p>
-              <p className="text-xl">{budgetStatus.expectedDailyLiters.toFixed(0)} L</p>
+              <p className="text-xl">{referenceDailyLiters.toFixed(0)} L</p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Referencia semanal</p>
-              <p className="text-xl">{budgetStatus.expectedWeeklyLiters.toFixed(0)} L</p>
+              <p className="text-xl">{referenceWeeklyLiters.toFixed(0)} L</p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Referencia mensual</p>
-              <p className="text-xl">{(budgetStatus.expectedMonthlyLiters / 1000).toFixed(2)} m³</p>
+              <p className="text-xl">{(referenceMonthlyLiters / 1000).toFixed(2)} m³</p>
             </div>
           </CardContent>
         </Card>
       )}
-      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
-        <Card>
+      <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2">
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>
               <Droplets className="mr-2 inline size-5 text-blue-600" />
@@ -173,30 +273,30 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
             />
             <div className="flex gap-2">
               <Button
+                variant={period === 'daily' ? 'default' : 'outline'}
+                onClick={() => selectPeriod('daily')}
+              >
+                Diario
+              </Button>
+              <Button
                 variant={period === 'weekly' ? 'default' : 'outline'}
-                onClick={() => setPeriod('weekly')}
+                onClick={() => selectPeriod('weekly')}
               >
                 Semanal
               </Button>
               <Button
                 variant={period === 'monthly' ? 'default' : 'outline'}
-                onClick={() => setPeriod('monthly')}
+                onClick={() => selectPeriod('monthly')}
               >
                 Mensual
-              </Button>
-              <Button
-                variant={period === 'annual' ? 'default' : 'outline'}
-                onClick={() => setPeriod('annual')}
-              >
-                Anual
               </Button>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>Presupuesto</CardTitle>
-            <CardDescription>Opcional, asociado a la misma meta.</CardDescription>
+          <CardDescription>Presupuesto mensual para calcular el consumo disponible.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Label htmlFor="goal-budget">Límite monetario</Label>
@@ -205,10 +305,10 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
               type="number"
               min="0"
               value={budgetLimit}
-              onChange={(event) => setBudgetLimit(event.target.value)}
+              onChange={(event) => updateBudget(event.target.value)}
             />
-            <Button className="w-full" onClick={save}>
-              Guardar meta
+            <Button className="w-full" onClick={save} disabled={saving || !homeId}>
+              {saving ? 'Guardando…' : 'Guardar meta'}
             </Button>
             {budgetStatus && (
               <div className="space-y-1 rounded-lg border bg-gray-50 p-3 text-sm">
@@ -223,9 +323,13 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
                 <p>
                   Litros restantes segun presupuesto:{' '}
                   <strong>
-                    {budgetStatus.remainingLiters == null
-                      ? 'Configura un presupuesto'
-                      : `${budgetStatus.remainingLiters.toFixed(0)} L`}
+                    {budgetAllowance
+                      ? `${budgetAllowance.remainingLiters.toFixed(0)} L`
+                      : budgetLimit.trim()
+                        ? budgetStatus.tariffM3 > 0
+                          ? 'Calculando…'
+                          : 'No hay tarifa vigente'
+                        : 'Configura un presupuesto'}
                   </strong>
                 </p>
                 <p className="text-xs text-gray-500">

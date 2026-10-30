@@ -652,11 +652,17 @@ body,
     grid-template-columns: repeat(4, minmax(0, 1fr));
     overflow: visible;
   }
+
+  [data-slot='tabs-list'].settings-tabs-carousel [data-slot='tabs-trigger'] {
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
+  }
 }
 
 @media (min-width: 1024px) {
   [data-slot='tabs-list'].settings-tabs-carousel {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

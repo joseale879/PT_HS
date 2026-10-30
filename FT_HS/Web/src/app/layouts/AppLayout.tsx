@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Home,
   BarChart3,
+  Lightbulb,
   Bell,
   Settings,
   Building2,
@@ -45,6 +46,7 @@ import { DashboardHome } from '@features/dashboard/pages/DashboardPage';
 import { HomeManagement } from '@features/homes/pages/HomesPage';
 import { DeviceManagement } from '@features/devices/pages/DevicesPage';
 import { ReportsAnalytics } from '@features/reports/pages/ReportsPage';
+import { RecommendationsPage } from '@features/recommendations/pages/RecommendationsPage';
 import { NotificationsPanel } from '@features/alerts/pages/AlertsPage';
 import { AccountSettings } from '@features/settings/pages/SettingsPage';
 import { GoalsConfig } from '@features/goals/pages/GoalsPage';
@@ -73,6 +75,7 @@ const viewPaths: Record<string, string> = {
   homes: '/app/homes',
   devices: '/app/devices',
   reports: '/app/reports',
+  recommendations: '/app/recommendations',
   goals: '/app/goals',
   notifications: '/app/alerts',
   support: '/app/support',
@@ -186,6 +189,13 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
         ariaLabel: t('nav.reports'),
       },
       {
+        id: 'recommendations',
+        label: t('nav.recommendations'),
+        icon: Lightbulb,
+        requiredPermission: 'reports.read',
+        ariaLabel: t('nav.recommendations'),
+      },
+      {
         id: 'goals',
         label: t('nav.goals'),
         icon: Target,
@@ -296,6 +306,8 @@ export function DashboardLayout({ session, onLogout }: DashboardLayoutProps) {
         return <DeviceManagement permissions={session.permissions} homeId={selectedHomeId} homes={homes} onHomeChange={setSelectedHomeId} />;
       case 'reports':
         return <ReportsAnalytics homeId={selectedHomeId} />;
+      case 'recommendations':
+        return <RecommendationsPage homeId={selectedHomeId} />;
       case 'goals':
         return <GoalsConfig homeId={selectedHomeId} />;
       case 'notifications':
