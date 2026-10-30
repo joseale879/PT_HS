@@ -960,11 +960,9 @@ export function DeviceManagement({
                             pendingMeasurement[device.deviceId] !== undefined;
                           const measurementButtonLabel = waitingForConfirmation
                             ? 'devices.measurementWaiting'
-                            : !online
-                              ? 'devices.configureWifiBluetooth'
-                              : measurementEnabled
-                                ? 'devices.pauseMeasurement'
-                                : 'devices.resumeMeasurement';
+                            : measurementEnabled
+                              ? 'devices.pauseMeasurement'
+                              : 'devices.resumeMeasurement';
                           return (
                             <div className="iot-measurement-panel flex min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -980,47 +978,48 @@ export function DeviceManagement({
                                     )}
                                   </Badge>
                                 </div>
-                                <Button
-                                  className="w-full sm:w-auto"
-                                  variant={
-                                    !online
-                                      ? 'outline'
-                                      : measurementEnabled
-                                        ? 'destructive'
-                                        : 'default'
-                                  }
-                                  size="sm"
-                                  disabled={
-                                    waitingForConfirmation ||
-                                    commandingMeasurement === device.deviceId ||
-                                    (!online && bleConnecting)
-                                  }
-                                  title={
-                                    !online ? t('devices.measurementDeviceOffline') : undefined
-                                  }
-                                  onClick={() =>
-                                    online
-                                      ? void toggleMeasurement(device)
-                                      : openProvisioningAndConnectBle(device)
-                                  }
-                                >
-                                  {waitingForConfirmation ? (
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                  ) : !online ? (
-                                    bleConnecting ? (
+                                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                                  <Button
+                                    className="w-full sm:w-auto"
+                                    variant={measurementEnabled ? 'destructive' : 'default'}
+                                    size="sm"
+                                    disabled={
+                                      !online ||
+                                      waitingForConfirmation ||
+                                      commandingMeasurement === device.deviceId
+                                    }
+                                    title={
+                                      !online ? t('devices.measurementDeviceOffline') : undefined
+                                    }
+                                    onClick={() => void toggleMeasurement(device)}
+                                  >
+                                    {waitingForConfirmation ||
+                                    commandingMeasurement === device.deviceId ? (
                                       <Loader2 className="mr-2 size-4 animate-spin" />
+                                    ) : measurementEnabled ? (
+                                      <Pause className="mr-2 size-4" />
                                     ) : (
-                                      <Bluetooth className="mr-2 size-4" />
-                                    )
-                                  ) : commandingMeasurement === device.deviceId ? (
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                  ) : measurementEnabled ? (
-                                    <Pause className="mr-2 size-4" />
-                                  ) : (
-                                    <Play className="mr-2 size-4" />
+                                      <Play className="mr-2 size-4" />
+                                    )}
+                                    {t(measurementButtonLabel)}
+                                  </Button>
+                                  {!online && (
+                                    <Button
+                                      className="w-full sm:w-auto"
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={bleConnecting}
+                                      onClick={() => openProvisioningAndConnectBle(device)}
+                                    >
+                                      {bleConnecting ? (
+                                        <Loader2 className="mr-2 size-4 animate-spin" />
+                                      ) : (
+                                        <Bluetooth className="mr-2 size-4" />
+                                      )}
+                                      {t('devices.configureWifiBluetooth')}
+                                    </Button>
                                   )}
-                                  {t(measurementButtonLabel)}
-                                </Button>
+                                </div>
                               </div>
                               <p className="text-xs leading-relaxed text-slate-500">
                                 {online
