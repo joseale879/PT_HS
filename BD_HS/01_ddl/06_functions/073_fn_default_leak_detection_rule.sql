@@ -10,8 +10,7 @@ SELECT h.home_id, 'leak_detected', 30, 'minutes', TRUE, NULL
         WHERE existing_rule.home_id = h.home_id
           AND existing_rule.alert_type = 'leak_detected'
           AND existing_rule.active = TRUE
-   )
-ON CONFLICT (home_id, alert_type) WHERE active = TRUE DO NOTHING;
+   );
 
 -- Keep the default rule active for homes created after this migration.
 CREATE OR REPLACE FUNCTION home.fn_create_home_with_billing_profile(
