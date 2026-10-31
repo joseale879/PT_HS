@@ -70,9 +70,11 @@ const ReportsAnalytics = lazy(() =>
   }))
 );
 const RecommendationsPage = lazy(() =>
-  import('@features/recommendations/pages/RecommendationsPage').then(({ RecommendationsPage: component }) => ({
-    default: component,
-  }))
+  import('@features/recommendations/pages/RecommendationsPage').then(
+    ({ RecommendationsPage: component }) => ({
+      default: component,
+    })
+  )
 );
 const NotificationsPanel = lazy(() =>
   import('@features/alerts/pages/AlertsPage').then(({ NotificationsPanel: component }) => ({

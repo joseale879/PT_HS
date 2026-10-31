@@ -23,7 +23,12 @@ const customAlertOptions: Array<{
   unit: AlertRule['unit'];
   unitLabel: string;
 }> = [
-  { type: 'excessive_consumption', label: 'Consumo diario elevado', unit: 'm3_day', unitLabel: 'm³/día' },
+  {
+    type: 'excessive_consumption',
+    label: 'Consumo diario elevado',
+    unit: 'm3_day',
+    unitLabel: 'm³/día',
+  },
   { type: 'leak_detected', label: 'Posible fuga', unit: 'minutes', unitLabel: 'minutos' },
   { type: 'no_reading', label: 'Sin lecturas del sensor', unit: 'minutes', unitLabel: 'minutos' },
 ];
@@ -34,13 +39,15 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
   const { homes } = useActiveHome();
   const currentHome = homes.find((home) => home.homeId === homeId);
   const canManage = currentHome?.homeRole !== 'Member' && currentHome?.homeRole !== 'Guest';
-  const [alerts, setAlerts] = useState<Array<{
-    alertId: string;
-    message?: string | null;
-    detectedValue?: number | null;
-    generatedAt: string;
-    status: string;
-  }>>([]);
+  const [alerts, setAlerts] = useState<
+    Array<{
+      alertId: string;
+      message?: string | null;
+      detectedValue?: number | null;
+      generatedAt: string;
+      status: string;
+    }>
+  >([]);
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [savedThresholds, setSavedThresholds] = useState<AlertThresholdConfiguration | null>(null);
   const [dailyLimit, setDailyLimit] = useState('');
@@ -105,7 +112,9 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
       toast.error('Ingresa al menos un límite diario o mensual.');
       return;
     }
-    if ([daily, monthly].some((value) => value !== null && (!Number.isFinite(value) || value < 0))) {
+    if (
+      [daily, monthly].some((value) => value !== null && (!Number.isFinite(value) || value < 0))
+    ) {
       toast.error('Los límites deben ser números mayores o iguales a cero.');
       return;
     }
@@ -130,7 +139,12 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
     if (!homeId) return;
     const option = customAlertOptions.find(({ type }) => type === newRuleType);
     const threshold = Number(newRuleThreshold);
-    if (!option || !Number.isFinite(threshold) || threshold < 0 || (option.unit === 'minutes' && threshold === 0)) {
+    if (
+      !option ||
+      !Number.isFinite(threshold) ||
+      threshold < 0 ||
+      (option.unit === 'minutes' && threshold === 0)
+    ) {
       toast.error('Revisa el valor de la regla antes de guardarla.');
       return;
     }
@@ -189,7 +203,9 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
     }
   };
 
-  const displayedRules = rules.filter((rule) => customRuleTypes.has(rule.alertType as CustomAlertType));
+  const displayedRules = rules.filter((rule) =>
+    customRuleTypes.has(rule.alertType as CustomAlertType)
+  );
   const availableRuleOptions = customAlertOptions.filter(
     ({ type }) => !rules.some((rule) => rule.alertType === type && rule.active)
   );
@@ -200,7 +216,9 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Alertas</CardTitle>
-          <CardDescription>Selecciona un hogar para consultar y configurar sus alertas.</CardDescription>
+          <CardDescription>
+            Selecciona un hogar para consultar y configurar sus alertas.
+          </CardDescription>
         </CardHeader>
       </Card>
     );
@@ -214,13 +232,17 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
             <Bell className="mr-2 inline size-5" />
             Alertas
           </CardTitle>
-          <CardDescription>Consulta los avisos y configura los límites de consumo del hogar.</CardDescription>
+          <CardDescription>
+            Consulta los avisos y configura los límites de consumo del hogar.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Pendientes</p>
-              <p className="text-2xl">{pendingCount ?? alerts.filter((alert) => alert.status === 'Pending').length}</p>
+              <p className="text-2xl">
+                {pendingCount ?? alerts.filter((alert) => alert.status === 'Pending').length}
+              </p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Límite diario</p>
@@ -241,7 +263,9 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Umbrales de consumo</CardTitle>
-          <CardDescription>Las reglas diarias y mensuales se actualizan junto con estos valores.</CardDescription>
+          <CardDescription>
+            Las reglas diarias y mensuales se actualizan junto con estos valores.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -282,9 +306,16 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
             />
             Activar alertas por límites de consumo
           </label>
-          {!canManage && <p className="text-sm text-gray-500">Solo el titular del hogar puede cambiar esta configuración.</p>}
+          {!canManage && (
+            <p className="text-sm text-gray-500">
+              Solo el titular del hogar puede cambiar esta configuración.
+            </p>
+          )}
           {canManage && (
-            <Button onClick={() => void saveThresholdConfiguration()} disabled={savingThresholds || loading}>
+            <Button
+              onClick={() => void saveThresholdConfiguration()}
+              disabled={savingThresholds || loading}
+            >
               <Save className="mr-2 size-4" />
               {savingThresholds ? 'Guardando…' : 'Guardar límites'}
             </Button>
@@ -295,7 +326,9 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Reglas de alerta</CardTitle>
-          <CardDescription>Crea y administra avisos de consumo elevado, posibles fugas y falta de lecturas.</CardDescription>
+          <CardDescription>
+            Crea y administra avisos de consumo elevado, posibles fugas y falta de lecturas.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {canManage && availableRuleOptions.length > 0 && (
@@ -309,12 +342,16 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
                   onChange={(event) => setNewRuleType(event.target.value as CustomAlertType)}
                 >
                   {availableRuleOptions.map((option) => (
-                    <option key={option.type} value={option.type}>{option.label}</option>
+                    <option key={option.type} value={option.type}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-alert-threshold">Umbral ({selectedRuleOption?.unitLabel})</Label>
+                <Label htmlFor="new-alert-threshold">
+                  Umbral ({selectedRuleOption?.unitLabel})
+                </Label>
                 <Input
                   id="new-alert-threshold"
                   type="number"
@@ -332,29 +369,47 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
             </div>
           )}
           {canManage && availableRuleOptions.length === 0 && (
-            <p className="text-sm text-gray-500">Ya existen reglas activas para todos los tipos disponibles.</p>
+            <p className="text-sm text-gray-500">
+              Ya existen reglas activas para todos los tipos disponibles.
+            </p>
           )}
-          {!canManage && <p className="text-sm text-gray-500">Solo el titular del hogar puede administrar las reglas.</p>}
+          {!canManage && (
+            <p className="text-sm text-gray-500">
+              Solo el titular del hogar puede administrar las reglas.
+            </p>
+          )}
           {displayedRules.length ? (
             <div className="space-y-3">
               {displayedRules.map((rule) => {
                 const option = customAlertOptions.find(({ type }) => type === rule.alertType);
                 const busy = busyRuleId === rule.ruleId;
                 return (
-                  <div key={rule.ruleId} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                  <div
+                    key={rule.ruleId}
+                    className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+                  >
                     <div>
                       <p className="font-medium">{option?.label || rule.alertType}</p>
-                      <Badge variant={rule.active ? 'default' : 'outline'}>{rule.active ? 'Activa' : 'Pausada'}</Badge>
+                      <Badge variant={rule.active ? 'default' : 'outline'}>
+                        {rule.active ? 'Activa' : 'Pausada'}
+                      </Badge>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`alert-rule-${rule.ruleId}`}>Umbral ({option?.unitLabel || rule.unit})</Label>
+                      <Label htmlFor={`alert-rule-${rule.ruleId}`}>
+                        Umbral ({option?.unitLabel || rule.unit})
+                      </Label>
                       <Input
                         id={`alert-rule-${rule.ruleId}`}
                         type="number"
                         min={rule.unit === 'minutes' ? '1' : '0'}
                         step={rule.unit === 'minutes' ? '1' : '0.01'}
                         value={ruleDrafts[rule.ruleId] ?? String(rule.threshold)}
-                        onChange={(event) => setRuleDrafts((current) => ({ ...current, [rule.ruleId]: event.target.value }))}
+                        onChange={(event) =>
+                          setRuleDrafts((current) => ({
+                            ...current,
+                            [rule.ruleId]: event.target.value,
+                          }))
+                        }
                         disabled={!canManage || busy}
                       />
                     </div>
@@ -365,7 +420,11 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
                           disabled={busy || loading}
                           onClick={() => {
                             const threshold = Number(ruleDrafts[rule.ruleId]);
-                            if (!Number.isFinite(threshold) || threshold < 0 || (rule.unit === 'minutes' && threshold === 0)) {
+                            if (
+                              !Number.isFinite(threshold) ||
+                              threshold < 0 ||
+                              (rule.unit === 'minutes' && threshold === 0)
+                            ) {
                               toast.error('Ingresa un umbral válido.');
                               return;
                             }
@@ -405,12 +464,17 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
         <Card>
           <CardHeader>
             <CardTitle>Ritmo de consumo y presupuesto</CardTitle>
-            <CardDescription>Comparación contra la referencia del hogar y el avance real del mes.</CardDescription>
+            <CardDescription>
+              Comparación contra la referencia del hogar y el avance real del mes.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Consumo</p>
-              <p className="text-xl">{budgetStatus.currentLiters.toFixed(0)} L / {budgetStatus.expectedToDateLiters.toFixed(0)} L esperados</p>
+              <p className="text-xl">
+                {budgetStatus.currentLiters.toFixed(0)} L /{' '}
+                {budgetStatus.expectedToDateLiters.toFixed(0)} L esperados
+              </p>
               <Badge>{budgetStatus.consumptionStatus || 'SIN DATOS'}</Badge>
             </div>
             <div className="rounded-lg border p-4">
@@ -434,13 +498,17 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
         <CardContent className="space-y-3">
           {alerts.length ? (
             alerts.map((alert) => (
-              <div key={alert.alertId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+              <div
+                key={alert.alertId}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
+              >
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="mt-1 size-5 text-orange-600" />
                   <div>
                     <p className="font-medium">{alert.message || 'Alerta sin descripción'}</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(alert.generatedAt).toLocaleString('es-CO')} · valor: {alert.detectedValue ?? '—'}
+                      {new Date(alert.generatedAt).toLocaleString('es-CO')} · valor:{' '}
+                      {alert.detectedValue ?? '—'}
                     </p>
                   </div>
                 </div>
@@ -449,9 +517,14 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
                   {alert.status === 'Pending' && canManage && (
                     <>
                       <Button size="sm" onClick={() => void mark(alert.alertId, 'Read')}>
-                        <CheckCircle2 className="mr-1 size-4" />Leer
+                        <CheckCircle2 className="mr-1 size-4" />
+                        Leer
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => void mark(alert.alertId, 'Dismissed')}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void mark(alert.alertId, 'Dismissed')}
+                      >
                         Descartar
                       </Button>
                     </>
@@ -460,7 +533,9 @@ export function NotificationsPanel({ homeId }: { homeId?: string }) {
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-500">{loading ? 'Cargando alertas…' : 'No hay alertas para mostrar.'}</p>
+            <p className="text-sm text-gray-500">
+              {loading ? 'Cargando alertas…' : 'No hay alertas para mostrar.'}
+            </p>
           )}
         </CardContent>
       </Card>
