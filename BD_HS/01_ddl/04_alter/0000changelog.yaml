@@ -566,7 +566,7 @@ databaseChangeLog:
         - sqlFile:
             path: 035_saving_goal_daily_period.sql
             relativeToChangelogFile: true
-            splitStatements: true
+            splitStatements: false
             stripComments: false
       rollback:
         - sqlFile:
