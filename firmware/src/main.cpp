@@ -62,11 +62,10 @@ constexpr char NVS_LINKED_HOME_KEY[] = "linkedHome";
 constexpr char NVS_TOTAL_LITERS_KEY[] = "totalLiters";
 constexpr char NVS_MEASUREMENT_ENABLED_KEY[] = "measurementOn";
 constexpr char PRIMARY_LOGICAL_DEVICE_CODE[] = "HS-7A3F91C8D2E4";
+// This ESP32 represents one physical water meter. Keep its accepted logical
+// identity aligned with the per-device Flespi ACL and the linked backend row.
 constexpr const char* LOGICAL_DEVICE_CODES[] = {
   "HS-7A3F91C8D2E4",
-  "HS-B6E04D79A153",
-  "HS-2C8A5F01E7B9",
-  "HS-141F47470968",
 };
 constexpr size_t LOGICAL_DEVICE_COUNT = sizeof(LOGICAL_DEVICE_CODES) / sizeof(LOGICAL_DEVICE_CODES[0]);
 constexpr char BLE_SERVICE_UUID[] = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
@@ -1105,6 +1104,12 @@ void setup() {
   pinMode(HIDROSMART_FLOW_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(HIDROSMART_FLOW_PIN), onPulse, FALLING);
   pinMode(CONFIG_BUTTON_PIN, INPUT_PULLUP);
+
+#if HIDROSMART_MQTT_USE_TLS
+  // Start NTP as soon as Wi-Fi comes up so TLS certificate validation has a
+  // valid clock. connectMqtt() still waits and retries if sync is not ready.
+  configTime(0, 0, "time.cloudflare.com", "pool.ntp.org", "time.google.com");
+#endif
 
   mqttClient.setKeepAlive(HIDROSMART_MQTT_KEEPALIVE_SECONDS);
   mqttClient.setBufferSize(768);
