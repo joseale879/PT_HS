@@ -2,16 +2,14 @@
 
 ## Un ID lógico activo por placa
 
-El ESP32 selecciona un solo código lógico activo por vez entre
-`HS-7A3F91C8D2E4`, `HS-B6E04D79A153`, `HS-2C8A5F01E7B9` y
-`HS-141F47470968`, y publica cada lectura una sola vez en su tópico
-`telemetry`. Se suscribe a comandos de los cuatro códigos para que la orden de
-vigilancia llegue aunque cambie el ID activo. El `hardwareId` derivado del
-eFuse identifica la placa física y no sustituye el código lógico.
+Esta compilación del ESP32 tiene un único código lógico: `HS-7A3F91C8D2E4`.
+Publica cada lectura una sola vez en su tópico `telemetry` y escucha comandos
+solo para ese código. El `hardwareId` derivado del eFuse identifica la placa
+física (`HS-141F47470968` en la unidad actual) y no sustituye el código lógico.
 
-La ACL Flespi del ESP32 debe permitir publicar `status` y `telemetry` para los
-cuatro códigos y suscribirse a `commands` para los cuatro. El backend conserva
-un token separado.
+La ACL Flespi del ESP32 debe permitir publicar `status` y `telemetry`, y
+suscribirse a `commands`, solo para `HS-7A3F91C8D2E4`. El backend conserva un
+token separado.
 
 ## Topics
 
