@@ -1380,9 +1380,7 @@ export function DeviceManagement({
                             )}
                           </button>
                         </div>
-                        <p className="text-xs text-blue-800">
-                          {t('devices.wifiPasswordNotShown')}
-                        </p>
+                        <p className="text-xs text-blue-800">{t('devices.wifiPasswordNotShown')}</p>
                       </div>
                       <Button
                         type="button"

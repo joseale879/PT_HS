@@ -22,9 +22,8 @@
 #define HIDROSMART_MQTT_PORT 1883
 #endif
 #endif
-// Vacio: usa el hardwareId HS-XXXXXX generado por el ESP32.
-// El ID activo puede ser HS-7A3F91C8D2E4, HS-B6E04D79A153,
-// HS-2C8A5F01E7B9 o HS-141F47470968. El hardwareId fisico se detecta desde eFuse.
+// Codigo logico unico de esta compilacion. Si se deja vacio, el firmware usa
+// HS-7A3F91C8D2E4. El hardwareId fisico se detecta por separado desde eFuse.
 // No reutilices el mismo codigo en dos placas.
 #define HIDROSMART_DEVICE_CODE ""
 // Use one dedicated Flespi ACL token per ESP32 as the MQTT username.
