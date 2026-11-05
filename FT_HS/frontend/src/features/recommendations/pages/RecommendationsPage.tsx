@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, CheckCheck, Clock3, Lightbulb, RefreshCw, ThumbsDown, ThumbsUp } from 'lucide-react';
+import {
+  Check,
+  CheckCheck,
+  Clock3,
+  Lightbulb,
+  RefreshCw,
+  ThumbsDown,
+  ThumbsUp,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@shared/ui/badge';
@@ -64,7 +72,10 @@ export function RecommendationsPage({ homeId }: { homeId?: string }) {
   };
 
   const countCards = [
-    { label: t('recommendations.total'), value: summary?.totalRecommendations ?? recommendations.length },
+    {
+      label: t('recommendations.total'),
+      value: summary?.totalRecommendations ?? recommendations.length,
+    },
     { label: t('recommendations.pending'), value: summary?.pendingCount ?? 0 },
     { label: t('recommendations.applied'), value: summary?.appliedCount ?? 0 },
     { label: t('recommendations.dismissed'), value: summary?.dismissedCount ?? 0 },
@@ -88,7 +99,9 @@ export function RecommendationsPage({ homeId }: { homeId?: string }) {
 
       {!homeId ? (
         <Card>
-          <CardContent className="pt-6 text-sm text-gray-600">{t('recommendations.selectHome')}</CardContent>
+          <CardContent className="pt-6 text-sm text-gray-600">
+            {t('recommendations.selectHome')}
+          </CardContent>
         </Card>
       ) : (
         <>
@@ -131,16 +144,26 @@ export function RecommendationsPage({ homeId }: { homeId?: string }) {
                   {recommendations.map((recommendation) => {
                     const busy = busyId === recommendation.userRecommendationId;
                     return (
-                      <article key={recommendation.userRecommendationId} className="flex flex-col rounded-lg border bg-white p-4">
+                      <article
+                        key={recommendation.userRecommendationId}
+                        className="flex flex-col rounded-lg border bg-white p-4"
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <Badge variant="outline">{recommendation.category}</Badge>
-                          <Badge>{t(`recommendations.status.${recommendation.status}`, { defaultValue: recommendation.status })}</Badge>
+                          <Badge>
+                            {t(`recommendations.status.${recommendation.status}`, {
+                              defaultValue: recommendation.status,
+                            })}
+                          </Badge>
                         </div>
                         <h3 className="mt-3 font-semibold text-gray-900">{recommendation.title}</h3>
-                        <p className="mt-2 flex-1 whitespace-pre-line text-sm text-gray-600">{recommendation.description}</p>
+                        <p className="mt-2 flex-1 whitespace-pre-line text-sm text-gray-600">
+                          {recommendation.description}
+                        </p>
                         {recommendation.activationThreshold != null && (
                           <p className="mt-3 text-xs text-gray-500">
-                            {recommendation.activationThreshold.toLocaleString()} {recommendation.thresholdUnit}
+                            {recommendation.activationThreshold.toLocaleString()}{' '}
+                            {recommendation.thresholdUnit}
                           </p>
                         )}
                         <p className="mt-2 flex items-center gap-1 text-xs text-gray-500">
@@ -153,18 +176,24 @@ export function RecommendationsPage({ homeId }: { homeId?: string }) {
                               size="sm"
                               variant="outline"
                               disabled={busy}
-                              onClick={() => void updateRecommendation(recommendation, { status: 'Read' })}
+                              onClick={() =>
+                                void updateRecommendation(recommendation, { status: 'Read' })
+                              }
                             >
-                              <Check className="mr-1 size-4" />{t('recommendations.markRead')}
+                              <Check className="mr-1 size-4" />
+                              {t('recommendations.markRead')}
                             </Button>
                           )}
                           {recommendation.status !== 'Applied' && (
                             <Button
                               size="sm"
                               disabled={busy}
-                              onClick={() => void updateRecommendation(recommendation, { status: 'Applied' })}
+                              onClick={() =>
+                                void updateRecommendation(recommendation, { status: 'Applied' })
+                              }
                             >
-                              <CheckCheck className="mr-1 size-4" />{t('recommendations.markApplied')}
+                              <CheckCheck className="mr-1 size-4" />
+                              {t('recommendations.markApplied')}
                             </Button>
                           )}
                           {recommendation.status !== 'Dismissed' && (
@@ -172,30 +201,40 @@ export function RecommendationsPage({ homeId }: { homeId?: string }) {
                               size="sm"
                               variant="outline"
                               disabled={busy}
-                              onClick={() => void updateRecommendation(recommendation, { status: 'Dismissed' })}
+                              onClick={() =>
+                                void updateRecommendation(recommendation, { status: 'Dismissed' })
+                              }
                             >
                               {t('recommendations.dismiss')}
                             </Button>
                           )}
                         </div>
                         <div className="mt-4 border-t pt-3">
-                          <p className="mb-2 text-xs text-gray-600">{t('recommendations.usefulQuestion')}</p>
+                          <p className="mb-2 text-xs text-gray-600">
+                            {t('recommendations.usefulQuestion')}
+                          </p>
                           <div className="flex gap-2">
                             <Button
                               size="sm"
                               variant={recommendation.usefulness === true ? 'default' : 'outline'}
                               disabled={busy || recommendation.usefulness === true}
-                              onClick={() => void updateRecommendation(recommendation, { usefulness: true })}
+                              onClick={() =>
+                                void updateRecommendation(recommendation, { usefulness: true })
+                              }
                             >
-                              <ThumbsUp className="mr-1 size-4" />{t('recommendations.usefulYes')}
+                              <ThumbsUp className="mr-1 size-4" />
+                              {t('recommendations.usefulYes')}
                             </Button>
                             <Button
                               size="sm"
                               variant={recommendation.usefulness === false ? 'default' : 'outline'}
                               disabled={busy || recommendation.usefulness === false}
-                              onClick={() => void updateRecommendation(recommendation, { usefulness: false })}
+                              onClick={() =>
+                                void updateRecommendation(recommendation, { usefulness: false })
+                              }
                             >
-                              <ThumbsDown className="mr-1 size-4" />{t('recommendations.usefulNo')}
+                              <ThumbsDown className="mr-1 size-4" />
+                              {t('recommendations.usefulNo')}
                             </Button>
                           </div>
                         </div>
