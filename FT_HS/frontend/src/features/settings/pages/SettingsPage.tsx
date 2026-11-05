@@ -200,9 +200,10 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([userApi.me(), homesApi.list()])
-      .then(async ([userResponse, homesResponse]) => {
-        const user = userResponse.data as Partial<ProfileForm & { createdAt: string }>;
+    userApi
+      .me()
+      .then(({ data }) => {
+        const user = data as Partial<ProfileForm & { createdAt: string }>;
         const nextProfile: ProfileForm = {
           fullName: user.fullName || '',
           email: user.email || '',
@@ -213,21 +214,10 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
           city: user.city || '',
           avatarDataUrl: user.avatarDataUrl || null,
         };
-        const homes = (homesResponse.data as Array<{ homeId: string }>) || [];
-        const deviceResponses = await Promise.all(
-          homes.map((home) => devicesApi.list(home.homeId))
-        );
         if (!active) return;
         setProfile(nextProfile);
         setSavedProfile(nextProfile);
-        setSummary({
-          createdAt: user.createdAt || null,
-          homes: homes.length,
-          devices: deviceResponses.reduce(
-            (total, response) => total + (response.data as unknown[]).length,
-            0
-          ),
-        });
+        setSummary((current) => ({ ...current, createdAt: user.createdAt || null }));
       })
       .catch((error) => {
         if (active) {
@@ -237,6 +227,34 @@ export function AccountSettings({ roles, homeId }: AccountSettingsProps) {
       .finally(() => {
         if (active) setProfileLoading(false);
       });
+
+    homesApi
+      .list()
+      .then(async ({ data }) => {
+        const homes = (data as Array<{ homeId: string }>) || [];
+        if (!active) return;
+        setSummary((current) => ({ ...current, homes: homes.length }));
+
+        try {
+          const deviceResponses = await Promise.all(
+            homes.map((home) => devicesApi.list(home.homeId))
+          );
+          if (!active) return;
+          setSummary((current) => ({
+            ...current,
+            devices: deviceResponses.reduce(
+              (total, response) => total + (response.data as unknown[]).length,
+              0
+            ),
+          }));
+        } catch {
+          if (active) setSummary((current) => ({ ...current, devices: null }));
+        }
+      })
+      .catch(() => {
+        if (active) setSummary((current) => ({ ...current, homes: null, devices: null }));
+      });
+
     return () => {
       active = false;
     };
