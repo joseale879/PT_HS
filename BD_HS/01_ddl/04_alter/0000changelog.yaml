@@ -566,7 +566,10 @@ databaseChangeLog:
         - sqlFile:
             path: 035_saving_goal_daily_period.sql
             relativeToChangelogFile: true
-            splitStatements: true
+            # El archivo contiene una función PL/pgSQL con un bloque $$...$$.
+            # Debe enviarse completo a PostgreSQL; si Liquibase lo divide por
+            # punto y coma, el CI falla en `Validate and update database`.
+            splitStatements: false
             stripComments: false
       rollback:
         - sqlFile:
