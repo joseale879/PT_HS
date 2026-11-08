@@ -105,14 +105,11 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
         goal.periodStart.slice(0, 10) <= today &&
         (!goal.periodEnd || goal.periodEnd.slice(0, 10) >= today);
       const active = loaded.find(
-        (goal) =>
-          ['daily', 'weekly', 'monthly'].includes(goal.type) && isCurrentGoal(goal)
+        (goal) => ['daily', 'weekly', 'monthly'].includes(goal.type) && isCurrentGoal(goal)
       );
       const activePeriod: GoalPeriod =
         active?.type === 'daily' || active?.type === 'weekly' ? active.type : 'monthly';
-      const activeMonthly = loaded.find(
-        (goal) => goal.type === 'monthly' && isCurrentGoal(goal)
-      );
+      const activeMonthly = loaded.find((goal) => goal.type === 'monthly' && isCurrentGoal(goal));
       const currentBudget =
         budgetResponse.data?.monthlyBudget ?? activeMonthly?.targetBudget ?? null;
       const budgetValue = currentBudget == null ? '' : String(currentBudget);
@@ -296,7 +293,9 @@ export function GoalsConfig({ homeId }: { homeId?: string }) {
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Presupuesto</CardTitle>
-          <CardDescription>Presupuesto mensual para calcular el consumo disponible.</CardDescription>
+            <CardDescription>
+              Presupuesto mensual para calcular el consumo disponible.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Label htmlFor="goal-budget">Límite monetario</Label>

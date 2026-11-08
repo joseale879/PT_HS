@@ -901,7 +901,12 @@ export type AlertThresholdConfiguration = {
 export type AlertRule = {
   ruleId: string;
   homeId: string;
-  alertType: 'excessive_consumption' | 'leak_detected' | 'monthly_limit' | 'daily_limit' | 'no_reading';
+  alertType:
+    | 'excessive_consumption'
+    | 'leak_detected'
+    | 'monthly_limit'
+    | 'daily_limit'
+    | 'no_reading';
   threshold: number;
   unit: 'm3_day' | 'm3_month' | 'minutes';
   active: boolean;
@@ -926,7 +931,9 @@ export const alertsApi = {
   rules: (homeId: number | string) =>
     apiClient.get<{ data: AlertRule[] }>(`/alerts/home/${homeId}/rules`),
   thresholds: (homeId: number | string) =>
-    apiClient.get<{ data: AlertThresholdConfiguration | null }>(`/alerts/home/${homeId}/thresholds`),
+    apiClient.get<{ data: AlertThresholdConfiguration | null }>(
+      `/alerts/home/${homeId}/thresholds`
+    ),
   history: (homeId: number | string, query = '') =>
     apiClient.get<{ data: AlertEvent[]; pagination: CollectionPagination }>(
       `/alerts/home/${homeId}/history${query ? `?${query}` : ''}`
@@ -941,7 +948,11 @@ export const alertsApi = {
   saveThresholds: (
     homeId: number | string,
     payload: { dailyLimit?: number; monthlyLimit?: number; active: boolean }
-  ) => apiClient.put<{ data: AlertThresholdConfiguration }>(`/alerts/home/${homeId}/thresholds`, payload),
+  ) =>
+    apiClient.put<{ data: AlertThresholdConfiguration }>(
+      `/alerts/home/${homeId}/thresholds`,
+      payload
+    ),
   deleteThresholds: (homeId: number | string) =>
     apiClient.delete<void>(`/alerts/home/${homeId}/thresholds`),
 };
